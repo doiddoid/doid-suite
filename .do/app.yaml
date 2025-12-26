@@ -1,6 +1,9 @@
 name: doid-suite
 region: fra
 
+# Global environment variables (set in DigitalOcean dashboard)
+# SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, JWT_SECRET, SUPER_ADMIN_EMAILS
+
 # Backend API Service
 services:
   - name: api
@@ -21,27 +24,12 @@ services:
         value: production
       - key: PORT
         value: "3001"
-      - key: SUPABASE_URL
-        type: SECRET
-        value: ${SUPABASE_URL}
-      - key: SUPABASE_ANON_KEY
-        type: SECRET
-        value: ${SUPABASE_ANON_KEY}
-      - key: SUPABASE_SERVICE_KEY
-        type: SECRET
-        value: ${SUPABASE_SERVICE_KEY}
-      - key: JWT_SECRET
-        type: SECRET
-        value: ${JWT_SECRET}
       - key: JWT_EXPIRES_IN
         value: "7d"
       - key: JWT_EXTERNAL_EXPIRES_IN
         value: "5m"
       - key: FRONTEND_URL
         value: ${APP_URL}
-      - key: SUPER_ADMIN_EMAILS
-        type: SECRET
-        value: ${SUPER_ADMIN_EMAILS}
     build_command: npm install
     run_command: npm start
     health_check:
@@ -64,9 +52,3 @@ static_sites:
     envs:
       - key: VITE_API_URL
         value: ${APP_URL}/api
-      - key: VITE_SUPABASE_URL
-        type: SECRET
-        value: ${SUPABASE_URL}
-      - key: VITE_SUPABASE_ANON_KEY
-        type: SECRET
-        value: ${SUPABASE_ANON_KEY}
