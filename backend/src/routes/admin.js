@@ -1,0 +1,887 @@
+import express from 'express';
+import { body, param, query, validationResult } from 'express-validator';
+import adminService from '../services/adminService.js';
+import packageService from '../services/packageService.js';
+import { authenticate } from '../middleware/auth.js';
+import { requireSuperAdmin, logAdminAction } from '../middleware/adminAuth.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
+import { supabaseAdmin } from '../config/supabase.js';
+
+const router = express.Router();
+
+// Validazione errori
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      error: 'Errore di validazione',
+      details: errors.array()
+    });
+  }
+  next();
+};
+
+// Tutte le route admin richiedono autenticazione + super admin
+router.use(authenticate);
+router.use(requireSuperAdmin);
+
+// ==================== STATS ====================
+
+// GET /api/admin/stats
+router.get('/stats',
+  logAdminAction('view_global_stats'),
+  asyncHandler(async (req, res) => {
+    const stats = await adminService.getGlobalStats();
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  })
+);
+
+// GET /api/admin/activity
+router.get('/activity',
+  [
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100')
+  ],
+  validate,
+  logAdminAction('view_recent_activity'),
+  asyncHandler(async (req, res) => {
+    const limit = parseInt(req.query.limit) || 20;
+    const activity = await adminService.getRecentActivity(limit);
+
+    res.json({
+      success: true,
+      data: activity
+    });
+  })
+);
+
+// ==================== USERS ====================
+
+// GET /api/admin/users
+router.get('/users',
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('Pagina non valida'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100'),
+    query('search').optional().trim()
+  ],
+  validate,
+  logAdminAction('list_users'),
+  asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20, search = '' } = req.query;
+
+    const result = await adminService.getAllUsers({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      search
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
+);
+
+// GET /api/admin/users/:id
+router.get('/users/:id',
+  [
+    param('id').isUUID().withMessage('ID utente non valido')
+  ],
+  validate,
+  logAdminAction('view_user'),
+  asyncHandler(async (req, res) => {
+    const user = await adminService.getUserById(req.params.id);
+
+    res.json({
+      success: true,
+      data: user
+    });
+  })
+);
+
+// POST /api/admin/users
+router.post('/users',
+  [
+    body('email').isEmail().withMessage('Email non valida'),
+    body('password').isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri'),
+    body('fullName').trim().notEmpty().withMessage('Nome completo richiesto'),
+    body('emailConfirm').optional().isBoolean().withMessage('emailConfirm deve essere boolean')
+  ],
+  validate,
+  logAdminAction('create_user'),
+  asyncHandler(async (req, res) => {
+    const { email, password, fullName, emailConfirm = true } = req.body;
+
+    const user = await adminService.createUser({
+      email,
+      password,
+      fullName,
+      emailConfirm
+    });
+
+    res.status(201).json({
+      success: true,
+      data: user,
+      message: 'Utente creato con successo'
+    });
+  })
+);
+
+// PUT /api/admin/users/:id
+router.put('/users/:id',
+  [
+    param('id').isUUID().withMessage('ID utente non valido'),
+    body('email').optional().isEmail().withMessage('Email non valida'),
+    body('password').optional().isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri'),
+    body('fullName').optional().trim(),
+    body('emailConfirm').optional().isBoolean().withMessage('emailConfirm deve essere boolean')
+  ],
+  validate,
+  logAdminAction('update_user'),
+  asyncHandler(async (req, res) => {
+    const user = await adminService.updateUser(req.params.id, req.body);
+
+    res.json({
+      success: true,
+      data: user,
+      message: 'Utente aggiornato'
+    });
+  })
+);
+
+// DELETE /api/admin/users/:id
+router.delete('/users/:id',
+  [
+    param('id').isUUID().withMessage('ID utente non valido')
+  ],
+  validate,
+  logAdminAction('delete_user'),
+  asyncHandler(async (req, res) => {
+    // Previeni l'eliminazione di se stessi
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Non puoi eliminare il tuo stesso account'
+      });
+    }
+
+    await adminService.deleteUser(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Utente eliminato'
+    });
+  })
+);
+
+// ==================== ORGANIZATIONS ====================
+
+// GET /api/admin/organizations
+router.get('/organizations',
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('Pagina non valida'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100'),
+    query('search').optional().trim(),
+    query('status').optional().isIn(['active', 'suspended', 'cancelled']).withMessage('Status non valido'),
+    query('accountType').optional().isIn(['single', 'agency']).withMessage('Tipo account non valido')
+  ],
+  validate,
+  logAdminAction('list_organizations'),
+  asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20, search = '', status, accountType } = req.query;
+
+    const result = await adminService.getAllOrganizations({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      search,
+      status,
+      accountType
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
+);
+
+// POST /api/admin/organizations
+router.post('/organizations',
+  [
+    body('name').trim().notEmpty().withMessage('Nome richiesto'),
+    body('email').optional().isEmail().withMessage('Email non valida'),
+    body('phone').optional().trim(),
+    body('vatNumber').optional().trim(),
+    body('accountType').optional().isIn(['single', 'agency']).withMessage('Tipo account non valido'),
+    body('maxActivities').optional().isInt({ min: -1 }).withMessage('Max attività deve essere >= -1'),
+    body('ownerEmail').optional().isEmail().withMessage('Email owner non valida')
+  ],
+  validate,
+  logAdminAction('create_organization'),
+  asyncHandler(async (req, res) => {
+    const organization = await adminService.createOrganization(req.body);
+
+    res.status(201).json({
+      success: true,
+      data: organization,
+      message: 'Organizzazione creata con successo'
+    });
+  })
+);
+
+// GET /api/admin/organizations/:id
+router.get('/organizations/:id',
+  [
+    param('id').isUUID().withMessage('ID organizzazione non valido')
+  ],
+  validate,
+  logAdminAction('view_organization'),
+  asyncHandler(async (req, res) => {
+    const organization = await adminService.getOrganizationById(req.params.id);
+
+    res.json({
+      success: true,
+      data: organization
+    });
+  })
+);
+
+// PUT /api/admin/organizations/:id
+router.put('/organizations/:id',
+  [
+    param('id').isUUID().withMessage('ID organizzazione non valido'),
+    body('name').optional().trim().notEmpty().withMessage('Nome non può essere vuoto'),
+    body('email').optional().isEmail().withMessage('Email non valida'),
+    body('status').optional().isIn(['active', 'suspended', 'cancelled']).withMessage('Status non valido')
+  ],
+  validate,
+  logAdminAction('update_organization'),
+  asyncHandler(async (req, res) => {
+    const organization = await adminService.updateOrganization(req.params.id, req.body);
+
+    res.json({
+      success: true,
+      data: organization,
+      message: 'Organizzazione aggiornata'
+    });
+  })
+);
+
+// DELETE /api/admin/organizations/:id
+router.delete('/organizations/:id',
+  [
+    param('id').isUUID().withMessage('ID organizzazione non valido')
+  ],
+  validate,
+  logAdminAction('delete_organization'),
+  asyncHandler(async (req, res) => {
+    await adminService.deleteOrganization(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Organizzazione eliminata'
+    });
+  })
+);
+
+// ==================== SUBSCRIPTIONS ====================
+
+// GET /api/admin/subscriptions
+router.get('/subscriptions',
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('Pagina non valida'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100'),
+    query('status').optional().isIn(['trial', 'active', 'past_due', 'cancelled', 'expired']).withMessage('Status non valido'),
+    query('serviceCode').optional().trim()
+  ],
+  validate,
+  logAdminAction('list_subscriptions'),
+  asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20, status, serviceCode } = req.query;
+
+    const result = await adminService.getAllSubscriptions({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      status,
+      serviceCode
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
+);
+
+// PUT /api/admin/subscriptions/:id
+router.put('/subscriptions/:id',
+  [
+    param('id').isUUID().withMessage('ID abbonamento non valido'),
+    body('status').optional().isIn(['trial', 'active', 'past_due', 'cancelled', 'expired']).withMessage('Status non valido'),
+    body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido'),
+    body('planId').optional().isUUID().withMessage('ID piano non valido')
+  ],
+  validate,
+  logAdminAction('update_subscription'),
+  asyncHandler(async (req, res) => {
+    const subscription = await adminService.updateSubscription(req.params.id, req.body);
+
+    res.json({
+      success: true,
+      data: subscription,
+      message: 'Abbonamento aggiornato'
+    });
+  })
+);
+
+// ==================== ACTIVITIES ====================
+
+// GET /api/admin/activities
+router.get('/activities',
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('Pagina non valida'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100'),
+    query('search').optional().trim(),
+    query('status').optional().isIn(['active', 'suspended', 'cancelled']).withMessage('Status non valido'),
+    query('organizationId').optional().isUUID().withMessage('ID organizzazione non valido')
+  ],
+  validate,
+  logAdminAction('list_activities'),
+  asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20, search = '', status, organizationId } = req.query;
+
+    const result = await adminService.getAllActivities({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      search,
+      status,
+      organizationId
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
+);
+
+// GET /api/admin/activities/:id
+router.get('/activities/:id',
+  [
+    param('id').isUUID().withMessage('ID attività non valido')
+  ],
+  validate,
+  logAdminAction('view_activity'),
+  asyncHandler(async (req, res) => {
+    const activity = await adminService.getActivityById(req.params.id);
+
+    res.json({
+      success: true,
+      data: activity
+    });
+  })
+);
+
+// POST /api/admin/organizations/:organizationId/activities
+router.post('/organizations/:organizationId/activities',
+  [
+    param('organizationId').isUUID().withMessage('ID organizzazione non valido'),
+    body('name').trim().notEmpty().withMessage('Nome attività richiesto'),
+    body('email').optional().isEmail().withMessage('Email non valida'),
+    body('phone').optional().trim(),
+    body('ownerEmail').optional().isEmail().withMessage('Email owner non valida')
+  ],
+  validate,
+  logAdminAction('create_activity_for_org'),
+  asyncHandler(async (req, res) => {
+    const activity = await adminService.createActivityForOrganization(
+      req.params.organizationId,
+      req.body,
+      req.body.ownerEmail
+    );
+
+    res.status(201).json({
+      success: true,
+      data: activity,
+      message: 'Attività creata con successo'
+    });
+  })
+);
+
+// ==================== PACKAGES ====================
+
+// GET /api/admin/packages
+router.get('/packages',
+  [
+    query('includeInactive').optional().isBoolean().withMessage('includeInactive deve essere boolean')
+  ],
+  validate,
+  logAdminAction('list_packages'),
+  asyncHandler(async (req, res) => {
+    const includeInactive = req.query.includeInactive === 'true';
+    const packages = await packageService.getAllPackages(includeInactive);
+
+    res.json({
+      success: true,
+      data: { packages }
+    });
+  })
+);
+
+// GET /api/admin/packages/:id
+router.get('/packages/:id',
+  [
+    param('id').isUUID().withMessage('ID pacchetto non valido')
+  ],
+  validate,
+  logAdminAction('view_package'),
+  asyncHandler(async (req, res) => {
+    const pkg = await packageService.getPackageById(req.params.id);
+
+    if (!pkg) {
+      return res.status(404).json({
+        success: false,
+        error: 'Pacchetto non trovato'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: pkg
+    });
+  })
+);
+
+// POST /api/admin/packages
+router.post('/packages',
+  [
+    body('code').trim().notEmpty().withMessage('Codice pacchetto richiesto'),
+    body('name').trim().notEmpty().withMessage('Nome pacchetto richiesto'),
+    body('description').optional().trim(),
+    body('priceMonthly').isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
+    body('priceYearly').isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
+    body('maxActivities').optional().isInt({ min: -1 }).withMessage('Max attività non valido'),
+    body('services').optional().isArray().withMessage('Services deve essere un array')
+  ],
+  validate,
+  logAdminAction('create_package'),
+  asyncHandler(async (req, res) => {
+    const pkg = await packageService.createPackage(req.body);
+
+    res.status(201).json({
+      success: true,
+      data: pkg,
+      message: 'Pacchetto creato con successo'
+    });
+  })
+);
+
+// PUT /api/admin/packages/:id
+router.put('/packages/:id',
+  [
+    param('id').isUUID().withMessage('ID pacchetto non valido'),
+    body('name').optional().trim().notEmpty().withMessage('Nome non può essere vuoto'),
+    body('description').optional().trim(),
+    body('priceMonthly').optional().isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
+    body('priceYearly').optional().isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
+    body('maxActivities').optional().isInt({ min: -1 }).withMessage('Max attività non valido'),
+    body('isActive').optional().isBoolean().withMessage('isActive deve essere boolean'),
+    body('services').optional().isArray().withMessage('Services deve essere un array')
+  ],
+  validate,
+  logAdminAction('update_package'),
+  asyncHandler(async (req, res) => {
+    const pkg = await packageService.updatePackage(req.params.id, req.body);
+
+    res.json({
+      success: true,
+      data: pkg,
+      message: 'Pacchetto aggiornato'
+    });
+  })
+);
+
+// DELETE /api/admin/packages/:id
+router.delete('/packages/:id',
+  [
+    param('id').isUUID().withMessage('ID pacchetto non valido')
+  ],
+  validate,
+  logAdminAction('delete_package'),
+  asyncHandler(async (req, res) => {
+    await packageService.deletePackage(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Pacchetto disattivato'
+    });
+  })
+);
+
+// ==================== ORGANIZATION PACKAGES ====================
+
+// GET /api/admin/organizations/:organizationId/packages
+router.get('/organizations/:organizationId/packages',
+  [
+    param('organizationId').isUUID().withMessage('ID organizzazione non valido')
+  ],
+  validate,
+  logAdminAction('list_org_packages'),
+  asyncHandler(async (req, res) => {
+    const packages = await packageService.getOrganizationPackages(req.params.organizationId);
+
+    res.json({
+      success: true,
+      data: { packages }
+    });
+  })
+);
+
+// POST /api/admin/organizations/:organizationId/packages
+router.post('/organizations/:organizationId/packages',
+  [
+    param('organizationId').isUUID().withMessage('ID organizzazione non valido'),
+    body('packageCode').trim().notEmpty().withMessage('Codice pacchetto richiesto'),
+    body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido')
+  ],
+  validate,
+  logAdminAction('activate_org_package'),
+  asyncHandler(async (req, res) => {
+    const { packageCode, billingCycle } = req.body;
+
+    const orgPackage = await packageService.activatePackageForOrganization(
+      req.params.organizationId,
+      packageCode,
+      billingCycle || 'monthly'
+    );
+
+    res.status(201).json({
+      success: true,
+      data: orgPackage,
+      message: 'Pacchetto attivato per l\'organizzazione'
+    });
+  })
+);
+
+// DELETE /api/admin/organizations/:organizationId/packages/:packageId
+router.delete('/organizations/:organizationId/packages/:packageId',
+  [
+    param('organizationId').isUUID().withMessage('ID organizzazione non valido'),
+    param('packageId').isUUID().withMessage('ID pacchetto non valido')
+  ],
+  validate,
+  logAdminAction('cancel_org_package'),
+  asyncHandler(async (req, res) => {
+    await packageService.cancelOrganizationPackage(
+      req.params.organizationId,
+      req.params.packageId
+    );
+
+    res.json({
+      success: true,
+      message: 'Pacchetto cancellato per l\'organizzazione'
+    });
+  })
+);
+
+// ==================== SERVICES ====================
+
+// GET /api/admin/services
+router.get('/services',
+  logAdminAction('list_services'),
+  asyncHandler(async (req, res) => {
+    const { data: services, error } = await supabaseAdmin
+      .from('services')
+      .select('*')
+      .order('sort_order');
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: {
+        services: services.map(s => ({
+          id: s.id,
+          code: s.code,
+          name: s.name,
+          description: s.description,
+          appUrl: s.app_url,
+          icon: s.icon,
+          color: s.color,
+          isActive: s.is_active,
+          sortOrder: s.sort_order
+        }))
+      }
+    });
+  })
+);
+
+// PUT /api/admin/services/:id
+router.put('/services/:id',
+  [
+    param('id').isUUID().withMessage('ID servizio non valido'),
+    body('name').optional().trim().notEmpty().withMessage('Nome non può essere vuoto'),
+    body('description').optional().trim(),
+    body('appUrl').optional().isURL().withMessage('URL non valido'),
+    body('icon').optional().trim(),
+    body('color').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore deve essere esadecimale'),
+    body('isActive').optional().isBoolean(),
+    body('sortOrder').optional().isInt({ min: 0 })
+  ],
+  validate,
+  logAdminAction('update_service'),
+  asyncHandler(async (req, res) => {
+    const { name, description, appUrl, icon, color, isActive, sortOrder } = req.body;
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (appUrl !== undefined) updateData.app_url = appUrl;
+    if (icon !== undefined) updateData.icon = icon;
+    if (color !== undefined) updateData.color = color;
+    if (isActive !== undefined) updateData.is_active = isActive;
+    if (sortOrder !== undefined) updateData.sort_order = sortOrder;
+
+    const { data: service, error } = await supabaseAdmin
+      .from('services')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: service,
+      message: 'Servizio aggiornato'
+    });
+  })
+);
+
+// ==================== SERVICE PLANS ====================
+
+// GET /api/admin/services/:serviceId/plans
+router.get('/services/:serviceId/plans',
+  [
+    param('serviceId').isUUID().withMessage('ID servizio non valido')
+  ],
+  validate,
+  logAdminAction('list_service_plans'),
+  asyncHandler(async (req, res) => {
+    const { data: plans, error } = await supabaseAdmin
+      .from('plans')
+      .select(`
+        *,
+        service:services(id, code, name)
+      `)
+      .eq('service_id', req.params.serviceId)
+      .order('sort_order');
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: {
+        plans: plans.map(p => ({
+          id: p.id,
+          serviceId: p.service_id,
+          service: p.service,
+          code: p.code,
+          name: p.name,
+          priceMonthly: parseFloat(p.price_monthly || 0),
+          priceYearly: parseFloat(p.price_yearly || 0),
+          features: p.features || [],
+          isActive: p.is_active,
+          sortOrder: p.sort_order
+        }))
+      }
+    });
+  })
+);
+
+// GET /api/admin/plans (tutti i piani di tutti i servizi)
+router.get('/plans',
+  [
+    query('includeInactive').optional().isBoolean()
+  ],
+  validate,
+  logAdminAction('list_all_plans'),
+  asyncHandler(async (req, res) => {
+    const includeInactive = req.query.includeInactive === 'true';
+
+    let query = supabaseAdmin
+      .from('plans')
+      .select(`
+        *,
+        service:services(id, code, name, icon, color)
+      `)
+      .order('service_id')
+      .order('sort_order');
+
+    if (!includeInactive) {
+      query = query.eq('is_active', true);
+    }
+
+    const { data: plans, error } = await query;
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: {
+        plans: plans.map(p => ({
+          id: p.id,
+          serviceId: p.service_id,
+          service: p.service,
+          code: p.code,
+          name: p.name,
+          priceMonthly: parseFloat(p.price_monthly || 0),
+          priceYearly: parseFloat(p.price_yearly || 0),
+          features: p.features || [],
+          isActive: p.is_active,
+          sortOrder: p.sort_order
+        }))
+      }
+    });
+  })
+);
+
+// POST /api/admin/plans
+router.post('/plans',
+  [
+    body('serviceId').isUUID().withMessage('ID servizio richiesto'),
+    body('code').trim().notEmpty().withMessage('Codice piano richiesto'),
+    body('name').trim().notEmpty().withMessage('Nome piano richiesto'),
+    body('priceMonthly').isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
+    body('priceYearly').isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
+    body('features').optional().isArray().withMessage('Features deve essere un array'),
+    body('sortOrder').optional().isInt({ min: 0 })
+  ],
+  validate,
+  logAdminAction('create_plan'),
+  asyncHandler(async (req, res) => {
+    const { serviceId, code, name, priceMonthly, priceYearly, features, sortOrder } = req.body;
+
+    // Verifica che il servizio esista
+    const { data: service } = await supabaseAdmin
+      .from('services')
+      .select('id')
+      .eq('id', serviceId)
+      .single();
+
+    if (!service) {
+      return res.status(404).json({
+        success: false,
+        error: 'Servizio non trovato'
+      });
+    }
+
+    const { data: plan, error } = await supabaseAdmin
+      .from('plans')
+      .insert({
+        service_id: serviceId,
+        code,
+        name,
+        price_monthly: priceMonthly,
+        price_yearly: priceYearly,
+        features: features || [],
+        sort_order: sortOrder || 0,
+        is_active: true
+      })
+      .select(`
+        *,
+        service:services(id, code, name)
+      `)
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(400).json({
+          success: false,
+          error: 'Esiste già un piano con questo codice per questo servizio'
+        });
+      }
+      throw error;
+    }
+
+    res.status(201).json({
+      success: true,
+      data: plan,
+      message: 'Piano creato con successo'
+    });
+  })
+);
+
+// PUT /api/admin/plans/:id
+router.put('/plans/:id',
+  [
+    param('id').isUUID().withMessage('ID piano non valido'),
+    body('name').optional().trim().notEmpty().withMessage('Nome non può essere vuoto'),
+    body('priceMonthly').optional().isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
+    body('priceYearly').optional().isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
+    body('features').optional().isArray().withMessage('Features deve essere un array'),
+    body('isActive').optional().isBoolean(),
+    body('sortOrder').optional().isInt({ min: 0 })
+  ],
+  validate,
+  logAdminAction('update_plan'),
+  asyncHandler(async (req, res) => {
+    const { name, priceMonthly, priceYearly, features, isActive, sortOrder } = req.body;
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (priceMonthly !== undefined) updateData.price_monthly = priceMonthly;
+    if (priceYearly !== undefined) updateData.price_yearly = priceYearly;
+    if (features !== undefined) updateData.features = features;
+    if (isActive !== undefined) updateData.is_active = isActive;
+    if (sortOrder !== undefined) updateData.sort_order = sortOrder;
+
+    const { data: plan, error } = await supabaseAdmin
+      .from('plans')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select(`
+        *,
+        service:services(id, code, name)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: plan,
+      message: 'Piano aggiornato'
+    });
+  })
+);
+
+// DELETE /api/admin/plans/:id (soft delete - disattiva)
+router.delete('/plans/:id',
+  [
+    param('id').isUUID().withMessage('ID piano non valido')
+  ],
+  validate,
+  logAdminAction('delete_plan'),
+  asyncHandler(async (req, res) => {
+    // Non eliminiamo ma disattiviamo
+    const { error } = await supabaseAdmin
+      .from('plans')
+      .update({ is_active: false })
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Piano disattivato'
+    });
+  })
+);
+
+export default router;
