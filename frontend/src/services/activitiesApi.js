@@ -139,6 +139,19 @@ class ActivitiesApiService {
     return api.request(`/activities/${activityId}/subscriptions/check/${serviceCode}`);
   }
 
+  // ==================== EXTERNAL ACCESS ====================
+
+  /**
+   * Genera token per accesso a servizio esterno (SSO)
+   * Ritorna { token, redirectUrl, expiresIn, service }
+   */
+  async generateAccessToken(activityId, serviceCode) {
+    return api.request(`/activities/${activityId}/generate-token`, {
+      method: 'POST',
+      body: JSON.stringify({ serviceCode }),
+    });
+  }
+
   // ==================== SERVICES (public) ====================
 
   /**

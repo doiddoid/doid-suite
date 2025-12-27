@@ -290,6 +290,29 @@ export function ActivityProvider({ children }) {
     }
   }, [currentActivity]);
 
+  // ==================== EXTERNAL ACCESS ====================
+
+  /**
+   * Accedi a un servizio esterno (SSO)
+   * Genera token e reindirizza all'app esterna
+   */
+  const accessService = useCallback(async (serviceCode, activityId = currentActivity?.id) => {
+    if (!activityId) return { success: false, error: 'Nessuna attività selezionata' };
+
+    try {
+      const response = await activitiesApi.generateAccessToken(activityId, serviceCode);
+      if (response.success) {
+        // Redirect all'app esterna
+        const { redirectUrl } = response.data;
+        window.location.href = redirectUrl;
+        return { success: true };
+      }
+      return { success: false, error: response.error };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }, [currentActivity]);
+
   // ==================== SERVICES ====================
 
   const getAllServices = useCallback(async () => {
@@ -333,6 +356,9 @@ export function ActivityProvider({ children }) {
     activateSubscription,
     cancelSubscription,
     checkSubscriptionStatus,
+
+    // External Access
+    accessService,
 
     // Services
     getAllServices,

@@ -14,7 +14,8 @@ export default function Dashboard() {
     getServicesDashboard,
     getSubscriptionStats,
     activateTrial,
-    activateSubscription
+    activateSubscription,
+    accessService
   } = useActivities();
 
   const [services, setServices] = useState([]);
@@ -63,8 +64,11 @@ export default function Dashboard() {
 
   // Handlers
   const handleAccessService = async (serviceCode) => {
-    // Per ora mostra un toast - in futuro implementerà redirect con token
-    alert(`Redirect a ${serviceCode}...`);
+    const result = await accessService(serviceCode);
+    if (!result.success) {
+      alert(result.error || 'Errore nell\'accesso al servizio');
+    }
+    // Se success, il redirect è già stato fatto in accessService
   };
 
   const handleActivateTrial = async (serviceCode) => {

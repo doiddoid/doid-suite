@@ -1,9 +1,6 @@
 name: doid-suite
 region: fra
 
-# Global environment variables (set in DigitalOcean dashboard)
-# SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY, JWT_SECRET, SUPER_ADMIN_EMAILS
-
 # Backend API Service
 services:
   - name: api
@@ -21,15 +18,35 @@ services:
         preserve_path_prefix: true
     envs:
       - key: NODE_ENV
+        scope: RUN_AND_BUILD_TIME
         value: production
       - key: PORT
+        scope: RUN_AND_BUILD_TIME
         value: "3001"
       - key: JWT_EXPIRES_IN
+        scope: RUN_AND_BUILD_TIME
         value: "7d"
       - key: JWT_EXTERNAL_EXPIRES_IN
+        scope: RUN_AND_BUILD_TIME
         value: "5m"
       - key: FRONTEND_URL
+        scope: RUN_AND_BUILD_TIME
         value: ${APP_URL}
+      - key: SUPABASE_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://uephzdezzfevxifagcjo.supabase.co
+      - key: SUPABASE_ANON_KEY
+        scope: RUN_AND_BUILD_TIME
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlcGh6ZGV6emZldnhpZmFnY2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2OTIzNDgsImV4cCI6MjA4MDI2ODM0OH0.qG7nS4TB4onNudOZuGAdt772znDKzr9A5Z-JpravTDQ
+      - key: SUPABASE_SERVICE_KEY
+        scope: RUN_AND_BUILD_TIME
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlcGh6ZGV6emZldnhpZmFnY2pvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDY5MjM0OCwiZXhwIjoyMDgwMjY4MzQ4fQ.J1AsqkmIK-ZrRsBvhlMDl3HIHmnjeD9RJaVbUIq-cuU
+      - key: JWT_SECRET
+        scope: RUN_AND_BUILD_TIME
+        value: xR5n3To0YR6REwVzzlU9aObWozfZY3OzaLva/9aeTvY=
+      - key: SUPER_ADMIN_EMAILS
+        scope: RUN_AND_BUILD_TIME
+        value: admin@doid.it
     build_command: npm install
     run_command: npm start
     health_check:
@@ -51,4 +68,11 @@ static_sites:
       - path: /
     envs:
       - key: VITE_API_URL
-        value: ${APP_URL}/api
+        scope: RUN_AND_BUILD_TIME
+        value: https://doid-suite-e9i5o.ondigitalocean.app/api
+      - key: VITE_SUPABASE_URL
+        scope: RUN_AND_BUILD_TIME
+        value: https://uephzdezzfevxifagcjo.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        scope: RUN_AND_BUILD_TIME
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlcGh6ZGV6emZldnhpZmFnY2pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2OTIzNDgsImV4cCI6MjA4MDI2ODM0OH0.qG7nS4TB4onNudOZuGAdt772znDKzr9A5Z-JpravTDQ
