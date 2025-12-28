@@ -1,3 +1,6 @@
+/* Google Fonts - doID Brand (must be first) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Roboto:wght@100;300;400;500;700;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,7 +8,7 @@
 /* Custom base styles */
 @layer base {
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Poppins', 'Roboto', system-ui, sans-serif;
   }
 
   body {
@@ -70,8 +73,20 @@
 
 /* Custom utility styles */
 @layer utilities {
+  /* doID Brand gradient - teal based */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-indigo-600;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-primary-700;
+  }
+
+  .text-gradient-doid {
+    background: linear-gradient(135deg, #139898 0%, #0f7a7a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-gradient-doid {
+    background: linear-gradient(135deg, #139898 0%, #0f7a7a 100%);
   }
 
   .animate-fade-in {
