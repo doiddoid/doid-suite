@@ -1,6 +1,11 @@
 name: doid-suite
 region: fra
 
+# Custom domain
+domains:
+  - domain: suite.doid.it
+    type: PRIMARY
+
 # Backend API Service
 services:
   - name: api
