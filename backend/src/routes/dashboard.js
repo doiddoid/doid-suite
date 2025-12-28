@@ -109,8 +109,8 @@ router.post('/generate-token',
       role: req.userRole
     });
 
-    // URL di redirect con token
-    const redirectUrl = `${service.appUrl}/auth/callback?token=${token}`;
+    // URL di redirect con token (endpoint SSO)
+    const redirectUrl = `${service.appUrl}/auth/sso?token=${token}`;
 
     res.json({
       success: true,
