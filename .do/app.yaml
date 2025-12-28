@@ -69,7 +69,7 @@ static_sites:
     envs:
       - key: VITE_API_URL
         scope: RUN_AND_BUILD_TIME
-        value: https://doid-suite-e9i5o.ondigitalocean.app/api
+        value: https://suite.doid.it/api
       - key: VITE_SUPABASE_URL
         scope: RUN_AND_BUILD_TIME
         value: https://uephzdezzfevxifagcjo.supabase.co
