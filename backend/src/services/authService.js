@@ -194,7 +194,7 @@ class AuthService {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      if (decoded.type !== 'external_access') {
+      if (decoded.type !== 'external_access' && decoded.type !== 'sidebar_access') {
         throw Errors.Unauthorized('Tipo di token non valido');
       }
 
@@ -204,6 +204,44 @@ class AuthService {
         throw Errors.Unauthorized('Token scaduto');
       }
       throw Errors.Unauthorized('Token non valido');
+    }
+  }
+
+  // Genera token per la sidebar DOID Suite (lunga durata, solo lettura)
+  generateSidebarToken({ userId, organizationId, activityId, service, role }) {
+    const payload = {
+      userId,
+      organizationId,
+      service,
+      role,
+      type: 'sidebar_access'
+    };
+
+    if (activityId) {
+      payload.activityId = activityId;
+    }
+
+    // Token della sidebar valido per 24 ore
+    return jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_SIDEBAR_EXPIRES_IN || '24h'
+    });
+  }
+
+  // Verifica token della sidebar
+  verifySidebarToken(token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      if (decoded.type !== 'sidebar_access') {
+        throw Errors.Unauthorized('Tipo di token non valido per sidebar');
+      }
+
+      return decoded;
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw Errors.Unauthorized('Token sidebar scaduto');
+      }
+      throw Errors.Unauthorized('Token sidebar non valido');
     }
   }
 

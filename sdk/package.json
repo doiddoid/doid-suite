@@ -1,0 +1,29 @@
+{
+  "name": "@doid/sidebar-sdk",
+  "version": "1.0.0",
+  "description": "DOID Suite Sidebar SDK - Componente standalone per integrare la sidebar Suite in qualsiasi app DOID",
+  "main": "dist/doid-sidebar.min.js",
+  "module": "src/doid-sidebar.js",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "npm run build:minify",
+    "build:minify": "terser src/doid-sidebar.js -o dist/doid-sidebar.min.js -c -m --source-map \"url='doid-sidebar.min.js.map'\"",
+    "build:copy": "cp src/doid-sidebar.js dist/doid-sidebar.js",
+    "watch": "nodemon --watch src -e js --exec 'npm run build'"
+  },
+  "keywords": [
+    "doid",
+    "sidebar",
+    "sdk",
+    "widget"
+  ],
+  "author": "DOID",
+  "license": "MIT",
+  "devDependencies": {
+    "terser": "^5.27.0",
+    "nodemon": "^3.0.2"
+  }
+}

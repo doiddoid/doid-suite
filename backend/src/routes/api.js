@@ -374,7 +374,68 @@ router.post('/sso/authenticate',
         }
       }
 
-      // 8. Restituisci dati completi per SSO
+      // 8. Genera token sidebar per l'app esterna (lunga durata)
+      const sidebarToken = authService.generateSidebarToken({
+        userId: user.id,
+        organizationId: organization.id,
+        activityId: activity?.id,
+        service: requestedService,
+        role: decoded.role
+      });
+
+      // 9. Ottieni tutte le attività dell'utente per la sidebar
+      let userActivities = [];
+      const { data: activityUsers } = await supabaseAdmin
+        .from('activity_users')
+        .select(`
+          role,
+          activity:activities (
+            id,
+            name,
+            slug,
+            status,
+            organization_id
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (activityUsers) {
+        userActivities = activityUsers
+          .filter(au => au.activity && au.activity.status === 'active')
+          .map(au => ({
+            id: au.activity.id,
+            name: au.activity.name,
+            slug: au.activity.slug,
+            role: au.role
+          }));
+      }
+
+      // 10. Ottieni gli abbonamenti attivi dell'utente per tutti i servizi
+      let userSubscriptions = [];
+      if (activity) {
+        const { data: subs } = await supabaseAdmin
+          .from('subscriptions')
+          .select(`
+            id,
+            status,
+            service:services (
+              code,
+              name
+            )
+          `)
+          .eq('activity_id', activity.id)
+          .in('status', ['active', 'trial']);
+
+        if (subs) {
+          userSubscriptions = subs.map(s => ({
+            serviceCode: s.service?.code,
+            serviceName: s.service?.name,
+            status: s.status
+          }));
+        }
+      }
+
+      // 11. Restituisci dati completi per SSO
       res.json({
         success: true,
         data: {
@@ -400,18 +461,24 @@ router.post('/sso/authenticate',
             name: activity.name,
             slug: activity.slug
           } : null,
-          // Dati licenza/abbonamento per Smart Review
+          // Lista attività utente per sidebar
+          activities: userActivities,
+          // Dati licenza/abbonamento per il servizio richiesto
           license: {
             isValid: licenseValid,
             expiresAt: licenseExpiration,
             planCode: planCode,
             features: planFeatures,
-            subscription: subscription
+            subscription: subscription,
+            // Tutti gli abbonamenti attivi per la sidebar
+            subscriptions: userSubscriptions
           },
           // Ruolo utente nell'organizzazione/attività
           role: decoded.role,
           // Servizio richiesto
           service: requestedService,
+          // Token sidebar per l'app esterna (24h)
+          sidebarToken: sidebarToken,
           // Timestamp per audit
           authenticatedAt: new Date().toISOString()
         }
