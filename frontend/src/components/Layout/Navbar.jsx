@@ -25,7 +25,10 @@ export default function Navbar() {
               <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">D</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">DOID Suite</span>
+              <span className="text-xl text-gray-900">
+                <span className="font-bold">DOID</span>{' '}
+                <span className="font-normal text-primary-600">Suite</span>
+              </span>
             </Link>
           </div>
 
