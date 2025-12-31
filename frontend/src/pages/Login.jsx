@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
@@ -44,11 +44,14 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <span className="text-white font-bold text-2xl">D</span>
+          <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-500/20">
+            <Sparkles className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">DOID Suite</h1>
-          <p className="text-gray-500 mt-2">Accedi al tuo account</p>
+          <div className="flex flex-col items-center">
+            <span className="text-3xl font-bold text-gray-900">DOID</span>
+            <span className="text-xs text-gray-400 uppercase tracking-wider">Suite</span>
+          </div>
+          <p className="text-gray-500 mt-3">Accedi al tuo account</p>
         </div>
 
         {/* Form */}

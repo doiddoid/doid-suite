@@ -302,9 +302,9 @@ export function ActivityProvider({ children }) {
     try {
       const response = await activitiesApi.generateAccessToken(activityId, serviceCode);
       if (response.success) {
-        // Redirect all'app esterna
+        // Apri l'app esterna in una nuova tab
         const { redirectUrl } = response.data;
-        window.location.href = redirectUrl;
+        window.open(redirectUrl, '_blank', 'noopener,noreferrer');
         return { success: true };
       }
       return { success: false, error: response.error };
