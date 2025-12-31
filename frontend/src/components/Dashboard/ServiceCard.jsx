@@ -1,6 +1,17 @@
 import { useState } from 'react';
-import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard } from 'lucide-react';
+import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard, Clock, Info } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+
+// Servizi attualmente non disponibili (presto disponibili)
+const UNAVAILABLE_SERVICES = ['menu_digitale', 'display_suite'];
+
+// URL delle landing page per i servizi
+const SERVICE_LANDING_URLS = {
+  smart_review: 'https://review.doid.it',
+  smart_page: 'https://page.doid.it',
+  menu_digitale: null,
+  display_suite: null,
+};
 
 // Mappa icone per i servizi
 const iconMap = {
@@ -81,8 +92,23 @@ export default function ServiceCard({
     };
   };
 
+  // Verifica se il servizio è disponibile
+  const isServiceUnavailable = UNAVAILABLE_SERVICES.includes(service.code);
+  const landingUrl = SERVICE_LANDING_URLS[service.code];
+
   // Determina label e stile del pulsante
   const getButtonConfig = () => {
+    // Servizi non disponibili (Menu Digitale, Display Suite)
+    if (isServiceUnavailable) {
+      return {
+        label: 'Presto disponibile',
+        icon: Clock,
+        className: 'bg-gray-100 text-gray-500 cursor-not-allowed',
+        disabled: true
+      };
+    }
+
+    // Servizio attivo - mostra Accedi
     if (canAccess) {
       return {
         label: 'Accedi',
@@ -92,11 +118,17 @@ export default function ServiceCard({
       };
     }
 
+    // Nessuna subscription - mostra Attiva Trial o Scopri di più
     if (!subscription) {
       return {
         label: 'Attiva Trial',
         icon: Play,
-        className: 'bg-primary-600 text-white hover:bg-primary-700'
+        className: 'bg-primary-600 text-white hover:bg-primary-700',
+        secondaryAction: landingUrl ? {
+          label: 'Scopri di più',
+          icon: Info,
+          url: landingUrl
+        } : null
       };
     }
 
@@ -167,22 +199,37 @@ export default function ServiceCard({
         )}
       </div>
 
-      {/* Action Button */}
-      <button
-        onClick={handleAction}
-        disabled={loading}
-        className={`w-full py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center space-x-2 ${buttonConfig.className} disabled:opacity-50 disabled:cursor-not-allowed`}
-        style={buttonConfig.style}
-      >
-        {loading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <>
-            <span>{buttonConfig.label}</span>
-            <ButtonIcon className="w-4 h-4" />
-          </>
+      {/* Action Buttons */}
+      <div className="space-y-2">
+        <button
+          onClick={handleAction}
+          disabled={loading || buttonConfig.disabled}
+          className={`w-full py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center space-x-2 ${buttonConfig.className} disabled:opacity-50 disabled:cursor-not-allowed`}
+          style={buttonConfig.style}
+        >
+          {loading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <span>{buttonConfig.label}</span>
+              <ButtonIcon className="w-4 h-4" />
+            </>
+          )}
+        </button>
+
+        {/* Pulsante secondario "Scopri di più" */}
+        {buttonConfig.secondaryAction && (
+          <a
+            href={buttonConfig.secondaryAction.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center space-x-2 bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200"
+          >
+            <span>{buttonConfig.secondaryAction.label}</span>
+            <buttonConfig.secondaryAction.icon className="w-4 h-4" />
+          </a>
         )}
-      </button>
+      </div>
     </div>
   );
 }
