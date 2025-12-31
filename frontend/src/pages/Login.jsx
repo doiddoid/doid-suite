@@ -47,9 +47,9 @@ export default function Login() {
           <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-500/20">
             <Sparkles className="w-7 h-7 text-white" />
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-3xl font-bold text-gray-900">DOID</span>
-            <span className="text-xs text-gray-400 uppercase tracking-wider">Suite</span>
+          <div className="flex items-baseline justify-center gap-1">
+            <span className="text-2xl text-gray-400 font-normal">DOID</span>
+            <span className="text-2xl text-gray-900 font-bold">Suite</span>
           </div>
           <p className="text-gray-500 mt-3">Accedi al tuo account</p>
         </div>
