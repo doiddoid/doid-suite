@@ -70,13 +70,25 @@ export default function ServiceCard({
     }
   };
 
+  // Stile per pulsante "Accedi" colorato in base al servizio
+  const getAccessButtonStyle = () => {
+    const color = service.color || '#6366f1';
+    const bgLight = service.bgLight || `${color}15`;
+    return {
+      backgroundColor: bgLight,
+      color: color,
+      border: `1px solid ${color}40`,
+    };
+  };
+
   // Determina label e stile del pulsante
   const getButtonConfig = () => {
     if (canAccess) {
       return {
         label: 'Accedi',
         icon: ExternalLink,
-        className: 'bg-gray-900 text-white hover:bg-gray-800'
+        className: 'hover:opacity-80 font-semibold',
+        style: getAccessButtonStyle()
       };
     }
 
@@ -115,12 +127,15 @@ export default function ServiceCard({
   const ButtonIcon = buttonConfig.icon;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100 flex flex-col h-full">
+    <div
+      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 flex flex-col h-full"
+      style={{ borderWidth: '1px', borderStyle: 'solid', borderColor: service.borderColor || '#e5e7eb' }}
+    >
       {/* Header con icona e badge */}
       <div className="flex items-start justify-between mb-4">
         <div
           className="w-12 h-12 rounded-lg flex items-center justify-center"
-          style={{ backgroundColor: `${service.color || '#6366f1'}20` }}
+          style={{ backgroundColor: service.bgLight || `${service.color || '#6366f1'}20` }}
         >
           <Icon
             className="w-6 h-6"
@@ -157,6 +172,7 @@ export default function ServiceCard({
         onClick={handleAction}
         disabled={loading}
         className={`w-full py-2.5 px-4 rounded-lg font-medium transition-all flex items-center justify-center space-x-2 ${buttonConfig.className} disabled:opacity-50 disabled:cursor-not-allowed`}
+        style={buttonConfig.style}
       >
         {loading ? (
           <Loader2 className="w-4 h-4 animate-spin" />

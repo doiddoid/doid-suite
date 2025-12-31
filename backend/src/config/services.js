@@ -6,7 +6,9 @@ export const SERVICES = {
     description: 'Gestione recensioni intelligente per la tua attività',
     appUrl: process.env.SMART_REVIEW_URL || 'https://review.doid.it',
     icon: 'Star',
-    color: '#FFB800'
+    color: '#F59E0B',
+    bgLight: '#FFFBEB',
+    borderColor: '#FDE68A'
   },
   smart_page: {
     code: 'smart_page',
@@ -14,7 +16,9 @@ export const SERVICES = {
     description: 'Crea pagine web professionali in pochi click',
     appUrl: process.env.SMART_PAGE_URL || 'https://page.doid.it',
     icon: 'FileText',
-    color: '#3B82F6'
+    color: '#3B82F6',
+    bgLight: '#EFF6FF',
+    borderColor: '#BFDBFE'
   },
   menu_digitale: {
     code: 'menu_digitale',
@@ -22,7 +26,9 @@ export const SERVICES = {
     description: 'Il tuo menu sempre aggiornato e accessibile',
     appUrl: process.env.MENU_DIGITALE_URL || 'https://menu.doid.it',
     icon: 'UtensilsCrossed',
-    color: '#10B981'
+    color: '#10B981',
+    bgLight: '#ECFDF5',
+    borderColor: '#A7F3D0'
   },
   display_suite: {
     code: 'display_suite',
@@ -30,7 +36,9 @@ export const SERVICES = {
     description: 'Digital signage per la tua attività',
     appUrl: process.env.DISPLAY_SUITE_URL || 'https://display.doid.it',
     icon: 'Monitor',
-    color: '#8B5CF6'
+    color: '#8B5CF6',
+    bgLight: '#F5F3FF',
+    borderColor: '#DDD6FE'
   }
 };
 
