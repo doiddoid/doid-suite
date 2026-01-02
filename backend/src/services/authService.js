@@ -169,6 +169,33 @@ class AuthService {
       }));
   }
 
+  // Genera token per impersonation (admin che accede come altro utente)
+  generateImpersonationTokens({ userId, email, fullName, impersonatedBy, impersonatedByEmail }) {
+    const accessPayload = {
+      sub: userId,
+      email,
+      user_metadata: { full_name: fullName },
+      type: 'impersonation',
+      impersonatedBy,
+      impersonatedByEmail,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 ore
+    };
+
+    const refreshPayload = {
+      sub: userId,
+      type: 'impersonation_refresh',
+      impersonatedBy,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7) // 7 giorni
+    };
+
+    return {
+      accessToken: jwt.sign(accessPayload, process.env.JWT_SECRET),
+      refreshToken: jwt.sign(refreshPayload, process.env.JWT_SECRET)
+    };
+  }
+
   // Genera token per app esterne
   generateExternalToken({ userId, organizationId, activityId, service, role }) {
     const payload = {

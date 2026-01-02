@@ -1093,11 +1093,10 @@ router.post('/impersonate',
     const authService = (await import('../services/authService.js')).default;
 
     // Genera token JWT per l'utente target
-    const tokens = authService.generateTokens({
-      id: userId,
+    const tokens = authService.generateImpersonationTokens({
+      userId: userId,
       email: authUser.user.email,
-      user_metadata: authUser.user.user_metadata,
-      // Flag per indicare che è una sessione impersonata
+      fullName: authUser.user.user_metadata?.full_name || authUser.user.email,
       impersonatedBy: req.user.id,
       impersonatedByEmail: req.user.email
     });
@@ -1181,10 +1180,10 @@ router.post('/impersonate/organization',
     const authService = (await import('../services/authService.js')).default;
 
     // Genera token JWT per l'owner
-    const tokens = authService.generateTokens({
-      id: orgOwner.user_id,
+    const tokens = authService.generateImpersonationTokens({
+      userId: orgOwner.user_id,
       email: authUser.user.email,
-      user_metadata: authUser.user.user_metadata,
+      fullName: authUser.user.user_metadata?.full_name || authUser.user.email,
       impersonatedBy: req.user.id,
       impersonatedByEmail: req.user.email
     });

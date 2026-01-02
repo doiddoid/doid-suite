@@ -17,7 +17,43 @@ export const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Verifica il token con Supabase
+    // Prima prova a verificare come token di impersonation (JWT custom)
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.type === 'impersonation') {
+        // Token di impersonation valido - recupera l'utente da Supabase
+        const { data: authUser, error: userError } = await supabaseAdmin.auth.admin.getUserById(decoded.sub);
+
+        if (userError || !authUser?.user) {
+          return res.status(401).json({
+            success: false,
+            error: 'Utente impersonato non trovato'
+          });
+        }
+
+        req.user = {
+          id: decoded.sub,
+          email: decoded.email,
+          user_metadata: decoded.user_metadata,
+          impersonation: {
+            active: true,
+            impersonatedBy: decoded.impersonatedBy,
+            impersonatedByEmail: decoded.impersonatedByEmail
+          }
+        };
+        req.token = token;
+        req.user.isSuperAdmin = isSuperAdmin(decoded.email);
+
+        // Per impersonation, creiamo un client admin (l'utente impersonato potrebbe non avere una sessione attiva)
+        req.supabase = supabaseAdmin;
+
+        return next();
+      }
+    } catch (jwtError) {
+      // Non è un token di impersonation, continua con Supabase
+    }
+
+    // Verifica il token con Supabase (flusso normale)
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
