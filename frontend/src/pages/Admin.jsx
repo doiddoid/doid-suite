@@ -48,6 +48,7 @@ export default function Admin() {
   const [accessingService, setAccessingService] = useState(null);
   const [impersonating, setImpersonating] = useState(false);
   const [expandedOrgs, setExpandedOrgs] = useState({});
+  const [clientTypeFilter, setClientTypeFilter] = useState('all'); // 'all', 'agency', 'single'
 
   // Fetch stats on mount
   useEffect(() => {
@@ -279,7 +280,9 @@ export default function Admin() {
   };
 
   const filteredUsers = filterItems(users, ['email', 'fullName']);
-  const filteredOrganizations = filterItems(organizations, ['name', 'email']);
+  const filteredOrganizations = filterItems(organizations, ['name', 'email']).filter(org =>
+    clientTypeFilter === 'all' || org.accountType === clientTypeFilter
+  );
   const filteredActivities = filterItems(activities, ['name', 'email', 'organization.name']);
   const filteredPackages = filterItems(packages, ['name', 'code', 'description']);
 
@@ -471,9 +474,9 @@ export default function Admin() {
 
   const tabs = [
     { id: 'stats', name: 'Statistiche', icon: Activity },
-    { id: 'clienti', name: 'Clienti', icon: Users, count: organizations.length },
-    { id: 'plans', name: 'Piani Servizi', icon: Layers, count: plans.length },
-    { id: 'packages', name: 'Pacchetti Agency', icon: Package, count: packages.length },
+    { id: 'clienti', name: 'Clienti', icon: Users },
+    { id: 'plans', name: 'Piani Servizi', icon: Layers },
+    { id: 'packages', name: 'Pacchetti Agency', icon: Package },
   ];
 
   const getStatusBadge = (status) => {
@@ -695,21 +698,59 @@ export default function Admin() {
               <div className="flex gap-6">
                 {/* Lista Clienti */}
                 <div className="flex-1 bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="p-4 border-b flex items-center justify-between gap-4">
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Cerca clienti..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
+                  <div className="p-4 border-b space-y-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Cerca clienti..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </div>
+                      <button onClick={() => openModal('organization', 'create')} className="btn-primary flex items-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        Nuovo Cliente
+                      </button>
                     </div>
-                    <button onClick={() => openModal('organization', 'create')} className="btn-primary flex items-center gap-2">
-                      <Plus className="w-4 h-4" />
-                      Nuovo Cliente
-                    </button>
+                    {/* Filtro tipo cliente */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">Filtra:</span>
+                      <button
+                        onClick={() => setClientTypeFilter('all')}
+                        className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                          clientTypeFilter === 'all'
+                            ? 'bg-indigo-100 text-indigo-700'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Tutti ({organizations.length})
+                      </button>
+                      <button
+                        onClick={() => setClientTypeFilter('agency')}
+                        className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+                          clientTypeFilter === 'agency'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Briefcase className="w-3.5 h-3.5" />
+                        Agenzie ({organizations.filter(o => o.accountType === 'agency').length})
+                      </button>
+                      <button
+                        onClick={() => setClientTypeFilter('single')}
+                        className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
+                          clientTypeFilter === 'single'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <User className="w-3.5 h-3.5" />
+                        Singoli ({organizations.filter(o => o.accountType === 'single').length})
+                      </button>
+                    </div>
                   </div>
                   <div className="divide-y divide-gray-100 max-h-[calc(100vh-320px)] overflow-y-auto">
                     {filteredOrganizations.length === 0 ? (

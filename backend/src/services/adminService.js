@@ -836,9 +836,20 @@ class AdminService {
 
   // Ottieni statistiche globali
   async getGlobalStats() {
-    // Conta utenti totali
-    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-    const totalUsers = users?.length || 0;
+    // Conta utenti totali (con paginazione per gestire più di 1000 utenti)
+    let totalUsers = 0;
+    let allUsers = [];
+    let page = 1;
+    const perPage = 1000;
+
+    while (true) {
+      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+      if (!users || users.length === 0) break;
+      allUsers = allUsers.concat(users);
+      totalUsers += users.length;
+      if (users.length < perPage) break;
+      page++;
+    }
 
     // Conta organizzazioni
     const { count: totalOrgs } = await supabaseAdmin
@@ -925,7 +936,7 @@ class AdminService {
     // Utenti registrati negli ultimi 30 giorni
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const newUsersLast30Days = users?.filter(u =>
+    const newUsersLast30Days = allUsers?.filter(u =>
       new Date(u.created_at) > thirtyDaysAgo
     ).length || 0;
 
