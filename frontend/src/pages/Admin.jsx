@@ -48,6 +48,7 @@ export default function Admin() {
   const [accessingService, setAccessingService] = useState(null);
   const [impersonating, setImpersonating] = useState(false);
   const [expandedOrgs, setExpandedOrgs] = useState({});
+  const [expandedOrgDetails, setExpandedOrgDetails] = useState({}); // Dettagli per orgs espanse
   const [clientTypeFilter, setClientTypeFilter] = useState('all'); // 'all', 'agency', 'single'
 
   // Fetch stats on mount
@@ -194,6 +195,28 @@ export default function Admin() {
     setSelectedItem(item);
     setItemDetails(null);
     fetchItemDetails(type, item.id);
+  };
+
+  // Fetch dettagli per organizzazione espansa (senza selezionarla)
+  const fetchExpandedOrgDetails = async (orgId) => {
+    if (expandedOrgDetails[orgId]) return; // Già caricato
+    try {
+      const response = await api.request(`/admin/organizations/${orgId}`);
+      if (response.success) {
+        setExpandedOrgDetails(prev => ({ ...prev, [orgId]: response.data }));
+      }
+    } catch (err) {
+      console.error('Error fetching org details:', err);
+    }
+  };
+
+  // Toggle espansione organizzazione
+  const toggleOrgExpansion = (org) => {
+    const newExpanded = !expandedOrgs[org.id];
+    setExpandedOrgs(prev => ({ ...prev, [org.id]: newExpanded }));
+    if (newExpanded && org.accountType === 'agency') {
+      fetchExpandedOrgDetails(org.id);
+    }
   };
 
   // Accedi al servizio come admin
@@ -772,7 +795,7 @@ export default function Admin() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setExpandedOrgs(prev => ({ ...prev, [org.id]: !prev[org.id] }));
+                                  toggleOrgExpansion(org);
                                 }}
                                 className={`p-1 rounded hover:bg-gray-200 transition-colors ${org.accountType !== 'agency' || !org.activitiesCount ? 'invisible' : ''}`}
                               >
@@ -811,6 +834,39 @@ export default function Admin() {
                                 <p className="text-sm text-gray-500 truncate">{org.email || 'Nessuna email'}</p>
                               </div>
 
+                              {/* Icone servizi attivi */}
+                              {(() => {
+                                const orgData = expandedOrgDetails[org.id] || (selectedItem?.id === org.id ? itemDetails : null);
+                                const subscriptions = (orgData?.subscriptions || []).filter(s => ['active', 'trial'].includes(s.status));
+                                if (subscriptions.length === 0) return null;
+
+                                // Raggruppa per servizio (evita duplicati)
+                                const serviceMap = new Map();
+                                subscriptions.forEach(sub => {
+                                  if (sub.plan?.service) {
+                                    serviceMap.set(sub.plan.service.code, sub.plan.service);
+                                  }
+                                });
+
+                                return (
+                                  <div className="flex items-center gap-1">
+                                    {Array.from(serviceMap.values()).slice(0, 4).map((service) => {
+                                      const ServiceIcon = SERVICE_ICONS[service.icon] || Star;
+                                      return (
+                                        <div
+                                          key={service.code}
+                                          className="w-6 h-6 rounded flex items-center justify-center"
+                                          style={{ backgroundColor: `${service.color}20` }}
+                                          title={service.name}
+                                        >
+                                          <ServiceIcon className="w-3.5 h-3.5" style={{ color: service.color }} />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })()}
+
                               {/* Status e contatori */}
                               <div className="text-right">
                                 {getStatusBadge(org.status)}
@@ -837,42 +893,59 @@ export default function Admin() {
                           </div>
 
                           {/* Attività espanse (per agenzie) */}
-                          {expandedOrgs[org.id] && org.accountType === 'agency' && itemDetails?.activities && selectedItem?.id === org.id && (
-                            <div className="bg-gray-50 border-t">
-                              {itemDetails.activities.map((act) => (
-                                <div
-                                  key={act.id}
-                                  onClick={() => {
-                                    setSelectedItem({ ...act, type: 'activity', organizationName: org.name });
-                                    fetchItemDetails('activity', act.id);
-                                  }}
-                                  className={`pl-14 pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
-                                    selectedItem?.id === act.id && selectedItem?.type === 'activity' ? 'bg-indigo-50' : ''
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white">
-                                      <Store className="w-4 h-4" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="font-medium text-gray-800 text-sm">{act.name}</p>
-                                      <p className="text-xs text-gray-500">
-                                        {act.owner?.email || 'Nessun owner'}
-                                      </p>
-                                    </div>
-                                    <div className="text-right">
-                                      {getStatusBadge(act.status)}
-                                    </div>
+                          {expandedOrgs[org.id] && org.accountType === 'agency' && (() => {
+                            // Usa i dettagli espansi o quelli dell'item selezionato
+                            const orgData = expandedOrgDetails[org.id] || (selectedItem?.id === org.id ? itemDetails : null);
+                            const activities = orgData?.activities || [];
+
+                            if (!orgData) {
+                              return (
+                                <div className="bg-gray-50 border-t pl-14 pr-4 py-3">
+                                  <div className="flex items-center gap-2 text-gray-500">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="text-sm">Caricamento...</span>
                                   </div>
                                 </div>
-                              ))}
-                              {itemDetails.activities.length === 0 && (
-                                <div className="pl-14 pr-4 py-3 text-sm text-gray-500 italic">
-                                  Nessuna attività
-                                </div>
-                              )}
-                            </div>
-                          )}
+                              );
+                            }
+
+                            return (
+                              <div className="bg-gray-50 border-t">
+                                {activities.map((act) => (
+                                  <div
+                                    key={act.id}
+                                    onClick={() => {
+                                      setSelectedItem({ ...act, type: 'activity', organizationName: org.name });
+                                      fetchItemDetails('activity', act.id);
+                                    }}
+                                    className={`pl-14 pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
+                                      selectedItem?.id === act.id && selectedItem?.type === 'activity' ? 'bg-indigo-50' : ''
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white">
+                                        <Store className="w-4 h-4" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-gray-800 text-sm">{act.name}</p>
+                                        <p className="text-xs text-gray-500">
+                                          {act.owner?.email || 'Nessun owner'}
+                                        </p>
+                                      </div>
+                                      <div className="text-right">
+                                        {getStatusBadge(act.status)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                                {activities.length === 0 && (
+                                  <div className="pl-14 pr-4 py-3 text-sm text-gray-500 italic">
+                                    Nessuna attività
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       ))
                     )}
