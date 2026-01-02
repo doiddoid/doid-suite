@@ -1192,10 +1192,10 @@ export default function Admin() {
                                     {sub.plan?.service?.code && selectedItem?.id && (
                                       <button
                                         onClick={() => {
-                                          // Trova l'owner dell'attività
+                                          // Trova l'owner dell'attività (usa userId, non id che è l'ID della riga activity_users)
                                           const owner = (itemDetails?.members || []).find(m => m.role === 'owner');
-                                          if (owner?.id) {
-                                            handleAdminAccessService(owner.id, selectedItem.id, sub.plan.service.code);
+                                          if (owner?.userId) {
+                                            handleAdminAccessService(owner.userId, selectedItem.id, sub.plan.service.code);
                                           } else {
                                             setError('Impossibile trovare il proprietario dell\'attività');
                                           }
