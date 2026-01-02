@@ -45,6 +45,7 @@ export default function Admin() {
   const [selectedService, setSelectedService] = useState(null);
   const [itemDetails, setItemDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [accessingService, setAccessingService] = useState(null);
 
   // Fetch stats on mount
   useEffect(() => {
@@ -191,6 +192,28 @@ export default function Admin() {
     setSelectedItem(item);
     setItemDetails(null);
     fetchItemDetails(type, item.id);
+  };
+
+  // Accedi al servizio come admin
+  const handleAdminAccessService = async (userId, activityId, serviceCode) => {
+    setAccessingService(serviceCode);
+    try {
+      const response = await api.request('/admin/access-service', {
+        method: 'POST',
+        body: JSON.stringify({ userId, activityId, serviceCode })
+      });
+
+      if (response.success) {
+        // Apri in nuova tab
+        window.open(response.data.redirectUrl, '_blank');
+      } else {
+        setError(response.error || 'Errore nell\'accesso al servizio');
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAccessingService(null);
+    }
   };
 
   // Filter items based on search
@@ -762,16 +785,19 @@ export default function Admin() {
                                         </div>
                                         {getStatusBadge(sub.status)}
                                       </div>
-                                      {sub.plan?.service?.appUrl && (
-                                        <a
-                                          href={sub.plan.service.appUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 mt-2"
+                                      {sub.plan?.service?.code && sub.activityId && (
+                                        <button
+                                          onClick={() => handleAdminAccessService(selectedItem.id, sub.activityId, sub.plan.service.code)}
+                                          disabled={accessingService === sub.plan.service.code}
+                                          className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 mt-2 disabled:opacity-50"
                                         >
-                                          <ExternalLink className="w-3 h-3" />
+                                          {accessingService === sub.plan.service.code ? (
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                          ) : (
+                                            <ExternalLink className="w-3 h-3" />
+                                          )}
                                           Accedi al servizio
-                                        </a>
+                                        </button>
                                       )}
                                     </div>
                                   );
@@ -1163,20 +1189,31 @@ export default function Admin() {
                                     )}
 
                                     {/* Accedi al servizio */}
-                                    {sub.plan?.service?.appUrl && (
-                                      <a
-                                        href={sub.plan.service.appUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-lg text-sm font-medium transition-colors"
+                                    {sub.plan?.service?.code && selectedItem?.id && (
+                                      <button
+                                        onClick={() => {
+                                          // Trova l'owner dell'attività
+                                          const owner = (itemDetails?.members || []).find(m => m.role === 'owner');
+                                          if (owner?.id) {
+                                            handleAdminAccessService(owner.id, selectedItem.id, sub.plan.service.code);
+                                          } else {
+                                            setError('Impossibile trovare il proprietario dell\'attività');
+                                          }
+                                        }}
+                                        disabled={accessingService === sub.plan.service.code}
+                                        className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
                                         style={{
                                           backgroundColor: `${serviceColor}15`,
                                           color: serviceColor
                                         }}
                                       >
-                                        <ExternalLink className="w-4 h-4" />
+                                        {accessingService === sub.plan.service.code ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          <ExternalLink className="w-4 h-4" />
+                                        )}
                                         Accedi a {sub.plan.service.name}
-                                      </a>
+                                      </button>
                                     )}
                                   </div>
                                 );

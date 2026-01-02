@@ -884,4 +884,174 @@ router.delete('/plans/:id',
   })
 );
 
+// ==================== ADMIN ACCESS TO SERVICES ====================
+
+// POST /api/admin/access-service
+// Genera token SSO per accedere al servizio di qualsiasi utente/attività
+router.post('/access-service',
+  [
+    body('userId').isUUID().withMessage('ID utente richiesto'),
+    body('activityId').isUUID().withMessage('ID attività richiesto'),
+    body('serviceCode').trim().notEmpty().withMessage('Codice servizio richiesto')
+  ],
+  validate,
+  logAdminAction('admin_access_service'),
+  asyncHandler(async (req, res) => {
+    const { userId, activityId, serviceCode } = req.body;
+
+    // Verifica che il servizio esista
+    const { data: service, error: serviceError } = await supabaseAdmin
+      .from('services')
+      .select('*')
+      .eq('code', serviceCode)
+      .eq('is_active', true)
+      .single();
+
+    if (serviceError || !service) {
+      return res.status(404).json({
+        success: false,
+        error: 'Servizio non trovato'
+      });
+    }
+
+    // Verifica che l'utente esista
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (authError || !authUser?.user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Utente non trovato'
+      });
+    }
+
+    // Verifica che l'attività esista
+    const { data: activity, error: activityError } = await supabaseAdmin
+      .from('activities')
+      .select('*, organization:organizations(id, name)')
+      .eq('id', activityId)
+      .single();
+
+    if (activityError || !activity) {
+      return res.status(404).json({
+        success: false,
+        error: 'Attività non trovata'
+      });
+    }
+
+    // Importa authService per generare il token
+    const authService = (await import('../services/authService.js')).default;
+
+    // Genera il token SSO con ruolo admin (super admin che accede)
+    const token = authService.generateExternalToken({
+      userId: userId,
+      activityId: activityId,
+      organizationId: activity.organization_id,
+      service: serviceCode,
+      role: 'owner', // Super admin ha accesso completo
+      adminAccess: true, // Flag per indicare accesso admin
+      adminEmail: req.user.email
+    });
+
+    // URL di redirect con token
+    const redirectUrl = `${service.app_url}/auth/sso?token=${token}`;
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        redirectUrl,
+        expiresIn: 300, // 5 minuti
+        targetUser: authUser.user.email,
+        targetActivity: activity.name,
+        service: service.name
+      }
+    });
+  })
+);
+
+// GET /api/admin/users/:userId/subscriptions
+// Ottieni tutte le sottoscrizioni di un utente
+router.get('/users/:userId/subscriptions',
+  [
+    param('userId').isUUID().withMessage('ID utente non valido')
+  ],
+  validate,
+  logAdminAction('view_user_subscriptions'),
+  asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+
+    // Ottieni le attività dell'utente
+    const { data: activities, error: actError } = await supabaseAdmin
+      .from('activity_users')
+      .select(`
+        role,
+        activity:activities (
+          id,
+          name,
+          status,
+          organization_id
+        )
+      `)
+      .eq('user_id', userId);
+
+    if (actError) throw actError;
+
+    // Per ogni attività, ottieni le sottoscrizioni
+    const subscriptions = [];
+    for (const au of activities || []) {
+      const { data: subs, error: subError } = await supabaseAdmin
+        .from('subscriptions')
+        .select(`
+          *,
+          plan:plans (
+            id,
+            code,
+            name,
+            service:services (
+              id,
+              code,
+              name,
+              icon,
+              color,
+              app_url
+            )
+          )
+        `)
+        .eq('activity_id', au.activity.id)
+        .in('status', ['active', 'trial']);
+
+      if (!subError && subs) {
+        for (const sub of subs) {
+          subscriptions.push({
+            id: sub.id,
+            activityId: au.activity.id,
+            activityName: au.activity.name,
+            userRole: au.role,
+            status: sub.status,
+            billingCycle: sub.billing_cycle,
+            currentPeriodEnd: sub.current_period_end,
+            plan: sub.plan ? {
+              id: sub.plan.id,
+              code: sub.plan.code,
+              name: sub.plan.name
+            } : null,
+            service: sub.plan?.service ? {
+              id: sub.plan.service.id,
+              code: sub.plan.service.code,
+              name: sub.plan.service.name,
+              icon: sub.plan.service.icon,
+              color: sub.plan.service.color,
+              appUrl: sub.plan.service.app_url
+            } : null
+          });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: { subscriptions }
+    });
+  })
+);
+
 export default router;
