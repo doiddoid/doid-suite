@@ -1054,4 +1054,164 @@ router.get('/users/:userId/subscriptions',
   })
 );
 
+// ==================== IMPERSONATION ====================
+
+// POST /api/admin/impersonate
+// Genera token di sessione per accedere come un altro utente
+router.post('/impersonate',
+  [
+    body('userId').isUUID().withMessage('ID utente richiesto')
+  ],
+  validate,
+  logAdminAction('impersonate_user'),
+  asyncHandler(async (req, res) => {
+    const { userId } = req.body;
+
+    // Verifica che l'utente esista
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (authError || !authUser?.user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Utente non trovato'
+      });
+    }
+
+    // Ottieni le organizzazioni dell'utente
+    const { data: orgUsers } = await supabaseAdmin
+      .from('organization_users')
+      .select(`
+        role,
+        organization:organizations (
+          id,
+          name,
+          account_type
+        )
+      `)
+      .eq('user_id', userId);
+
+    // Importa authService
+    const authService = (await import('../services/authService.js')).default;
+
+    // Genera token JWT per l'utente target
+    const tokens = authService.generateTokens({
+      id: userId,
+      email: authUser.user.email,
+      user_metadata: authUser.user.user_metadata,
+      // Flag per indicare che è una sessione impersonata
+      impersonatedBy: req.user.id,
+      impersonatedByEmail: req.user.email
+    });
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user: {
+          id: userId,
+          email: authUser.user.email,
+          fullName: authUser.user.user_metadata?.full_name || authUser.user.email,
+          organizations: orgUsers?.map(ou => ({
+            id: ou.organization.id,
+            name: ou.organization.name,
+            accountType: ou.organization.account_type,
+            role: ou.role
+          })) || []
+        },
+        impersonation: {
+          active: true,
+          adminId: req.user.id,
+          adminEmail: req.user.email
+        }
+      }
+    });
+  })
+);
+
+// POST /api/admin/impersonate/organization
+// Accedi direttamente alla dashboard di un'organizzazione specifica
+router.post('/impersonate/organization',
+  [
+    body('organizationId').isUUID().withMessage('ID organizzazione richiesto')
+  ],
+  validate,
+  logAdminAction('impersonate_organization'),
+  asyncHandler(async (req, res) => {
+    const { organizationId } = req.body;
+
+    // Trova l'organizzazione
+    const { data: org, error: orgError } = await supabaseAdmin
+      .from('organizations')
+      .select('*')
+      .eq('id', organizationId)
+      .single();
+
+    if (orgError || !org) {
+      return res.status(404).json({
+        success: false,
+        error: 'Organizzazione non trovata'
+      });
+    }
+
+    // Trova l'owner dell'organizzazione
+    const { data: orgOwner } = await supabaseAdmin
+      .from('organization_users')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+      .eq('role', 'owner')
+      .single();
+
+    if (!orgOwner) {
+      return res.status(404).json({
+        success: false,
+        error: 'Owner dell\'organizzazione non trovato'
+      });
+    }
+
+    // Ottieni i dati dell'owner
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(orgOwner.user_id);
+    if (authError || !authUser?.user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Utente owner non trovato'
+      });
+    }
+
+    // Importa authService
+    const authService = (await import('../services/authService.js')).default;
+
+    // Genera token JWT per l'owner
+    const tokens = authService.generateTokens({
+      id: orgOwner.user_id,
+      email: authUser.user.email,
+      user_metadata: authUser.user.user_metadata,
+      impersonatedBy: req.user.id,
+      impersonatedByEmail: req.user.email
+    });
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user: {
+          id: orgOwner.user_id,
+          email: authUser.user.email,
+          fullName: authUser.user.user_metadata?.full_name || authUser.user.email
+        },
+        organization: {
+          id: org.id,
+          name: org.name,
+          accountType: org.account_type
+        },
+        impersonation: {
+          active: true,
+          adminId: req.user.id,
+          adminEmail: req.user.email
+        }
+      }
+    });
+  })
+);
+
 export default router;

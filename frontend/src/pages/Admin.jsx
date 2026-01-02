@@ -6,7 +6,7 @@ import {
   Mail, Calendar, Hash, CreditCard, Star, FileText,
   Check, Clock, Ban, Search, UtensilsCrossed, Monitor,
   User, Shield, Briefcase, MapPin, Phone, Layers,
-  ExternalLink, Loader2
+  ExternalLink, Loader2, LogIn
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -46,6 +46,7 @@ export default function Admin() {
   const [itemDetails, setItemDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [accessingService, setAccessingService] = useState(null);
+  const [impersonating, setImpersonating] = useState(false);
 
   // Fetch stats on mount
   useEffect(() => {
@@ -213,6 +214,55 @@ export default function Admin() {
       setError(err.message);
     } finally {
       setAccessingService(null);
+    }
+  };
+
+  // Impersona utente o organizzazione
+  const handleImpersonate = async (type, id) => {
+    setImpersonating(true);
+    try {
+      const endpoint = type === 'organization'
+        ? '/admin/impersonate/organization'
+        : '/admin/impersonate';
+
+      const body = type === 'organization'
+        ? { organizationId: id }
+        : { userId: id };
+
+      const response = await api.request(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+
+      if (response.success) {
+        // Salva i token dell'admin per poter tornare
+        const adminTokens = {
+          accessToken: localStorage.getItem('accessToken'),
+          refreshToken: localStorage.getItem('refreshToken')
+        };
+        localStorage.setItem('adminTokensBackup', JSON.stringify(adminTokens));
+
+        // Imposta i nuovi token
+        localStorage.setItem('accessToken', response.data.accessToken);
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+
+        // Flag per indicare sessione impersonata
+        localStorage.setItem('impersonationActive', JSON.stringify({
+          active: true,
+          targetUser: response.data.user.email,
+          targetOrg: response.data.organization?.name || null,
+          adminEmail: response.data.impersonation.adminEmail
+        }));
+
+        // Redirect alla dashboard
+        window.location.href = '/';
+      } else {
+        setError(response.error || 'Errore durante l\'impersonation');
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setImpersonating(false);
     }
   };
 
@@ -706,6 +756,14 @@ export default function Admin() {
                           {(selectedItem.fullName || selectedItem.email || '?').charAt(0).toUpperCase()}
                         </div>
                         <div className="flex gap-1">
+                          <button
+                            onClick={() => handleImpersonate('user', selectedItem.id)}
+                            disabled={impersonating}
+                            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                            title="Accedi come utente"
+                          >
+                            {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                          </button>
                           <button onClick={() => openModal('user', 'edit', selectedItem)} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Modifica">
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -859,6 +917,14 @@ export default function Admin() {
                           {selectedItem.accountType === 'agency' ? <Briefcase className="w-8 h-8" /> : <Building2 className="w-8 h-8" />}
                         </div>
                         <div className="flex gap-1">
+                          <button
+                            onClick={() => handleImpersonate('organization', selectedItem.id)}
+                            disabled={impersonating}
+                            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                            title="Accedi come owner"
+                          >
+                            {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                          </button>
                           <button onClick={() => openModal('organization', 'edit', selectedItem)} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><Edit2 className="w-4 h-4" /></button>
                           <button onClick={() => setDeleteConfirm({ type: 'organization', id: selectedItem.id, name: selectedItem.name })} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
