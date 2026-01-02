@@ -6,7 +6,7 @@ import {
   Mail, Calendar, Hash, CreditCard, Star, FileText,
   Check, Clock, Ban, Search, UtensilsCrossed, Monitor,
   User, Shield, Briefcase, MapPin, Phone, Layers,
-  ExternalLink, Loader2, LogIn
+  ExternalLink, Loader2, LogIn, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -47,6 +47,7 @@ export default function Admin() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [accessingService, setAccessingService] = useState(null);
   const [impersonating, setImpersonating] = useState(false);
+  const [expandedOrgs, setExpandedOrgs] = useState({});
 
   // Fetch stats on mount
   useEffect(() => {
@@ -57,10 +58,9 @@ export default function Admin() {
   useEffect(() => {
     setSearchQuery('');
     setSelectedItem(null);
-    if (activeTab === 'users') fetchUsers();
-    else if (activeTab === 'organizations') fetchOrganizations();
-    else if (activeTab === 'activities') fetchActivities();
-    else if (activeTab === 'packages') fetchPackages();
+    if (activeTab === 'clienti') {
+      fetchOrganizations();
+    } else if (activeTab === 'packages') fetchPackages();
     else if (activeTab === 'plans') {
       fetchServices();
       fetchPlans();
@@ -471,9 +471,7 @@ export default function Admin() {
 
   const tabs = [
     { id: 'stats', name: 'Statistiche', icon: Activity },
-    { id: 'users', name: 'Utenti', icon: Users, count: users.length },
-    { id: 'organizations', name: 'Organizzazioni', icon: Building2, count: organizations.length },
-    { id: 'activities', name: 'Attività', icon: Store, count: activities.length },
+    { id: 'clienti', name: 'Clienti', icon: Users, count: organizations.length },
     { id: 'plans', name: 'Piani Servizi', icon: Layers, count: plans.length },
     { id: 'packages', name: 'Pacchetti Agency', icon: Package, count: packages.length },
   ];
@@ -527,9 +525,7 @@ export default function Admin() {
             <button
               onClick={() => {
                 fetchStats();
-                if (activeTab === 'users') fetchUsers();
-                else if (activeTab === 'organizations') fetchOrganizations();
-                else if (activeTab === 'activities') fetchActivities();
+                if (activeTab === 'clienti') fetchOrganizations();
                 else if (activeTab === 'packages') fetchPackages();
                 else if (activeTab === 'plans') { fetchServices(); fetchPlans(); }
               }}
@@ -694,222 +690,156 @@ export default function Admin() {
               </div>
             )}
 
-            {/* Users Tab */}
-            {activeTab === 'users' && (
+            {/* Clienti Tab - Vista Gerarchica */}
+            {activeTab === 'clienti' && (
               <div className="flex gap-6">
+                {/* Lista Clienti */}
                 <div className="flex-1 bg-white rounded-xl shadow-sm overflow-hidden">
                   <div className="p-4 border-b flex items-center justify-between gap-4">
                     <div className="relative flex-1 max-w-md">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="text"
-                        placeholder="Cerca utenti..."
+                        placeholder="Cerca clienti..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       />
                     </div>
-                    <button onClick={() => openModal('user', 'create')} className="btn-primary flex items-center gap-2">
+                    <button onClick={() => openModal('organization', 'create')} className="btn-primary flex items-center gap-2">
                       <Plus className="w-4 h-4" />
-                      Nuovo Utente
+                      Nuovo Cliente
                     </button>
                   </div>
                   <div className="divide-y divide-gray-100 max-h-[calc(100vh-320px)] overflow-y-auto">
-                    {filteredUsers.length === 0 ? (
+                    {filteredOrganizations.length === 0 ? (
                       <div className="p-8 text-center text-gray-500">
                         <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                        <p>Nessun utente trovato</p>
+                        <p>Nessun cliente trovato</p>
                       </div>
                     ) : (
-                      filteredUsers.map((u) => (
-                        <div
-                          key={u.id}
-                          onClick={() => handleSelectItem(u, 'user')}
-                          className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
-                            selectedItem?.id === u.id ? 'bg-indigo-50 border-l-4 border-l-indigo-500' : ''
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-                              {(u.fullName || u.email || '?').charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 truncate">{u.fullName || 'Nome non impostato'}</p>
-                              <p className="text-sm text-gray-500 truncate">{u.email}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-gray-400">{u.organizations?.length || 0} org</p>
-                              <p className="text-xs text-gray-400">{new Date(u.createdAt).toLocaleDateString('it-IT')}</p>
+                      filteredOrganizations.map((org) => (
+                        <div key={org.id} className="border-b last:border-b-0">
+                          {/* Riga Organizzazione */}
+                          <div
+                            className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
+                              selectedItem?.id === org.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Chevron per espandere (solo se agenzia con attività) */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedOrgs(prev => ({ ...prev, [org.id]: !prev[org.id] }));
+                                }}
+                                className={`p-1 rounded hover:bg-gray-200 transition-colors ${org.accountType !== 'agency' || !org.activitiesCount ? 'invisible' : ''}`}
+                              >
+                                {expandedOrgs[org.id] ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                              </button>
+
+                              {/* Icona */}
+                              <div
+                                onClick={() => {
+                                  setSelectedItem({ ...org, type: 'organization' });
+                                  fetchItemDetails('organization', org.id);
+                                }}
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                  org.accountType === 'agency'
+                                    ? 'bg-gradient-to-br from-purple-400 to-pink-500'
+                                    : 'bg-gradient-to-br from-green-400 to-teal-500'
+                                } text-white`}
+                              >
+                                {org.accountType === 'agency' ? <Briefcase className="w-5 h-5" /> : <User className="w-5 h-5" />}
+                              </div>
+
+                              {/* Info */}
+                              <div
+                                className="flex-1 min-w-0"
+                                onClick={() => {
+                                  setSelectedItem({ ...org, type: 'organization' });
+                                  fetchItemDetails('organization', org.id);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-gray-900 truncate">{org.name}</p>
+                                  {org.accountType === 'agency' && (
+                                    <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded font-medium">Agenzia</span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-500 truncate">{org.email || 'Nessuna email'}</p>
+                              </div>
+
+                              {/* Status e contatori */}
+                              <div className="text-right">
+                                {getStatusBadge(org.status)}
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {org.activitiesCount || 0} attività
+                                </p>
+                              </div>
+
+                              {/* Azioni rapide */}
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleImpersonate('organization', org.id);
+                                  }}
+                                  disabled={impersonating}
+                                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                  title="Accedi come owner"
+                                >
+                                  {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                                </button>
+                              </div>
                             </div>
                           </div>
+
+                          {/* Attività espanse (per agenzie) */}
+                          {expandedOrgs[org.id] && org.accountType === 'agency' && itemDetails?.activities && selectedItem?.id === org.id && (
+                            <div className="bg-gray-50 border-t">
+                              {itemDetails.activities.map((act) => (
+                                <div
+                                  key={act.id}
+                                  onClick={() => {
+                                    setSelectedItem({ ...act, type: 'activity', organizationName: org.name });
+                                    fetchItemDetails('activity', act.id);
+                                  }}
+                                  className={`pl-14 pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
+                                    selectedItem?.id === act.id && selectedItem?.type === 'activity' ? 'bg-indigo-50' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white">
+                                      <Store className="w-4 h-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-gray-800 text-sm">{act.name}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {act.owner?.email || 'Nessun owner'}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      {getStatusBadge(act.status)}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {itemDetails.activities.length === 0 && (
+                                <div className="pl-14 pr-4 py-3 text-sm text-gray-500 italic">
+                                  Nessuna attività
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
                   </div>
                 </div>
 
-                {selectedItem && activeTab === 'users' && (
-                  <div className="w-[420px] bg-white rounded-xl shadow-sm overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
-                    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white sticky top-0">
-                      <div className="flex items-start justify-between">
-                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-2xl font-bold">
-                          {(selectedItem.fullName || selectedItem.email || '?').charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => handleImpersonate('user', selectedItem.id)}
-                            disabled={impersonating}
-                            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                            title="Accedi come utente"
-                          >
-                            {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                          </button>
-                          <button onClick={() => openModal('user', 'edit', selectedItem)} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Modifica">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => setDeleteConfirm({ type: 'user', id: selectedItem.id, name: selectedItem.email })} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Elimina">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <h3 className="text-xl font-bold mt-4">{selectedItem.fullName || 'Nome non impostato'}</h3>
-                      <p className="text-indigo-100">{selectedItem.email}</p>
-                    </div>
-
-                    {loadingDetails ? (
-                      <div className="p-8 flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-                      </div>
-                    ) : (
-                      <>
-                        <div className="p-4 border-b">
-                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">Informazioni</h4>
-                          <div className="space-y-2">
-                            <DetailRow icon={Mail} label="Email" value={selectedItem.email} />
-                            <DetailRow icon={User} label="Nome" value={selectedItem.fullName || '-'} />
-                            <DetailRow icon={Calendar} label="Registrato" value={new Date(selectedItem.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })} />
-                          </div>
-                        </div>
-
-                        {/* Organizzazioni */}
-                        <div className="p-4 border-b">
-                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-                            Organizzazioni ({itemDetails?.organizations?.length || selectedItem.organizations?.length || 0})
-                          </h4>
-                          {(itemDetails?.organizations || selectedItem.organizations || []).length === 0 ? (
-                            <p className="text-sm text-gray-400 italic">Nessuna organizzazione</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {(itemDetails?.organizations || selectedItem.organizations || []).map((org) => (
-                                <div key={org.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                  <div className="flex items-center gap-2">
-                                    <Building2 className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-medium">{org.name}</span>
-                                  </div>
-                                  <span className={`px-2 py-0.5 text-xs rounded-full ${
-                                    org.role === 'owner' ? 'bg-purple-100 text-purple-700' :
-                                    org.role === 'admin' ? 'bg-blue-100 text-blue-700' :
-                                    'bg-gray-100 text-gray-600'
-                                  }`}>
-                                    {org.role}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Abbonamenti */}
-                        {itemDetails?.subscriptions && (
-                          <div className="p-4">
-                            <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-                              Abbonamenti Attivi ({itemDetails.subscriptions.filter(s => ['active', 'trial'].includes(s.status)).length})
-                            </h4>
-                            {itemDetails.subscriptions.filter(s => ['active', 'trial'].includes(s.status)).length === 0 ? (
-                              <p className="text-sm text-gray-400 italic">Nessun abbonamento attivo</p>
-                            ) : (
-                              <div className="space-y-2">
-                                {itemDetails.subscriptions.filter(s => ['active', 'trial'].includes(s.status)).map((sub) => {
-                                  const ServiceIcon = SERVICE_ICONS[sub.plan?.service?.icon] || Star;
-                                  return (
-                                    <div key={sub.id} className="p-3 border rounded-lg">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <div className="p-1.5 rounded" style={{ backgroundColor: `${sub.plan?.service?.color}20` }}>
-                                          <ServiceIcon className="w-4 h-4" style={{ color: sub.plan?.service?.color }} />
-                                        </div>
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium">{sub.plan?.service?.name}</p>
-                                          <p className="text-xs text-gray-500">Piano: {sub.plan?.name}</p>
-                                        </div>
-                                        {getStatusBadge(sub.status)}
-                                      </div>
-                                      {sub.plan?.service?.code && sub.activityId && (
-                                        <button
-                                          onClick={() => handleAdminAccessService(selectedItem.id, sub.activityId, sub.plan.service.code)}
-                                          disabled={accessingService === sub.plan.service.code}
-                                          className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 mt-2 disabled:opacity-50"
-                                        >
-                                          {accessingService === sub.plan.service.code ? (
-                                            <Loader2 className="w-3 h-3 animate-spin" />
-                                          ) : (
-                                            <ExternalLink className="w-3 h-3" />
-                                          )}
-                                          Accedi al servizio
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Organizations Tab */}
-            {activeTab === 'organizations' && (
-              <div className="flex gap-6">
-                <div className="flex-1 bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="p-4 border-b flex items-center justify-between gap-4">
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input type="text" placeholder="Cerca organizzazioni..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-                    </div>
-                    <button onClick={() => openModal('organization', 'create')} className="btn-primary flex items-center gap-2">
-                      <Plus className="w-4 h-4" />
-                      Nuova Org.
-                    </button>
-                  </div>
-                  <div className="divide-y divide-gray-100 max-h-[calc(100vh-320px)] overflow-y-auto">
-                    {filteredOrganizations.map((org) => (
-                      <div key={org.id} onClick={() => handleSelectItem(org, 'organization')} className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${selectedItem?.id === org.id ? 'bg-indigo-50 border-l-4 border-l-indigo-500' : ''}`}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${org.accountType === 'agency' ? 'bg-gradient-to-br from-purple-400 to-pink-500' : 'bg-gradient-to-br from-green-400 to-teal-500'} text-white`}>
-                            {org.accountType === 'agency' ? <Briefcase className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-gray-900 truncate">{org.name}</p>
-                              {org.accountType === 'agency' && <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded font-medium">Agenzia</span>}
-                            </div>
-                            <p className="text-sm text-gray-500 truncate">{org.email || 'Nessuna email'}</p>
-                          </div>
-                          <div className="text-right">
-                            {getStatusBadge(org.status)}
-                            <p className="text-xs text-gray-400 mt-1">{org.activitiesCount || 0}/{org.maxActivities === -1 ? '∞' : org.maxActivities} attività</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedItem && activeTab === 'organizations' && (
+                {/* Pannello Dettagli */}
+                {selectedItem && activeTab === 'clienti' && selectedItem.type === 'organization' && (
                   <div className="w-[420px] bg-white rounded-xl shadow-sm overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
                     <div className={`p-6 text-white sticky top-0 ${selectedItem.accountType === 'agency' ? 'bg-gradient-to-r from-purple-500 to-pink-600' : 'bg-gradient-to-r from-green-500 to-teal-600'}`}>
                       <div className="flex items-start justify-between">
@@ -1070,45 +1000,9 @@ export default function Admin() {
                     )}
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Activities Tab */}
-            {activeTab === 'activities' && (
-              <div className="flex gap-6">
-                <div className="flex-1 bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="p-4 border-b flex items-center justify-between gap-4">
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input type="text" placeholder="Cerca attività..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-                    </div>
-                    <button onClick={() => openModal('activity', 'create')} className="btn-primary flex items-center gap-2">
-                      <Plus className="w-4 h-4" />
-                      Nuova Attività
-                    </button>
-                  </div>
-                  <div className="divide-y divide-gray-100 max-h-[calc(100vh-320px)] overflow-y-auto">
-                    {filteredActivities.map((act) => (
-                      <div key={act.id} onClick={() => handleSelectItem(act, 'activity')} className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${selectedItem?.id === act.id ? 'bg-indigo-50 border-l-4 border-l-indigo-500' : ''}`}>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white">
-                            <Store className="w-5 h-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{act.name}</p>
-                            <p className="text-sm text-gray-500 truncate">{act.organization?.name || 'Nessuna organizzazione'}</p>
-                          </div>
-                          <div className="text-right">
-                            {getStatusBadge(act.status)}
-                            <p className="text-xs text-gray-400 mt-1">{act.activeSubscriptions || 0} abb.</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedItem && activeTab === 'activities' && (
+                {/* Pannello Dettagli Attività */}
+                {selectedItem && activeTab === 'clienti' && selectedItem.type === 'activity' && (
                   <div className="w-[420px] bg-white rounded-xl shadow-sm overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
                     <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6 text-white sticky top-0">
                       <div className="flex items-start justify-between">
@@ -1120,7 +1014,7 @@ export default function Admin() {
                         </div>
                       </div>
                       <h3 className="text-xl font-bold mt-4">{selectedItem.name}</h3>
-                      <p className="opacity-80">{selectedItem.organization?.name || itemDetails?.organization?.name || 'Nessuna organizzazione'}</p>
+                      <p className="opacity-80">{selectedItem.organizationName || itemDetails?.organization?.name || 'Nessuna organizzazione'}</p>
                     </div>
 
                     {loadingDetails ? (
@@ -1258,7 +1152,6 @@ export default function Admin() {
                                     {sub.plan?.service?.code && selectedItem?.id && (
                                       <button
                                         onClick={() => {
-                                          // Trova l'owner dell'attività (usa userId, non id che è l'ID della riga activity_users)
                                           const owner = (itemDetails?.members || []).find(m => m.role === 'owner');
                                           if (owner?.userId) {
                                             handleAdminAccessService(owner.userId, selectedItem.id, sub.plan.service.code);
