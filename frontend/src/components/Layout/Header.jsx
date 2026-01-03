@@ -6,13 +6,9 @@ import {
   ChevronDown,
   LogOut,
   Settings,
-  User,
-  HelpCircle,
-  Moon,
-  Sun
+  User
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { ActivitySelector } from '../Activities';
 
 export default function Header({ sidebarCollapsed }) {
   const navigate = useNavigate();
@@ -51,7 +47,7 @@ export default function Header({ sidebarCollapsed }) {
       `}
     >
       <div className="h-full px-4 lg:px-6 flex items-center justify-between">
-        {/* Left side - Search & Activity Selector */}
+        {/* Left side - Search only */}
         <div className="flex items-center gap-4">
           {/* Search */}
           <div className="hidden md:flex items-center">
@@ -61,28 +57,15 @@ export default function Header({ sidebarCollapsed }) {
                 type="text"
                 placeholder="Cerca..."
                 className="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm
-                  focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+                  focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500
                   placeholder-gray-400 transition-all"
               />
             </div>
-          </div>
-
-          {/* Activity Selector */}
-          <div className="hidden lg:block">
-            <ActivitySelector />
           </div>
         </div>
 
         {/* Right side - Actions */}
         <div className="flex items-center gap-2">
-          {/* Help */}
-          <button
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Aiuto"
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
-
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
             <button
@@ -116,7 +99,7 @@ export default function Header({ sidebarCollapsed }) {
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
               className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-full flex items-center justify-center shadow-sm">
+              <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center shadow-sm">
                 <span className="text-white font-medium text-sm">
                   {user?.fullName?.charAt(0)?.toUpperCase() || 'U'}
                 </span>
