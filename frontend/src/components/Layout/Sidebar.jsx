@@ -11,9 +11,7 @@ import {
   FileText,
   UtensilsCrossed,
   Monitor,
-  Users,
-  Building,
-  BarChart3,
+  Shield,
   HelpCircle,
   Sparkles,
   Check
@@ -82,28 +80,12 @@ export default function Sidebar({ collapsed, onToggle }) {
     }
   ];
 
-  const adminNavItems = [
-    {
-      name: 'Tutti gli Utenti',
-      path: '/admin/users',
-      icon: Users
-    },
-    {
-      name: 'Tutte le Attività',
-      path: '/admin/activities',
-      icon: Building
-    },
-    {
-      name: 'Agenzie',
-      path: '/admin/agencies',
-      icon: Building2
-    },
-    {
-      name: 'Statistiche',
-      path: '/admin',
-      icon: BarChart3
-    }
-  ];
+  // Single admin link - the Admin page has internal tabs
+  const adminNavItem = {
+    name: 'Pannello Admin',
+    path: '/admin',
+    icon: Shield
+  };
 
   const NavItem = ({ item, showLabel = true }) => {
     const Icon = item.icon;
@@ -305,24 +287,21 @@ export default function Sidebar({ collapsed, onToggle }) {
               </div>
             )}
             <div className={`${!collapsed ? 'bg-amber-50/50 rounded-lg p-1' : ''}`}>
-              {adminNavItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`
-                    flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
-                    ${isActive(item.path)
-                      ? 'bg-amber-100 text-amber-800 font-medium'
-                      : 'text-amber-700 hover:bg-amber-100'
-                    }
-                    ${collapsed ? 'justify-center' : ''}
-                  `}
-                  title={collapsed ? item.name : undefined}
-                >
-                  <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive(item.path) ? 'text-amber-700' : 'text-amber-600'}`} />
-                  {!collapsed && <span className="truncate">{item.name}</span>}
-                </Link>
-              ))}
+              <Link
+                to={adminNavItem.path}
+                className={`
+                  flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
+                  ${isActive(adminNavItem.path)
+                    ? 'bg-amber-100 text-amber-800 font-medium'
+                    : 'text-amber-700 hover:bg-amber-100'
+                  }
+                  ${collapsed ? 'justify-center' : ''}
+                `}
+                title={collapsed ? adminNavItem.name : undefined}
+              >
+                <adminNavItem.icon className={`w-5 h-5 flex-shrink-0 ${isActive(adminNavItem.path) ? 'text-amber-700' : 'text-amber-600'}`} />
+                {!collapsed && <span className="truncate">{adminNavItem.name}</span>}
+              </Link>
             </div>
           </div>
         )}
