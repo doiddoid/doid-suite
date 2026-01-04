@@ -1244,4 +1244,256 @@ router.post('/impersonate/organization',
   })
 );
 
+// ==================== CRON ENDPOINTS ====================
+
+// POST /api/admin/cron/check-trials
+// Controlla trial in scadenza e genera notifiche
+router.post('/cron/check-trials',
+  [
+    body('daysBeforeExpiry').optional().isInt({ min: 1, max: 7 }).withMessage('Giorni deve essere tra 1 e 7')
+  ],
+  validate,
+  logAdminAction('cron_check_trials'),
+  asyncHandler(async (req, res) => {
+    const daysBeforeExpiry = req.body.daysBeforeExpiry || 3;
+    const result = await adminService.checkExpiringTrials(daysBeforeExpiry);
+
+    res.json({
+      success: true,
+      data: result,
+      message: `Controllati ${result.expiringCount} trial in scadenza`
+    });
+  })
+);
+
+// POST /api/admin/cron/check-subscriptions
+// Controlla e aggiorna trial/abbonamenti scaduti
+router.post('/cron/check-subscriptions',
+  logAdminAction('cron_check_subscriptions'),
+  asyncHandler(async (req, res) => {
+    const result = await adminService.checkExpiringSubscriptions();
+
+    res.json({
+      success: true,
+      data: result,
+      message: `Aggiornati ${result.expiredTrials + result.expiredSubscriptions} abbonamenti`
+    });
+  })
+);
+
+// ==================== ACTIVITY SERVICES MANAGEMENT ====================
+
+// GET /api/admin/activities/:activityId/services
+// Ottieni tutti i servizi con stato per un'attività
+router.get('/activities/:activityId/services',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido')
+  ],
+  validate,
+  logAdminAction('view_activity_services'),
+  asyncHandler(async (req, res) => {
+    const services = await adminService.getActivityServicesWithStatus(req.params.activityId);
+
+    res.json({
+      success: true,
+      data: { services }
+    });
+  })
+);
+
+// PUT /api/admin/activities/:activityId/services/:serviceCode
+// Modifica stato servizio per un'attività
+router.put('/activities/:activityId/services/:serviceCode',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    param('serviceCode').isString().trim().notEmpty().withMessage('Codice servizio richiesto'),
+    body('status').isIn(['inactive', 'free', 'trial', 'pro', 'active', 'expired', 'cancelled']).withMessage('Status non valido'),
+    body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido'),
+    body('trialDays').optional().isInt({ min: 1, max: 90 }).withMessage('Giorni trial deve essere tra 1 e 90'),
+    body('periodEndDate').optional().isISO8601().withMessage('Data fine periodo non valida'),
+    body('cancelAtPeriodEnd').optional().isBoolean().withMessage('cancelAtPeriodEnd deve essere boolean')
+  ],
+  validate,
+  logAdminAction('update_activity_service'),
+  asyncHandler(async (req, res) => {
+    const { activityId, serviceCode } = req.params;
+    const result = await adminService.updateActivityServiceStatus(activityId, serviceCode, req.body);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Stato servizio aggiornato'
+    });
+  })
+);
+
+// ==================== USER BILLING ====================
+
+// GET /api/admin/users/:userId/billing
+// Ottieni riepilogo fatturazione utente con sconti
+router.get('/users/:userId/billing',
+  [
+    param('userId').isUUID().withMessage('ID utente non valido')
+  ],
+  validate,
+  logAdminAction('view_user_billing'),
+  asyncHandler(async (req, res) => {
+    const billing = await adminService.getUserBillingSummary(req.params.userId);
+
+    res.json({
+      success: true,
+      data: billing
+    });
+  })
+);
+
+// GET /api/admin/users/:userId/details
+// Ottieni dettagli completi utente con attività e servizi
+router.get('/users/:userId/details',
+  [
+    param('userId').isUUID().withMessage('ID utente non valido')
+  ],
+  validate,
+  logAdminAction('view_user_details'),
+  asyncHandler(async (req, res) => {
+    const userDetails = await adminService.getUserWithActivitiesAndServices(req.params.userId);
+
+    res.json({
+      success: true,
+      data: userDetails
+    });
+  })
+);
+
+// ==================== VOLUME DISCOUNTS ====================
+
+// GET /api/admin/discounts
+// Ottieni lista sconti volume
+router.get('/discounts',
+  logAdminAction('list_discounts'),
+  asyncHandler(async (req, res) => {
+    const discounts = await adminService.getVolumeDiscounts();
+
+    res.json({
+      success: true,
+      data: { discounts }
+    });
+  })
+);
+
+// PUT /api/admin/discounts/:id
+// Aggiorna sconto volume
+router.put('/discounts/:id',
+  [
+    param('id').isUUID().withMessage('ID sconto non valido'),
+    body('minActivities').optional().isInt({ min: 1 }).withMessage('Min attività non valido'),
+    body('maxActivities').optional().isInt({ min: 1 }).nullable().withMessage('Max attività non valido'),
+    body('discountPercentage').optional().isFloat({ min: 0, max: 100 }).withMessage('Percentuale sconto deve essere tra 0 e 100'),
+    body('isActive').optional().isBoolean().withMessage('isActive deve essere boolean')
+  ],
+  validate,
+  logAdminAction('update_discount'),
+  asyncHandler(async (req, res) => {
+    const discount = await adminService.updateVolumeDiscount(req.params.id, req.body);
+
+    res.json({
+      success: true,
+      data: discount,
+      message: 'Sconto aggiornato'
+    });
+  })
+);
+
+// ==================== COMMUNICATION LOGS ====================
+
+// GET /api/admin/communications
+// Ottieni log comunicazioni con filtri
+router.get('/communications',
+  [
+    query('activityId').optional().isUUID().withMessage('ID attività non valido'),
+    query('userId').optional().isUUID().withMessage('ID utente non valido'),
+    query('type').optional().isIn(['email', 'webhook', 'admin_action', 'system']).withMessage('Tipo non valido'),
+    query('event').optional().trim(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100'),
+    query('offset').optional().isInt({ min: 0 }).withMessage('Offset non valido')
+  ],
+  validate,
+  logAdminAction('list_communications'),
+  asyncHandler(async (req, res) => {
+    const { activityId, userId, type, event, limit = 50, offset = 0 } = req.query;
+
+    const result = await adminService.getCommunicationLogs({
+      activityId,
+      userId,
+      type,
+      event,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
+);
+
+// ==================== WEBHOOKS QUEUE ====================
+
+// GET /api/admin/webhooks/pending
+// Ottieni webhook in coda
+router.get('/webhooks/pending',
+  [
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100')
+  ],
+  validate,
+  logAdminAction('list_pending_webhooks'),
+  asyncHandler(async (req, res) => {
+    const limit = parseInt(req.query.limit) || 50;
+    const webhooks = await adminService.getPendingWebhooks(limit);
+
+    res.json({
+      success: true,
+      data: { webhooks }
+    });
+  })
+);
+
+// POST /api/admin/webhooks/:id/complete
+// Marca webhook come completato
+router.post('/webhooks/:id/complete',
+  [
+    param('id').isUUID().withMessage('ID webhook non valido')
+  ],
+  validate,
+  logAdminAction('complete_webhook'),
+  asyncHandler(async (req, res) => {
+    await adminService.markWebhookComplete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Webhook completato'
+    });
+  })
+);
+
+// POST /api/admin/webhooks/:id/retry
+// Riprogramma webhook per retry
+router.post('/webhooks/:id/retry',
+  [
+    param('id').isUUID().withMessage('ID webhook non valido')
+  ],
+  validate,
+  logAdminAction('retry_webhook'),
+  asyncHandler(async (req, res) => {
+    const result = await adminService.retryWebhook(req.params.id);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Webhook riprogrammato'
+    });
+  })
+);
+
 export default router;

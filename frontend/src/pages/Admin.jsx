@@ -6,17 +6,27 @@ import {
   Mail, Calendar, Hash, CreditCard, Star, FileText,
   Check, Clock, Ban, Search, UtensilsCrossed, Monitor,
   User, Shield, Briefcase, MapPin, Phone, Layers,
-  ExternalLink, Loader2, LogIn, ChevronDown, ChevronRight
+  ExternalLink, Loader2, LogIn, ChevronDown, ChevronRight,
+  MessageSquare, Zap, Key
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
+import ServiceStatusManager from '../components/Admin/ServiceStatusManager';
+import BillingSummary from '../components/Admin/BillingSummary';
+import CommunicationLogs from '../components/Admin/CommunicationLogs';
 
 // Mappa icone servizi
 const SERVICE_ICONS = {
   Star: Star,
+  star: Star,
   FileText: FileText,
+  'file-text': FileText,
   UtensilsCrossed: UtensilsCrossed,
-  Monitor: Monitor
+  utensils: UtensilsCrossed,
+  Monitor: Monitor,
+  monitor: Monitor,
+  Key: Key,
+  key: Key
 };
 
 export default function Admin() {
@@ -51,6 +61,13 @@ export default function Admin() {
   const [expandedOrgDetails, setExpandedOrgDetails] = useState({}); // Dettagli per orgs espanse
   const [clientTypeFilter, setClientTypeFilter] = useState('all'); // 'all', 'agency', 'single'
 
+  // Stati per comunicazioni e gestione servizi
+  const [communicationLogs, setCommunicationLogs] = useState([]);
+  const [logsFilters, setLogsFilters] = useState({});
+  const [logsPagination, setLogsPagination] = useState(null);
+  const [serviceStatusModal, setServiceStatusModal] = useState(null); // { activityId, activityName, service, subscription, effectiveStatus, isActive, daysRemaining }
+  const [activityServices, setActivityServices] = useState({}); // Cache dei servizi per attività
+
   // Fetch stats on mount
   useEffect(() => {
     fetchStats();
@@ -66,6 +83,8 @@ export default function Admin() {
     else if (activeTab === 'plans') {
       fetchServices();
       fetchPlans();
+    } else if (activeTab === 'comunicazioni') {
+      fetchCommunicationLogs();
     }
   }, [activeTab]);
 
@@ -166,6 +185,83 @@ export default function Admin() {
       setError(err.message);
     }
     setLoading(false);
+  };
+
+  // Fetch communication logs
+  const fetchCommunicationLogs = async (filters = {}, loadMore = false) => {
+    if (!loadMore) setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filters.type) params.append('type', filters.type);
+      if (filters.event) params.append('event', filters.event);
+      if (loadMore && logsPagination) {
+        params.append('offset', communicationLogs.length);
+      }
+      params.append('limit', '50');
+
+      const response = await api.request(`/admin/communications?${params.toString()}`);
+      if (response.success) {
+        if (loadMore) {
+          setCommunicationLogs(prev => [...prev, ...(response.data.logs || [])]);
+        } else {
+          setCommunicationLogs(response.data.logs || []);
+        }
+        setLogsPagination(response.data.pagination);
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
+  // Fetch servizi per attività
+  const fetchActivityServices = async (activityId) => {
+    try {
+      const response = await api.request(`/admin/activities/${activityId}/services`);
+      if (response.success) {
+        setActivityServices(prev => ({ ...prev, [activityId]: response.data.services }));
+        return response.data.services;
+      }
+    } catch (err) {
+      console.error('Error fetching activity services:', err);
+    }
+    return [];
+  };
+
+  // Update service status per attività
+  const handleUpdateServiceStatus = async (activityId, serviceCode, updates) => {
+    try {
+      const response = await api.request(`/admin/activities/${activityId}/services/${serviceCode}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+      if (response.success) {
+        setSuccessMessage('Stato servizio aggiornato');
+        // Refresh services for this activity
+        await fetchActivityServices(activityId);
+        // Refresh item details if viewing this activity
+        if (selectedItem?.id === activityId) {
+          fetchItemDetails('activity', activityId);
+        }
+      } else {
+        throw new Error(response.error);
+      }
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  // Open service status modal
+  const openServiceStatusModal = (activityId, activityName, service, subscription, effectiveStatus, isActive, daysRemaining) => {
+    setServiceStatusModal({
+      activityId,
+      activityName,
+      service,
+      subscription,
+      effectiveStatus,
+      isActive,
+      daysRemaining
+    });
   };
 
   // Fetch dettagli completi quando si seleziona un item
@@ -500,26 +596,46 @@ export default function Admin() {
     { id: 'clienti', name: 'Clienti', icon: Users },
     { id: 'plans', name: 'Piani Servizi', icon: Layers },
     { id: 'packages', name: 'Pacchetti Agency', icon: Package },
+    { id: 'comunicazioni', name: 'Comunicazioni', icon: MessageSquare },
   ];
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, daysRemaining = null) => {
     const styles = {
       active: 'bg-green-100 text-green-700 border-green-200',
       suspended: 'bg-yellow-100 text-yellow-700 border-yellow-200',
       cancelled: 'bg-red-100 text-red-700 border-red-200',
       trial: 'bg-blue-100 text-blue-700 border-blue-200',
+      // Nuovi stati per servizi indipendenti
+      inactive: 'bg-gray-100 text-gray-500 border-gray-200',
+      free: 'bg-green-100 text-green-700 border-green-200',
+      pro: 'bg-purple-100 text-purple-700 border-purple-200',
+      expired: 'bg-orange-100 text-orange-700 border-orange-200',
     };
     const labels = {
       active: 'Attivo',
       suspended: 'Sospeso',
       cancelled: 'Cancellato',
-      trial: 'Prova',
+      trial: daysRemaining !== null ? `Trial • ${daysRemaining}g` : 'Trial',
+      // Nuovi stati per servizi indipendenti
+      inactive: 'Non attivo',
+      free: 'FREE',
+      pro: 'PRO',
+      expired: 'Scaduto',
     };
+    const icons = {
+      active: Check,
+      suspended: Clock,
+      cancelled: Ban,
+      trial: Clock,
+      inactive: Ban,
+      free: Check,
+      pro: Zap,
+      expired: AlertCircle,
+    };
+    const IconComponent = icons[status];
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-        {status === 'active' && <Check className="w-3 h-3 mr-1" />}
-        {status === 'suspended' && <Clock className="w-3 h-3 mr-1" />}
-        {status === 'cancelled' && <Ban className="w-3 h-3 mr-1" />}
+        {IconComponent && <IconComponent className="w-3 h-3 mr-1" />}
         {labels[status] || status}
       </span>
     );
@@ -554,6 +670,7 @@ export default function Admin() {
                 if (activeTab === 'clienti') fetchOrganizations();
                 else if (activeTab === 'packages') fetchPackages();
                 else if (activeTab === 'plans') { fetchServices(); fetchPlans(); }
+                else if (activeTab === 'comunicazioni') fetchCommunicationLogs(logsFilters);
               }}
               className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
             >
@@ -1204,95 +1321,135 @@ export default function Admin() {
                           )}
                         </div>
 
-                        {/* Abbonamenti / Servizi Attivi */}
+                        {/* Gestione Servizi */}
                         <div className="p-4">
-                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-                            Servizi Attivi ({(itemDetails?.subscriptions || []).filter(s => ['active', 'trial'].includes(s.status)).length})
-                          </h4>
-                          {(itemDetails?.subscriptions || []).filter(s => ['active', 'trial'].includes(s.status)).length === 0 ? (
-                            <p className="text-sm text-gray-400 italic">Nessun servizio attivo</p>
-                          ) : (
-                            <div className="space-y-3">
-                              {(itemDetails?.subscriptions || []).filter(s => ['active', 'trial'].includes(s.status)).map((sub) => {
-                                const ServiceIcon = SERVICE_ICONS[sub.plan?.service?.icon] || Star;
-                                const serviceColor = sub.plan?.service?.color || '#6366f1';
-                                return (
-                                  <div key={sub.id} className="p-3 border rounded-lg hover:shadow-sm transition-shadow">
-                                    <div className="flex items-center gap-3 mb-2">
-                                      <div className="p-2 rounded-lg" style={{ backgroundColor: `${serviceColor}15` }}>
-                                        <ServiceIcon className="w-5 h-5" style={{ color: serviceColor }} />
-                                      </div>
-                                      <div className="flex-1">
-                                        <p className="font-medium">{sub.plan?.service?.name}</p>
-                                        <p className="text-xs text-gray-500">Piano: {sub.plan?.name}</p>
-                                      </div>
-                                      {getStatusBadge(sub.status)}
-                                    </div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase">
+                              Servizi
+                            </h4>
+                            <button
+                              onClick={() => fetchActivityServices(selectedItem.id)}
+                              className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Aggiorna
+                            </button>
+                          </div>
+                          {(() => {
+                            // Mostra tutti i servizi con il loro stato
+                            const cachedServices = activityServices[selectedItem.id];
+                            const subscriptions = itemDetails?.subscriptions || [];
 
-                                    {/* Dettagli piano */}
-                                    <div className="bg-gray-50 rounded-lg p-2 mb-2">
-                                      <div className="flex justify-between text-xs">
-                                        <span className="text-gray-500">Prezzo</span>
-                                        <span className="font-medium">
-                                          €{sub.billingCycle === 'yearly' ? sub.plan?.priceYearly : sub.plan?.priceMonthly}/{sub.billingCycle === 'yearly' ? 'anno' : 'mese'}
-                                        </span>
-                                      </div>
-                                      {sub.status === 'trial' && sub.trialEndsAt && (
-                                        <div className="flex justify-between text-xs mt-1">
-                                          <span className="text-gray-500">Fine prova</span>
-                                          <span className="font-medium text-blue-600">
-                                            {new Date(sub.trialEndsAt).toLocaleDateString('it-IT')}
-                                          </span>
+                            // Se abbiamo i servizi cached, usali
+                            if (cachedServices) {
+                              return (
+                                <div className="space-y-2">
+                                  {cachedServices.map((svc) => {
+                                    const ServiceIcon = SERVICE_ICONS[svc.icon] || Star;
+                                    const serviceColor = svc.color || '#6366f1';
+                                    return (
+                                      <button
+                                        key={svc.code}
+                                        onClick={() => openServiceStatusModal(
+                                          selectedItem.id,
+                                          selectedItem.name,
+                                          svc,
+                                          svc.subscription,
+                                          svc.effectiveStatus,
+                                          svc.isActive,
+                                          svc.daysRemaining
+                                        )}
+                                        className="w-full p-3 border rounded-lg hover:shadow-sm transition-all text-left hover:border-indigo-300"
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <div className="p-2 rounded-lg" style={{ backgroundColor: `${serviceColor}15` }}>
+                                            <ServiceIcon className="w-5 h-5" style={{ color: serviceColor }} />
+                                          </div>
+                                          <div className="flex-1">
+                                            <p className="font-medium text-sm">{svc.name}</p>
+                                            {svc.daysRemaining !== null && svc.effectiveStatus === 'trial' && (
+                                              <p className="text-xs text-gray-500">{svc.daysRemaining} giorni rimanenti</p>
+                                            )}
+                                          </div>
+                                          {getStatusBadge(svc.effectiveStatus, svc.daysRemaining)}
+                                          <Edit2 className="w-4 h-4 text-gray-400" />
                                         </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            }
+
+                            // Altrimenti mostra i servizi dagli abbonamenti esistenti
+                            if (subscriptions.length === 0) {
+                              return (
+                                <div className="text-center py-4">
+                                  <p className="text-sm text-gray-400 mb-2">Nessun servizio configurato</p>
+                                  <button
+                                    onClick={() => fetchActivityServices(selectedItem.id)}
+                                    className="text-sm text-indigo-600 hover:underline"
+                                  >
+                                    Carica servizi disponibili
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="space-y-2">
+                                {subscriptions.map((sub) => {
+                                  const ServiceIcon = SERVICE_ICONS[sub.plan?.service?.icon] || Star;
+                                  const serviceColor = sub.plan?.service?.color || '#6366f1';
+                                  return (
+                                    <div key={sub.id} className="p-3 border rounded-lg">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg" style={{ backgroundColor: `${serviceColor}15` }}>
+                                          <ServiceIcon className="w-5 h-5" style={{ color: serviceColor }} />
+                                        </div>
+                                        <div className="flex-1">
+                                          <p className="font-medium text-sm">{sub.plan?.service?.name}</p>
+                                          <p className="text-xs text-gray-500">Piano: {sub.plan?.name}</p>
+                                        </div>
+                                        {getStatusBadge(sub.status)}
+                                      </div>
+                                      {['active', 'trial'].includes(sub.status) && sub.plan?.service?.code && (
+                                        <button
+                                          onClick={() => {
+                                            const owner = (itemDetails?.members || []).find(m => m.role === 'owner');
+                                            if (owner?.userId) {
+                                              handleAdminAccessService(owner.userId, selectedItem.id, sub.plan.service.code);
+                                            } else {
+                                              setError('Impossibile trovare il proprietario dell\'attività');
+                                            }
+                                          }}
+                                          disabled={accessingService === sub.plan.service.code}
+                                          className="flex items-center justify-center gap-2 w-full mt-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                          style={{
+                                            backgroundColor: `${serviceColor}15`,
+                                            color: serviceColor
+                                          }}
+                                        >
+                                          {accessingService === sub.plan.service.code ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                          ) : (
+                                            <ExternalLink className="w-4 h-4" />
+                                          )}
+                                          Accedi
+                                        </button>
                                       )}
                                     </div>
-
-                                    {/* Features */}
-                                    {sub.plan?.features && sub.plan.features.length > 0 && (
-                                      <div className="text-xs text-gray-600 space-y-1 mb-2">
-                                        {sub.plan.features.slice(0, 3).map((f, i) => (
-                                          <div key={i} className="flex items-center gap-1">
-                                            <Check className="w-3 h-3 text-green-500" />
-                                            <span>{f}</span>
-                                          </div>
-                                        ))}
-                                        {sub.plan.features.length > 3 && (
-                                          <span className="text-gray-400">+{sub.plan.features.length - 3} altre...</span>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {/* Accedi al servizio */}
-                                    {sub.plan?.service?.code && selectedItem?.id && (
-                                      <button
-                                        onClick={() => {
-                                          const owner = (itemDetails?.members || []).find(m => m.role === 'owner');
-                                          if (owner?.userId) {
-                                            handleAdminAccessService(owner.userId, selectedItem.id, sub.plan.service.code);
-                                          } else {
-                                            setError('Impossibile trovare il proprietario dell\'attività');
-                                          }
-                                        }}
-                                        disabled={accessingService === sub.plan.service.code}
-                                        className="flex items-center justify-center gap-2 w-full py-2 px-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                                        style={{
-                                          backgroundColor: `${serviceColor}15`,
-                                          color: serviceColor
-                                        }}
-                                      >
-                                        {accessingService === sub.plan.service.code ? (
-                                          <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                          <ExternalLink className="w-4 h-4" />
-                                        )}
-                                        Accedi a {sub.plan.service.name}
-                                      </button>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                                  );
+                                })}
+                                <button
+                                  onClick={() => fetchActivityServices(selectedItem.id)}
+                                  className="w-full p-2 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+                                >
+                                  + Gestisci tutti i servizi
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </>
                     )}
@@ -1436,9 +1593,39 @@ export default function Admin() {
                 </div>
               </div>
             )}
+
+            {/* Comunicazioni Tab */}
+            {activeTab === 'comunicazioni' && (
+              <CommunicationLogs
+                logs={communicationLogs}
+                pagination={logsPagination}
+                filters={logsFilters}
+                onFilterChange={(newFilters) => {
+                  setLogsFilters(newFilters);
+                  fetchCommunicationLogs(newFilters);
+                }}
+                onLoadMore={() => fetchCommunicationLogs(logsFilters, true)}
+                loading={loading}
+              />
+            )}
           </>
         )}
       </div>
+
+      {/* Service Status Modal */}
+      {serviceStatusModal && (
+        <ServiceStatusManager
+          activityId={serviceStatusModal.activityId}
+          activityName={serviceStatusModal.activityName}
+          service={serviceStatusModal.service}
+          subscription={serviceStatusModal.subscription}
+          effectiveStatus={serviceStatusModal.effectiveStatus}
+          isActive={serviceStatusModal.isActive}
+          daysRemaining={serviceStatusModal.daysRemaining}
+          onUpdate={handleUpdateServiceStatus}
+          onClose={() => setServiceStatusModal(null)}
+        />
+      )}
 
       {/* Modal */}
       {showModal && (

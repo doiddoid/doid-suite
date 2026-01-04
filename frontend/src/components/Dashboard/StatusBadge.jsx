@@ -1,26 +1,40 @@
 /**
- * StatusBadge - Badge per visualizzare lo stato dell'abbonamento
+ * StatusBadge - Badge per visualizzare lo stato dell'abbonamento/servizio
+ * Supporta gli stati del modello "Servizi Indipendenti":
+ * - inactive: Non attivo (grigio)
+ * - free: Versione gratuita attiva (verde)
+ * - trial: Periodo di prova (blu)
+ * - active/pro: Abbonamento PRO attivo (viola)
+ * - expired: Scaduto (arancione)
+ * - cancelled: Cancellato (rosso)
  */
 
 export default function StatusBadge({ status, trialDaysLeft, className = '' }) {
   const styles = {
-    active: 'bg-green-100 text-green-700',
-    trial: 'bg-yellow-100 text-yellow-700',
-    expired: 'bg-red-100 text-red-700',
-    cancelled: 'bg-gray-100 text-gray-600',
-    inactive: 'bg-gray-100 text-gray-500'
+    inactive: 'bg-gray-100 text-gray-500',
+    free: 'bg-green-100 text-green-700',
+    trial: 'bg-blue-100 text-blue-700',
+    active: 'bg-purple-100 text-purple-700',
+    pro: 'bg-purple-100 text-purple-700',
+    expired: 'bg-orange-100 text-orange-700',
+    cancelled: 'bg-red-100 text-red-700'
   };
 
   const getLabel = () => {
     switch (status) {
-      case 'active':
-        return 'Attivo';
+      case 'inactive':
+        return 'Non attivo';
+      case 'free':
+        return 'FREE';
       case 'trial':
-        return trialDaysLeft !== undefined ? `Trial • ${trialDaysLeft}g` : 'Trial';
+        return trialDaysLeft !== undefined ? `TRIAL • ${trialDaysLeft}g` : 'TRIAL';
+      case 'active':
+      case 'pro':
+        return 'PRO';
       case 'expired':
-        return 'Scaduto';
+        return 'SCADUTO';
       case 'cancelled':
-        return 'Cancellato';
+        return 'CANCELLATO';
       default:
         return 'Non attivo';
     }

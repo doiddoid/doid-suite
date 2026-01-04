@@ -1122,6 +1122,788 @@ class AdminService {
 
     return allActivities;
   }
+
+  // ==================== CRON: TRIAL E SUBSCRIPTIONS ====================
+
+  // Controlla trial in scadenza e notifica
+  async checkExpiringTrials(daysBeforeExpiry = 3) {
+    const now = new Date();
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + daysBeforeExpiry);
+
+    // Trova trial che scadono nei prossimi N giorni
+    const { data: expiringTrials, error } = await supabaseAdmin
+      .from('subscriptions')
+      .select(`
+        id,
+        trial_ends_at,
+        activity:activities (id, name, email),
+        service:services (id, code, name)
+      `)
+      .eq('status', 'trial')
+      .lte('trial_ends_at', expiryDate.toISOString())
+      .gte('trial_ends_at', now.toISOString());
+
+    if (error) {
+      console.error('Error checking expiring trials:', error);
+      throw Errors.Internal('Errore nel controllo dei trial in scadenza');
+    }
+
+    const notifications = [];
+
+    // Crea log comunicazioni e webhook per ogni trial in scadenza
+    for (const trial of expiringTrials || []) {
+      const daysLeft = Math.ceil((new Date(trial.trial_ends_at) - now) / (1000 * 60 * 60 * 24));
+
+      // Log comunicazione
+      await this.logCommunication({
+        activityId: trial.activity?.id,
+        type: 'system',
+        event: `trial_expiring_${daysLeft}d`,
+        recipient: trial.activity?.email,
+        subject: `Il tuo trial di ${trial.service?.name} scade tra ${daysLeft} giorni`,
+        metadata: {
+          trialEndsAt: trial.trial_ends_at,
+          serviceCode: trial.service?.code,
+          daysLeft
+        }
+      });
+
+      // Aggiungi a webhook queue
+      await this.queueWebhook({
+        eventType: 'trial_expiring',
+        activityId: trial.activity?.id,
+        serviceCode: trial.service?.code,
+        payload: {
+          subscriptionId: trial.id,
+          activityName: trial.activity?.name,
+          serviceName: trial.service?.name,
+          trialEndsAt: trial.trial_ends_at,
+          daysLeft
+        }
+      });
+
+      notifications.push({
+        activityId: trial.activity?.id,
+        activityName: trial.activity?.name,
+        serviceCode: trial.service?.code,
+        serviceName: trial.service?.name,
+        daysLeft,
+        trialEndsAt: trial.trial_ends_at
+      });
+    }
+
+    return {
+      expiringCount: expiringTrials?.length || 0,
+      notifications
+    };
+  }
+
+  // Controlla e aggiorna trial/abbonamenti scaduti
+  async checkExpiringSubscriptions() {
+    const now = new Date();
+
+    // Trova trial scaduti
+    const { data: expiredTrials } = await supabaseAdmin
+      .from('subscriptions')
+      .select(`
+        id,
+        activity_id,
+        service_id,
+        service:services (code, name, has_free_tier)
+      `)
+      .eq('status', 'trial')
+      .lt('trial_ends_at', now.toISOString());
+
+    let trialExpiredCount = 0;
+    let trialToFreeCount = 0;
+
+    // Aggiorna status dei trial scaduti
+    for (const trial of expiredTrials || []) {
+      // Se il servizio ha free tier, passa a free; altrimenti expired
+      const newStatus = trial.service?.has_free_tier ? 'free' : 'expired';
+
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({
+          status: newStatus,
+          trial_ends_at: null,
+          updated_at: now.toISOString()
+        })
+        .eq('id', trial.id);
+
+      // Log e webhook
+      await this.logCommunication({
+        activityId: trial.activity_id,
+        type: 'system',
+        event: 'trial_expired',
+        metadata: {
+          serviceCode: trial.service?.code,
+          newStatus
+        }
+      });
+
+      await this.queueWebhook({
+        eventType: 'trial_expired',
+        activityId: trial.activity_id,
+        serviceCode: trial.service?.code,
+        payload: {
+          subscriptionId: trial.id,
+          newStatus,
+          hasFreeAccess: newStatus === 'free'
+        }
+      });
+
+      if (newStatus === 'free') {
+        trialToFreeCount++;
+      } else {
+        trialExpiredCount++;
+      }
+    }
+
+    // Trova abbonamenti PRO scaduti
+    const { data: expiredSubs } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id, activity_id, service:services (code, name, has_free_tier)')
+      .eq('status', 'active')
+      .lt('current_period_end', now.toISOString());
+
+    let subscriptionExpiredCount = 0;
+
+    for (const sub of expiredSubs || []) {
+      // Se ha cancel_at_period_end, passa a expired/free
+      const newStatus = sub.service?.has_free_tier ? 'free' : 'expired';
+
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({
+          status: newStatus,
+          updated_at: now.toISOString()
+        })
+        .eq('id', sub.id);
+
+      await this.logCommunication({
+        activityId: sub.activity_id,
+        type: 'system',
+        event: 'subscription_expired',
+        metadata: {
+          serviceCode: sub.service?.code,
+          newStatus
+        }
+      });
+
+      await this.queueWebhook({
+        eventType: 'subscription_expired',
+        activityId: sub.activity_id,
+        serviceCode: sub.service?.code,
+        payload: {
+          subscriptionId: sub.id,
+          newStatus
+        }
+      });
+
+      subscriptionExpiredCount++;
+    }
+
+    return {
+      expiredTrials: (expiredTrials?.length || 0),
+      trialToFree: trialToFreeCount,
+      trialExpired: trialExpiredCount,
+      expiredSubscriptions: subscriptionExpiredCount
+    };
+  }
+
+  // ==================== SERVICE STATUS MANAGEMENT ====================
+
+  // Ottieni tutti i servizi con stato per una specifica attività
+  async getActivityServicesWithStatus(activityId) {
+    // Ottieni tutti i servizi attivi
+    const { data: services, error: servicesError } = await supabaseAdmin
+      .from('services')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order');
+
+    if (servicesError) {
+      throw Errors.Internal('Errore nel recupero dei servizi');
+    }
+
+    // Ottieni le subscription per questa attività
+    const { data: subscriptions } = await supabaseAdmin
+      .from('subscriptions')
+      .select(`
+        *,
+        plan:plans (id, code, name)
+      `)
+      .eq('activity_id', activityId);
+
+    // Mappa subscription per service_id
+    const subMap = new Map();
+    subscriptions?.forEach(sub => subMap.set(sub.service_id, sub));
+
+    const now = new Date();
+
+    return services.map(service => {
+      const sub = subMap.get(service.id);
+
+      let effectiveStatus = 'inactive';
+      let isActive = false;
+
+      if (sub) {
+        if (sub.status === 'trial') {
+          isActive = sub.trial_ends_at && new Date(sub.trial_ends_at) > now;
+          effectiveStatus = isActive ? 'trial' : 'expired';
+        } else if (sub.status === 'active') {
+          isActive = sub.current_period_end && new Date(sub.current_period_end) > now;
+          effectiveStatus = isActive ? 'pro' : 'expired';
+        } else if (sub.status === 'free') {
+          isActive = true;
+          effectiveStatus = 'free';
+        } else {
+          effectiveStatus = sub.status; // expired, cancelled, inactive
+        }
+      }
+
+      // Calcola giorni rimanenti
+      let daysRemaining = null;
+      if (sub && effectiveStatus === 'trial' && sub.trial_ends_at) {
+        daysRemaining = Math.ceil((new Date(sub.trial_ends_at) - now) / (1000 * 60 * 60 * 24));
+      } else if (sub && effectiveStatus === 'pro' && sub.current_period_end) {
+        daysRemaining = Math.ceil((new Date(sub.current_period_end) - now) / (1000 * 60 * 60 * 24));
+      }
+
+      return {
+        service: {
+          id: service.id,
+          code: service.code,
+          name: service.name,
+          description: service.description,
+          icon: service.icon,
+          color: service.color,
+          hasFree: service.has_free_tier,
+          priceMonthly: parseFloat(service.price_pro_monthly || 0),
+          priceYearly: parseFloat(service.price_pro_yearly || 0),
+          trialDays: service.trial_days || 30
+        },
+        subscription: sub ? {
+          id: sub.id,
+          status: sub.status,
+          planCode: sub.plan?.code,
+          planName: sub.plan?.name,
+          billingCycle: sub.billing_cycle,
+          trialEndsAt: sub.trial_ends_at,
+          currentPeriodStart: sub.current_period_start,
+          currentPeriodEnd: sub.current_period_end,
+          cancelAtPeriodEnd: sub.cancel_at_period_end,
+          createdAt: sub.created_at
+        } : null,
+        effectiveStatus,
+        isActive,
+        daysRemaining
+      };
+    });
+  }
+
+  // Aggiorna stato servizio per un'attività (admin)
+  async updateActivityServiceStatus(activityId, serviceCode, updates) {
+    const { status, billingCycle, trialDays, periodEndDate, cancelAtPeriodEnd } = updates;
+
+    // Trova servizio
+    const { data: service, error: serviceError } = await supabaseAdmin
+      .from('services')
+      .select('id, code, name, trial_days, has_free_tier')
+      .eq('code', serviceCode)
+      .single();
+
+    if (serviceError || !service) {
+      throw Errors.NotFound(`Servizio '${serviceCode}' non trovato`);
+    }
+
+    // Cerca subscription esistente
+    const { data: existingSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id, status')
+      .eq('activity_id', activityId)
+      .eq('service_id', service.id)
+      .single();
+
+    const now = new Date();
+    let updateData = {
+      status: status === 'pro' ? 'active' : status, // 'pro' -> 'active' per compatibilità enum
+      updated_at: now.toISOString()
+    };
+
+    // Calcola date in base allo status
+    if (status === 'trial') {
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + (trialDays || service.trial_days || 30));
+      updateData.trial_ends_at = trialEndDate.toISOString();
+      updateData.current_period_start = now.toISOString();
+      updateData.current_period_end = trialEndDate.toISOString();
+    } else if (status === 'pro' || status === 'active') {
+      updateData.status = 'active';
+      updateData.billing_cycle = billingCycle || 'yearly';
+      updateData.current_period_start = now.toISOString();
+      updateData.upgraded_at = now.toISOString();
+
+      if (periodEndDate) {
+        updateData.current_period_end = new Date(periodEndDate).toISOString();
+      } else {
+        const endDate = new Date();
+        if (billingCycle === 'yearly') {
+          endDate.setFullYear(endDate.getFullYear() + 1);
+        } else {
+          endDate.setMonth(endDate.getMonth() + 1);
+        }
+        updateData.current_period_end = endDate.toISOString();
+      }
+      updateData.trial_ends_at = null;
+    } else if (status === 'free') {
+      if (!service.has_free_tier) {
+        throw Errors.BadRequest(`Il servizio '${serviceCode}' non ha un piano gratuito`);
+      }
+      updateData.trial_ends_at = null;
+      updateData.current_period_end = null;
+    } else if (status === 'cancelled') {
+      updateData.cancelled_at = now.toISOString();
+      if (cancelAtPeriodEnd !== undefined) {
+        updateData.cancel_at_period_end = cancelAtPeriodEnd;
+      }
+    } else if (status === 'inactive' || status === 'expired') {
+      updateData.trial_ends_at = null;
+    }
+
+    let result;
+    const previousStatus = existingSub?.status;
+
+    if (existingSub) {
+      // Aggiorna esistente
+      const { data, error } = await supabaseAdmin
+        .from('subscriptions')
+        .update(updateData)
+        .eq('id', existingSub.id)
+        .select(`
+          *,
+          service:services (id, code, name)
+        `)
+        .single();
+
+      if (error) throw Errors.Internal('Errore nell\'aggiornamento: ' + error.message);
+      result = data;
+    } else {
+      // Crea nuovo
+      const { data: activity } = await supabaseAdmin
+        .from('activities')
+        .select('organization_id')
+        .eq('id', activityId)
+        .single();
+
+      // Trova piano appropriato
+      const planCode = status === 'free' ? 'free' : 'pro';
+      const { data: plan } = await supabaseAdmin
+        .from('plans')
+        .select('id')
+        .eq('service_id', service.id)
+        .eq('code', planCode)
+        .single();
+
+      const { data, error } = await supabaseAdmin
+        .from('subscriptions')
+        .insert({
+          activity_id: activityId,
+          service_id: service.id,
+          plan_id: plan?.id,
+          organization_id: activity?.organization_id,
+          ...updateData
+        })
+        .select(`
+          *,
+          service:services (id, code, name)
+        `)
+        .single();
+
+      if (error) throw Errors.Internal('Errore nella creazione: ' + error.message);
+      result = data;
+    }
+
+    // Log azione admin
+    await this.logCommunication({
+      activityId,
+      type: 'admin_action',
+      event: `service_status_changed`,
+      metadata: {
+        serviceCode,
+        serviceName: service.name,
+        previousStatus,
+        newStatus: status
+      }
+    });
+
+    return {
+      ...result,
+      effectiveStatus: status
+    };
+  }
+
+  // ==================== BILLING & DISCOUNTS ====================
+
+  // Ottieni riepilogo fatturazione utente con sconti
+  async getUserBillingSummary(userId) {
+    // Ottieni tutte le attività dell'utente
+    const { data: activityUsers } = await supabaseAdmin
+      .from('activity_users')
+      .select('activity_id')
+      .eq('user_id', userId);
+
+    const activityCount = activityUsers?.length || 0;
+    const activityIds = activityUsers?.map(au => au.activity_id) || [];
+
+    // Calcola sconto via funzione DB
+    const { data: discountResult } = await supabaseAdmin
+      .rpc('get_user_discount', { p_user_id: userId });
+
+    const discountPercentage = discountResult || 0;
+
+    // Ottieni abbonamenti attivi (PRO) per queste attività
+    const { data: subscriptions } = await supabaseAdmin
+      .from('subscriptions')
+      .select(`
+        *,
+        service:services (id, code, name, price_pro_monthly, price_pro_yearly),
+        activity:activities (id, name)
+      `)
+      .in('activity_id', activityIds)
+      .eq('status', 'active');
+
+    // Calcola totali
+    let monthlyTotal = 0;
+    let yearlyTotal = 0;
+
+    const formattedSubscriptions = (subscriptions || []).map(sub => {
+      const price = sub.billing_cycle === 'yearly'
+        ? parseFloat(sub.service?.price_pro_yearly || 0)
+        : parseFloat(sub.service?.price_pro_monthly || 0);
+
+      if (sub.billing_cycle === 'yearly') {
+        yearlyTotal += price;
+      } else {
+        monthlyTotal += price;
+      }
+
+      return {
+        id: sub.id,
+        activityId: sub.activity?.id,
+        activityName: sub.activity?.name,
+        serviceCode: sub.service?.code,
+        serviceName: sub.service?.name,
+        billingCycle: sub.billing_cycle,
+        price,
+        currentPeriodEnd: sub.current_period_end
+      };
+    });
+
+    // Converti yearly a monthly equivalent
+    const totalMonthlyEquivalent = monthlyTotal + (yearlyTotal / 12);
+    const discountAmount = totalMonthlyEquivalent * (discountPercentage / 100);
+    const finalMonthly = totalMonthlyEquivalent - discountAmount;
+
+    return {
+      userId,
+      activityCount,
+      isAgency: activityCount >= 5,
+      discountPercentage,
+      subscriptions: formattedSubscriptions,
+      totals: {
+        monthlySubtotal: Math.round(monthlyTotal * 100) / 100,
+        yearlySubtotal: Math.round(yearlyTotal * 100) / 100,
+        monthlyEquivalent: Math.round(totalMonthlyEquivalent * 100) / 100,
+        discountAmount: Math.round(discountAmount * 100) / 100,
+        finalMonthly: Math.round(finalMonthly * 100) / 100,
+        estimatedYearly: Math.round(finalMonthly * 12 * 100) / 100
+      }
+    };
+  }
+
+  // Ottieni lista sconti volume
+  async getVolumeDiscounts() {
+    const { data, error } = await supabaseAdmin
+      .from('volume_discounts')
+      .select('*')
+      .order('min_activities');
+
+    if (error) {
+      throw Errors.Internal('Errore nel recupero degli sconti');
+    }
+
+    return data.map(d => ({
+      id: d.id,
+      minActivities: d.min_activities,
+      maxActivities: d.max_activities,
+      discountPercentage: parseFloat(d.discount_percentage),
+      isActive: d.is_active,
+      createdAt: d.created_at
+    }));
+  }
+
+  // Aggiorna sconto volume
+  async updateVolumeDiscount(discountId, updates) {
+    const updateData = {};
+    if (updates.minActivities !== undefined) updateData.min_activities = updates.minActivities;
+    if (updates.maxActivities !== undefined) updateData.max_activities = updates.maxActivities;
+    if (updates.discountPercentage !== undefined) updateData.discount_percentage = updates.discountPercentage;
+    if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+
+    const { data, error } = await supabaseAdmin
+      .from('volume_discounts')
+      .update(updateData)
+      .eq('id', discountId)
+      .select()
+      .single();
+
+    if (error) {
+      throw Errors.BadRequest('Errore nell\'aggiornamento dello sconto: ' + error.message);
+    }
+
+    return {
+      id: data.id,
+      minActivities: data.min_activities,
+      maxActivities: data.max_activities,
+      discountPercentage: parseFloat(data.discount_percentage),
+      isActive: data.is_active
+    };
+  }
+
+  // ==================== COMMUNICATION LOGS ====================
+
+  // Log una comunicazione
+  async logCommunication({ activityId, userId, type, event, recipient, subject, content, metadata, status = 'completed' }) {
+    const { data, error } = await supabaseAdmin
+      .from('communication_logs')
+      .insert({
+        activity_id: activityId || null,
+        user_id: userId || null,
+        type,
+        event,
+        recipient: recipient || null,
+        subject: subject || null,
+        content: content || null,
+        metadata: metadata || {},
+        status,
+        sent_at: status === 'sent' || status === 'completed' ? new Date().toISOString() : null
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error logging communication:', error);
+    }
+    return data;
+  }
+
+  // Ottieni log comunicazioni con filtri
+  async getCommunicationLogs({ activityId, userId, type, event, limit = 50, offset = 0 }) {
+    let query = supabaseAdmin
+      .from('communication_logs')
+      .select(`
+        *,
+        activity:activities (id, name),
+        user:auth.users (id, email)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (activityId) query = query.eq('activity_id', activityId);
+    if (userId) query = query.eq('user_id', userId);
+    if (type) query = query.eq('type', type);
+    if (event) query = query.eq('event', event);
+
+    const { data, error, count } = await query.range(offset, offset + limit - 1);
+
+    if (error) {
+      throw Errors.Internal('Errore nel recupero dei log');
+    }
+
+    return {
+      logs: data.map(log => ({
+        id: log.id,
+        activityId: log.activity_id,
+        activityName: log.activity?.name,
+        userId: log.user_id,
+        type: log.type,
+        event: log.event,
+        recipient: log.recipient,
+        subject: log.subject,
+        status: log.status,
+        metadata: log.metadata,
+        createdAt: log.created_at,
+        sentAt: log.sent_at
+      })),
+      pagination: {
+        total: count,
+        limit,
+        offset
+      }
+    };
+  }
+
+  // ==================== WEBHOOKS QUEUE ====================
+
+  // Aggiungi webhook alla coda
+  async queueWebhook({ eventType, activityId, userId, serviceCode, payload, targetUrl }) {
+    const { data, error } = await supabaseAdmin
+      .from('webhooks_queue')
+      .insert({
+        event_type: eventType,
+        activity_id: activityId || null,
+        user_id: userId || null,
+        service_code: serviceCode || null,
+        payload,
+        target_url: targetUrl || null,
+        status: 'pending',
+        scheduled_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error queuing webhook:', error);
+    }
+    return data;
+  }
+
+  // Ottieni webhook in coda (pending)
+  async getPendingWebhooks(limit = 50) {
+    const { data, error } = await supabaseAdmin
+      .from('webhooks_queue')
+      .select('*')
+      .eq('status', 'pending')
+      .order('scheduled_at')
+      .limit(limit);
+
+    if (error) {
+      throw Errors.Internal('Errore nel recupero dei webhook');
+    }
+
+    return data.map(w => ({
+      id: w.id,
+      eventType: w.event_type,
+      activityId: w.activity_id,
+      userId: w.user_id,
+      serviceCode: w.service_code,
+      payload: w.payload,
+      targetUrl: w.target_url,
+      retryCount: w.retry_count,
+      status: w.status,
+      scheduledAt: w.scheduled_at,
+      createdAt: w.created_at
+    }));
+  }
+
+  // Marca webhook come completato
+  async markWebhookComplete(webhookId) {
+    const { error } = await supabaseAdmin
+      .from('webhooks_queue')
+      .update({
+        status: 'completed',
+        processed_at: new Date().toISOString()
+      })
+      .eq('id', webhookId);
+
+    if (error) {
+      throw Errors.BadRequest('Errore nel completamento del webhook');
+    }
+
+    return { success: true };
+  }
+
+  // Marca webhook come fallito
+  async markWebhookFailed(webhookId, errorMessage) {
+    const { data: webhook } = await supabaseAdmin
+      .from('webhooks_queue')
+      .select('retry_count, max_retries')
+      .eq('id', webhookId)
+      .single();
+
+    const newRetryCount = (webhook?.retry_count || 0) + 1;
+    const isFinalFailure = newRetryCount >= (webhook?.max_retries || 3);
+
+    const { error } = await supabaseAdmin
+      .from('webhooks_queue')
+      .update({
+        status: isFinalFailure ? 'failed' : 'pending',
+        retry_count: newRetryCount,
+        error_message: errorMessage,
+        processed_at: isFinalFailure ? new Date().toISOString() : null
+      })
+      .eq('id', webhookId);
+
+    if (error) {
+      throw Errors.BadRequest('Errore nell\'aggiornamento del webhook');
+    }
+
+    return { success: true, isFinalFailure };
+  }
+
+  // Retry webhook
+  async retryWebhook(webhookId) {
+    const { error } = await supabaseAdmin
+      .from('webhooks_queue')
+      .update({
+        status: 'pending',
+        scheduled_at: new Date().toISOString(),
+        error_message: null
+      })
+      .eq('id', webhookId);
+
+    if (error) {
+      throw Errors.BadRequest('Errore nel retry del webhook');
+    }
+
+    return { success: true };
+  }
+
+  // ==================== USER DETAILS WITH ACTIVITIES ====================
+
+  // Ottieni dettagli completi utente con tutte le attività e servizi
+  async getUserWithActivitiesAndServices(userId) {
+    // Ottieni user base
+    const user = await this.getUserById(userId);
+
+    // Ottieni attività dell'utente
+    const { data: activityUsers } = await supabaseAdmin
+      .from('activity_users')
+      .select(`
+        role,
+        activity:activities (*)
+      `)
+      .eq('user_id', userId);
+
+    // Per ogni attività, ottieni i servizi con stato
+    const activitiesWithServices = await Promise.all(
+      (activityUsers || []).map(async (au) => {
+        const services = await this.getActivityServicesWithStatus(au.activity.id);
+        return {
+          id: au.activity.id,
+          name: au.activity.name,
+          slug: au.activity.slug,
+          email: au.activity.email,
+          phone: au.activity.phone,
+          status: au.activity.status,
+          role: au.role,
+          createdAt: au.activity.created_at,
+          services
+        };
+      })
+    );
+
+    // Ottieni billing summary
+    const billing = await this.getUserBillingSummary(userId);
+
+    return {
+      ...user,
+      activities: activitiesWithServices,
+      billing
+    };
+  }
 }
 
 export default new AdminService();
