@@ -317,6 +317,37 @@ router.get('/subscriptions',
   })
 );
 
+// POST /api/admin/subscriptions
+// Crea nuova subscription (per admin)
+router.post('/subscriptions',
+  [
+    body('activityId').isUUID().withMessage('ID attività non valido'),
+    body('serviceCode').isString().trim().notEmpty().withMessage('Codice servizio richiesto'),
+    body('planCode').isString().trim().notEmpty().withMessage('Codice piano richiesto'),
+    body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido'),
+    body('status').optional().isIn(['trial', 'active']).withMessage('Status non valido')
+  ],
+  validate,
+  logAdminAction('create_subscription'),
+  asyncHandler(async (req, res) => {
+    const { activityId, serviceCode, planCode, billingCycle = 'yearly', status = 'active' } = req.body;
+
+    const subscription = await adminService.createSubscription({
+      activityId,
+      serviceCode,
+      planCode,
+      billingCycle,
+      status
+    });
+
+    res.status(201).json({
+      success: true,
+      data: subscription,
+      message: 'Abbonamento creato con successo'
+    });
+  })
+);
+
 // PUT /api/admin/subscriptions/:id
 router.put('/subscriptions/:id',
   [

@@ -800,6 +800,111 @@ class AdminService {
     };
   }
 
+  // Crea nuovo abbonamento (admin)
+  async createSubscription({ activityId, serviceCode, planCode, billingCycle = 'yearly', status = 'active' }) {
+    // Trova il servizio
+    const { data: service } = await supabaseAdmin
+      .from('services')
+      .select('id, code, name')
+      .eq('code', serviceCode)
+      .single();
+
+    if (!service) {
+      throw Errors.NotFound(`Servizio ${serviceCode} non trovato`);
+    }
+
+    // Trova il piano
+    const { data: plan } = await supabaseAdmin
+      .from('plans')
+      .select('id, code, name')
+      .eq('service_id', service.id)
+      .eq('code', planCode)
+      .single();
+
+    if (!plan) {
+      throw Errors.NotFound(`Piano ${planCode} non trovato per il servizio ${serviceCode}`);
+    }
+
+    // Ottieni organization_id dall'attività
+    const { data: activity } = await supabaseAdmin
+      .from('activities')
+      .select('organization_id')
+      .eq('id', activityId)
+      .single();
+
+    if (!activity) {
+      throw Errors.NotFound('Attività non trovata');
+    }
+
+    // Verifica se esiste già una subscription per questo servizio
+    const { data: existingSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id')
+      .eq('activity_id', activityId)
+      .eq('service_id', service.id)
+      .single();
+
+    const now = new Date();
+    const periodEnd = billingCycle === 'yearly'
+      ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
+      : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+
+    if (existingSub) {
+      // Aggiorna la subscription esistente
+      const { data, error } = await supabaseAdmin
+        .from('subscriptions')
+        .update({
+          plan_id: plan.id,
+          status: status,
+          billing_cycle: billingCycle,
+          trial_ends_at: null,
+          current_period_start: now.toISOString(),
+          current_period_end: periodEnd.toISOString(),
+          cancelled_at: null,
+          updated_at: now.toISOString()
+        })
+        .eq('id', existingSub.id)
+        .select(`
+          *,
+          service:services (id, code, name),
+          plan:plans (id, code, name)
+        `)
+        .single();
+
+      if (error) {
+        throw Errors.Internal('Errore nell\'aggiornamento della subscription: ' + error.message);
+      }
+
+      return data;
+    }
+
+    // Crea nuova subscription
+    const { data, error } = await supabaseAdmin
+      .from('subscriptions')
+      .insert({
+        activity_id: activityId,
+        organization_id: activity.organization_id,
+        service_id: service.id,
+        plan_id: plan.id,
+        status: status,
+        billing_cycle: billingCycle,
+        current_period_start: now.toISOString(),
+        current_period_end: periodEnd.toISOString()
+      })
+      .select(`
+        *,
+        service:services (id, code, name),
+        plan:plans (id, code, name)
+      `)
+      .single();
+
+    if (error) {
+      throw Errors.Internal('Errore nella creazione della subscription: ' + error.message);
+    }
+
+    return data;
+  }
+
   // Aggiorna abbonamento
   async updateSubscription(subscriptionId, updates) {
     const allowedFields = ['status', 'billing_cycle', 'trial_ends_at', 'current_period_end', 'plan_id'];
