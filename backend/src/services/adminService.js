@@ -209,8 +209,8 @@ class AdminService {
   // ==================== ORGANIZATIONS/AGENCIES ====================
 
   // Crea nuova organizzazione/agenzia (super admin)
-  async createOrganization({ name, email, phone, vatNumber, accountType = 'single', maxActivities = 1, ownerEmail }) {
-    // Genera slug unico
+  async createOrganization({ name, email, phone, vatNumber, accountType = 'single', maxActivities = 1, ownerEmail, createActivity = true }) {
+    // Genera slug unico per organizzazione
     const baseSlug = generateSlug(name);
     const slug = await ensureUniqueSlug(baseSlug, async (s) => {
       const { data } = await supabaseAdmin
@@ -243,17 +243,60 @@ class AdminService {
       throw Errors.Internal('Errore nella creazione dell\'organizzazione');
     }
 
+    let ownerId = null;
+
     // Se fornito ownerEmail, aggiungi come owner
     if (ownerEmail) {
       const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
       const owner = users?.find(u => u.email === ownerEmail);
 
       if (owner) {
+        ownerId = owner.id;
         await supabaseAdmin
           .from('organization_users')
           .insert({
             organization_id: org.id,
             user_id: owner.id,
+            role: 'owner'
+          });
+      }
+    }
+
+    // Crea automaticamente la prima attività
+    if (createActivity) {
+      // Genera slug unico per attività
+      const activitySlug = await ensureUniqueSlug(baseSlug, async (s) => {
+        const { data } = await supabaseAdmin
+          .from('activities')
+          .select('id')
+          .eq('slug', s)
+          .single();
+        return !!data;
+      });
+
+      const { data: activity, error: activityError } = await supabaseAdmin
+        .from('activities')
+        .insert({
+          organization_id: org.id,
+          name,
+          slug: activitySlug,
+          email: email || null,
+          phone: phone || null,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (activityError) {
+        console.error('Error creating activity:', activityError);
+        // Non blocchiamo la creazione dell'organizzazione
+      } else if (activity && ownerId) {
+        // Aggiungi l'owner anche all'attività
+        await supabaseAdmin
+          .from('activity_users')
+          .insert({
+            activity_id: activity.id,
+            user_id: ownerId,
             role: 'owner'
           });
       }
