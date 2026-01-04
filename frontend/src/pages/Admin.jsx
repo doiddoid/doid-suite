@@ -421,15 +421,22 @@ export default function Admin() {
     setEditingItem(item);
     setError(null);
 
+    // Carica utenti per dropdown owner se necessario
+    if ((type === 'organization' || type === 'activity') && mode === 'create') {
+      if (users.length === 0) {
+        fetchUsers();
+      }
+    }
+
     if (mode === 'edit' || mode === 'view') {
       setFormData({ ...item });
     } else {
       if (type === 'user') {
         setFormData({ email: '', password: '', fullName: '', emailConfirm: true });
       } else if (type === 'organization') {
-        setFormData({ name: '', email: '', accountType: 'single', maxActivities: 1, ownerEmail: '' });
+        setFormData({ name: '', email: '', accountType: 'single', maxActivities: 1, ownerId: '' });
       } else if (type === 'activity') {
-        setFormData({ name: '', email: '', organizationId: '', ownerEmail: '' });
+        setFormData({ name: '', email: '', organizationId: '', ownerId: '' });
       } else if (type === 'package') {
         setFormData({ code: '', name: '', description: '', priceMonthly: 0, priceYearly: 0, maxActivities: -1, isActive: true });
       } else if (type === 'plan') {
@@ -1740,12 +1747,28 @@ export default function Admin() {
               {/* Organization Form */}
               {modalType === 'organization' && (
                 <>
-                  <FormField label="Nome Organizzazione" required>
+                  <FormField label="Nome Cliente / Organizzazione" required>
                     <input type="text" required value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="input-field" placeholder="Nome azienda o attività" />
                   </FormField>
                   <FormField label="Email">
                     <input type="email" value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="input-field" placeholder="info@azienda.it" />
                   </FormField>
+                  {modalMode === 'create' && (
+                    <FormField label="Owner" hint="Utente proprietario del cliente">
+                      <select
+                        value={formData.ownerId || ''}
+                        onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+                        className="input-field"
+                      >
+                        <option value="">Seleziona owner (opzionale)...</option>
+                        {users.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.fullName || u.email} {u.fullName ? `(${u.email})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+                  )}
                   <FormField label="Tipo Account">
                     <div className="grid grid-cols-2 gap-3">
                       <label className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.accountType === 'single' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'} ${modalMode === 'edit' ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -1763,11 +1786,6 @@ export default function Admin() {
                   <FormField label="Max Attività" hint="-1 per illimitate">
                     <input type="number" min={-1} value={formData.maxActivities ?? 1} onChange={(e) => setFormData({ ...formData, maxActivities: parseInt(e.target.value) })} className="input-field" />
                   </FormField>
-                  {modalMode === 'create' && (
-                    <FormField label="Email Owner" hint="Opzionale - Assegna a un utente esistente">
-                      <input type="email" value={formData.ownerEmail || ''} onChange={(e) => setFormData({ ...formData, ownerEmail: e.target.value })} className="input-field" placeholder="owner@esempio.it" />
-                    </FormField>
-                  )}
                   {modalMode === 'edit' && (
                     <FormField label="Stato">
                       <select value={formData.status || 'active'} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="input-field">

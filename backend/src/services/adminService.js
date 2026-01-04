@@ -209,7 +209,7 @@ class AdminService {
   // ==================== ORGANIZATIONS/AGENCIES ====================
 
   // Crea nuova organizzazione/agenzia (super admin)
-  async createOrganization({ name, email, phone, vatNumber, accountType = 'single', maxActivities = 1, ownerEmail, createActivity = true }) {
+  async createOrganization({ name, email, phone, vatNumber, accountType = 'single', maxActivities = 1, ownerId, ownerEmail, createActivity = true }) {
     // Genera slug unico per organizzazione
     const baseSlug = generateSlug(name);
     const slug = await ensureUniqueSlug(baseSlug, async (s) => {
@@ -243,15 +243,25 @@ class AdminService {
       throw Errors.Internal('Errore nella creazione dell\'organizzazione');
     }
 
-    let ownerId = null;
+    let resolvedOwnerId = ownerId || null;
 
-    // Se fornito ownerEmail, aggiungi come owner
-    if (ownerEmail) {
+    // Se fornito ownerId direttamente, usalo
+    if (ownerId) {
+      await supabaseAdmin
+        .from('organization_users')
+        .insert({
+          organization_id: org.id,
+          user_id: ownerId,
+          role: 'owner'
+        });
+    }
+    // Fallback: se fornito ownerEmail (legacy), cerca l'utente
+    else if (ownerEmail) {
       const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
       const owner = users?.find(u => u.email === ownerEmail);
 
       if (owner) {
-        ownerId = owner.id;
+        resolvedOwnerId = owner.id;
         await supabaseAdmin
           .from('organization_users')
           .insert({
@@ -290,13 +300,13 @@ class AdminService {
       if (activityError) {
         console.error('Error creating activity:', activityError);
         // Non blocchiamo la creazione dell'organizzazione
-      } else if (activity && ownerId) {
+      } else if (activity && resolvedOwnerId) {
         // Aggiungi l'owner anche all'attività
         await supabaseAdmin
           .from('activity_users')
           .insert({
             activity_id: activity.id,
-            user_id: ownerId,
+            user_id: resolvedOwnerId,
             role: 'owner'
           });
       }

@@ -218,6 +218,7 @@ router.post('/organizations',
     body('vatNumber').optional({ checkFalsy: true }).trim(),
     body('accountType').optional().isIn(['single', 'agency']).withMessage('Tipo account non valido'),
     body('maxActivities').optional().isInt({ min: -1 }).withMessage('Max attività deve essere >= -1'),
+    body('ownerId').optional({ checkFalsy: true }).isUUID().withMessage('ID owner non valido'),
     body('ownerEmail').optional({ checkFalsy: true }).isEmail().withMessage('Email owner non valida')
   ],
   validate,
