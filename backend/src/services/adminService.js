@@ -397,6 +397,23 @@ class AdminService {
       .eq('organization_id', organizationId)
       .eq('status', 'active');
 
+    // Ottieni servizi con stato per ogni attività
+    const activitiesWithServices = await Promise.all(
+      (activities || []).map(async (a) => {
+        const services = await this.getActivityServicesWithStatus(a.id);
+        return {
+          id: a.id,
+          name: a.name,
+          slug: a.slug,
+          status: a.status,
+          email: a.email,
+          phone: a.phone,
+          createdAt: a.created_at,
+          services
+        };
+      })
+    );
+
     // Ottieni abbonamenti
     const { data: subscriptions } = await supabaseAdmin
       .from('subscriptions')
@@ -426,13 +443,7 @@ class AdminService {
     return {
       ...this.formatOrganization(org),
       members: memberDetails,
-      activities: activities?.map(a => ({
-        id: a.id,
-        name: a.name,
-        slug: a.slug,
-        status: a.status,
-        createdAt: a.created_at
-      })) || [],
+      activities: activitiesWithServices,
       subscriptions: subscriptions || [],
       packages: packages || []
     };

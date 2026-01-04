@@ -239,9 +239,12 @@ export default function Admin() {
         setSuccessMessage('Stato servizio aggiornato');
         // Refresh services for this activity
         await fetchActivityServices(activityId);
-        // Refresh item details if viewing this activity
-        if (selectedItem?.id === activityId) {
+        // Refresh item details based on what we're viewing
+        if (selectedItem?.type === 'activity' && selectedItem?.id === activityId) {
           fetchItemDetails('activity', activityId);
+        } else if (selectedItem?.type === 'organization') {
+          // Refresh organization to update activity services
+          fetchItemDetails('organization', selectedItem.id);
         }
       } else {
         throw new Error(response.error);
@@ -1147,22 +1150,72 @@ export default function Admin() {
                           )}
                         </div>
 
-                        {/* Attività */}
+                        {/* Attività con Servizi */}
                         <div className="p-4 border-b">
                           <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-                            Attività ({itemDetails?.activities?.length || 0})
+                            Attività e Servizi ({itemDetails?.activities?.length || 0})
                           </h4>
                           {(itemDetails?.activities || []).length === 0 ? (
                             <p className="text-sm text-gray-400 italic">Nessuna attività</p>
                           ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               {(itemDetails?.activities || []).map((activity) => (
-                                <div key={activity.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                  <div className="flex items-center gap-2">
-                                    <Store className="w-4 h-4 text-amber-500" />
-                                    <span className="text-sm font-medium">{activity.name}</span>
+                                <div key={activity.id} className="border rounded-lg overflow-hidden">
+                                  {/* Header Attività */}
+                                  <div className="flex items-center justify-between p-3 bg-gray-50">
+                                    <div className="flex items-center gap-2">
+                                      <Store className="w-4 h-4 text-amber-500" />
+                                      <span className="text-sm font-medium">{activity.name}</span>
+                                    </div>
+                                    {getStatusBadge(activity.status)}
                                   </div>
-                                  {getStatusBadge(activity.status)}
+                                  {/* Servizi dell'attività */}
+                                  <div className="p-2 space-y-1">
+                                    {(activity.services || []).map((svc) => {
+                                      const ServiceIcon = SERVICE_ICONS[svc.service?.icon] || Star;
+                                      const statusColors = {
+                                        inactive: 'bg-gray-100 text-gray-500',
+                                        free: 'bg-green-100 text-green-700',
+                                        trial: 'bg-blue-100 text-blue-700',
+                                        pro: 'bg-purple-100 text-purple-700',
+                                        expired: 'bg-orange-100 text-orange-700',
+                                        cancelled: 'bg-red-100 text-red-700'
+                                      };
+                                      return (
+                                        <div
+                                          key={svc.service.id}
+                                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                                          onClick={() => setServiceStatusModal({
+                                            activityId: activity.id,
+                                            activityName: activity.name,
+                                            service: svc.service,
+                                            subscription: svc.subscription,
+                                            effectiveStatus: svc.effectiveStatus,
+                                            isActive: svc.isActive,
+                                            daysRemaining: svc.daysRemaining
+                                          })}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <div className="p-1 rounded" style={{ backgroundColor: `${svc.service.color}15` }}>
+                                              <ServiceIcon className="w-3.5 h-3.5" style={{ color: svc.service.color }} />
+                                            </div>
+                                            <span className="text-xs font-medium text-gray-700">{svc.service.name}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            {svc.daysRemaining !== null && (
+                                              <span className="text-xs text-gray-400">{svc.daysRemaining}g</span>
+                                            )}
+                                            <span className={`px-1.5 py-0.5 text-xs rounded ${statusColors[svc.effectiveStatus] || statusColors.inactive}`}>
+                                              {svc.effectiveStatus === 'pro' ? 'PRO' : svc.effectiveStatus?.toUpperCase()}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                    {(!activity.services || activity.services.length === 0) && (
+                                      <p className="text-xs text-gray-400 italic p-2">Nessun servizio configurato</p>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
