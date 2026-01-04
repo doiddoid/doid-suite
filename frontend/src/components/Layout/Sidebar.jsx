@@ -14,7 +14,9 @@ import {
   Shield,
   HelpCircle,
   Sparkles,
-  Check
+  Check,
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useActivities } from '../../hooks/useActivities';
@@ -22,10 +24,11 @@ import { useActivities } from '../../hooks/useActivities';
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
   const { user } = useAuth();
-  const { currentActivity, activities, switchActivity, getServicesDashboard } = useActivities();
+  const { currentActivity, activities, switchActivity, getServicesDashboard, accessService } = useActivities();
 
   const [activeServices, setActiveServices] = useState([]);
   const [activityDropdownOpen, setActivityDropdownOpen] = useState(false);
+  const [accessingService, setAccessingService] = useState(null);
 
   // Service icons and colors mapping
   const serviceConfig = {
@@ -117,25 +120,48 @@ export default function Sidebar({ collapsed, onToggle }) {
     );
   };
 
+  const handleAccessService = async (serviceCode) => {
+    if (accessingService) return;
+
+    setAccessingService(serviceCode);
+    try {
+      const result = await accessService(serviceCode);
+      if (!result.success) {
+        console.error('Error accessing service:', result.error);
+      }
+    } catch (err) {
+      console.error('Error accessing service:', err);
+    } finally {
+      setAccessingService(null);
+    }
+  };
+
   const ServiceNavItem = ({ service }) => {
     const config = serviceConfig[service.service.code] || { icon: Star, color: 'text-gray-500' };
     const Icon = config.icon;
     const isTrialStatus = service.subscription?.status === 'trial';
+    const isLoading = accessingService === service.service.code;
 
     return (
-      <Link
-        to={`/services/${service.service.code.replace('_', '-')}`}
+      <button
+        onClick={() => handleAccessService(service.service.code)}
+        disabled={isLoading}
         className={`
-          flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group
-          text-gray-600 hover:bg-gray-100 hover:text-gray-900
+          w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group
+          text-gray-600 hover:bg-teal-50 hover:text-teal-700
           ${collapsed ? 'justify-center' : ''}
+          ${isLoading ? 'opacity-70 cursor-wait' : 'cursor-pointer'}
         `}
-        title={collapsed ? service.service.name : undefined}
+        title={collapsed ? `Accedi a ${service.service.name}` : undefined}
       >
-        <Icon className={`w-5 h-5 flex-shrink-0 ${config.color}`} />
+        {isLoading ? (
+          <Loader2 className="w-5 h-5 flex-shrink-0 animate-spin text-teal-500" />
+        ) : (
+          <Icon className={`w-5 h-5 flex-shrink-0 ${config.color}`} />
+        )}
         {!collapsed && (
           <>
-            <span className="truncate flex-1">{service.service.name}</span>
+            <span className="truncate flex-1 text-left">{service.service.name}</span>
             <span className={`
               text-[10px] font-semibold px-1.5 py-0.5 rounded
               ${isTrialStatus
@@ -145,9 +171,10 @@ export default function Sidebar({ collapsed, onToggle }) {
             `}>
               {isTrialStatus ? 'TRIAL' : 'PRO'}
             </span>
+            <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-teal-500 transition-colors" />
           </>
         )}
-      </Link>
+      </button>
     );
   };
 
