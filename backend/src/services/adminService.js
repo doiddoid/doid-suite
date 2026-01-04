@@ -209,7 +209,7 @@ class AdminService {
   // ==================== ORGANIZATIONS/AGENCIES ====================
 
   // Crea nuova organizzazione/agenzia (super admin)
-  async createOrganization({ name, email, phone, vatNumber, accountType = 'single', maxActivities = 1, ownerId, ownerEmail, createActivity = true }) {
+  async createOrganization({ name, email, phone, vatNumber, accountType = 'single', maxActivities = 1, ownerId, ownerEmail, createNewOwner, newOwnerEmail, newOwnerPassword, newOwnerName, createActivity = true }) {
     // Genera slug unico per organizzazione
     const baseSlug = generateSlug(name);
     const slug = await ensureUniqueSlug(baseSlug, async (s) => {
@@ -245,8 +245,35 @@ class AdminService {
 
     let resolvedOwnerId = ownerId || null;
 
+    // Se richiesto, crea nuovo utente owner
+    if (createNewOwner && newOwnerEmail && newOwnerPassword) {
+      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+        email: newOwnerEmail,
+        password: newOwnerPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: newOwnerName || newOwnerEmail.split('@')[0]
+        }
+      });
+
+      if (createUserError) {
+        console.error('Error creating new owner:', createUserError);
+        throw Errors.BadRequest(createUserError.message || 'Errore nella creazione dell\'utente owner');
+      }
+
+      if (newUser?.user) {
+        resolvedOwnerId = newUser.user.id;
+        await supabaseAdmin
+          .from('organization_users')
+          .insert({
+            organization_id: org.id,
+            user_id: newUser.user.id,
+            role: 'owner'
+          });
+      }
+    }
     // Se fornito ownerId direttamente, usalo
-    if (ownerId) {
+    else if (ownerId) {
       await supabaseAdmin
         .from('organization_users')
         .insert({

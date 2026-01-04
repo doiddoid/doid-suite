@@ -219,7 +219,11 @@ router.post('/organizations',
     body('accountType').optional().isIn(['single', 'agency']).withMessage('Tipo account non valido'),
     body('maxActivities').optional().isInt({ min: -1 }).withMessage('Max attività deve essere >= -1'),
     body('ownerId').optional({ checkFalsy: true }).isUUID().withMessage('ID owner non valido'),
-    body('ownerEmail').optional({ checkFalsy: true }).isEmail().withMessage('Email owner non valida')
+    body('ownerEmail').optional({ checkFalsy: true }).isEmail().withMessage('Email owner non valida'),
+    body('createNewOwner').optional().isBoolean().withMessage('createNewOwner deve essere boolean'),
+    body('newOwnerEmail').optional({ checkFalsy: true }).isEmail().withMessage('Email nuovo owner non valida'),
+    body('newOwnerPassword').optional({ checkFalsy: true }).isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri'),
+    body('newOwnerName').optional({ checkFalsy: true }).trim()
   ],
   validate,
   logAdminAction('create_organization'),

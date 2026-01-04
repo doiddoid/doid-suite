@@ -1754,20 +1754,68 @@ export default function Admin() {
                     <input type="email" value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="input-field" placeholder="info@azienda.it" />
                   </FormField>
                   {modalMode === 'create' && (
-                    <FormField label="Owner" hint="Utente proprietario del cliente">
-                      <select
-                        value={formData.ownerId || ''}
-                        onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
-                        className="input-field"
-                      >
-                        <option value="">Seleziona owner (opzionale)...</option>
-                        {users.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.fullName || u.email} {u.fullName ? `(${u.email})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </FormField>
+                    <div className="space-y-3">
+                      <FormField label="Owner" hint="Utente proprietario del cliente">
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, createNewOwner: false, newOwnerEmail: '', newOwnerPassword: '', newOwnerName: '' })}
+                            className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${!formData.createNewOwner ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                          >
+                            Seleziona esistente
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, createNewOwner: true, ownerId: '' })}
+                            className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${formData.createNewOwner ? 'bg-green-50 border-green-500 text-green-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                          >
+                            + Crea nuovo
+                          </button>
+                        </div>
+                        {!formData.createNewOwner ? (
+                          <select
+                            value={formData.ownerId || ''}
+                            onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+                            className="input-field"
+                          >
+                            <option value="">Nessun owner (opzionale)...</option>
+                            {users.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.fullName || u.email} {u.fullName ? `(${u.email})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="space-y-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                            <input
+                              type="text"
+                              value={formData.newOwnerName || ''}
+                              onChange={(e) => setFormData({ ...formData, newOwnerName: e.target.value })}
+                              className="input-field"
+                              placeholder="Nome completo *"
+                              required={formData.createNewOwner}
+                            />
+                            <input
+                              type="email"
+                              value={formData.newOwnerEmail || ''}
+                              onChange={(e) => setFormData({ ...formData, newOwnerEmail: e.target.value })}
+                              className="input-field"
+                              placeholder="Email *"
+                              required={formData.createNewOwner}
+                            />
+                            <input
+                              type="password"
+                              value={formData.newOwnerPassword || ''}
+                              onChange={(e) => setFormData({ ...formData, newOwnerPassword: e.target.value })}
+                              className="input-field"
+                              placeholder="Password (min 8 caratteri) *"
+                              minLength={8}
+                              required={formData.createNewOwner}
+                            />
+                          </div>
+                        )}
+                      </FormField>
+                    </div>
                   )}
                   <FormField label="Tipo Account">
                     <div className="grid grid-cols-2 gap-3">
