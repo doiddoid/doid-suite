@@ -135,9 +135,9 @@ router.post('/users',
 router.put('/users/:id',
   [
     param('id').isUUID().withMessage('ID utente non valido'),
-    body('email').optional().isEmail().withMessage('Email non valida'),
-    body('password').optional().isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri'),
-    body('fullName').optional().trim(),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email non valida'),
+    body('password').optional({ checkFalsy: true }).isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri'),
+    body('fullName').optional({ checkFalsy: true }).trim(),
     body('emailConfirm').optional().isBoolean().withMessage('emailConfirm deve essere boolean')
   ],
   validate,
@@ -213,12 +213,12 @@ router.get('/organizations',
 router.post('/organizations',
   [
     body('name').trim().notEmpty().withMessage('Nome richiesto'),
-    body('email').optional().isEmail().withMessage('Email non valida'),
-    body('phone').optional().trim(),
-    body('vatNumber').optional().trim(),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email non valida'),
+    body('phone').optional({ checkFalsy: true }).trim(),
+    body('vatNumber').optional({ checkFalsy: true }).trim(),
     body('accountType').optional().isIn(['single', 'agency']).withMessage('Tipo account non valido'),
     body('maxActivities').optional().isInt({ min: -1 }).withMessage('Max attività deve essere >= -1'),
-    body('ownerEmail').optional().isEmail().withMessage('Email owner non valida')
+    body('ownerEmail').optional({ checkFalsy: true }).isEmail().withMessage('Email owner non valida')
   ],
   validate,
   logAdminAction('create_organization'),
@@ -254,8 +254,8 @@ router.get('/organizations/:id',
 router.put('/organizations/:id',
   [
     param('id').isUUID().withMessage('ID organizzazione non valido'),
-    body('name').optional().trim().notEmpty().withMessage('Nome non può essere vuoto'),
-    body('email').optional().isEmail().withMessage('Email non valida'),
+    body('name').optional({ checkFalsy: true }).trim().notEmpty().withMessage('Nome non può essere vuoto'),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email non valida'),
     body('status').optional().isIn(['active', 'suspended', 'cancelled']).withMessage('Status non valido')
   ],
   validate,
@@ -422,9 +422,9 @@ router.post('/organizations/:organizationId/activities',
   [
     param('organizationId').isUUID().withMessage('ID organizzazione non valido'),
     body('name').trim().notEmpty().withMessage('Nome attività richiesto'),
-    body('email').optional().isEmail().withMessage('Email non valida'),
-    body('phone').optional().trim(),
-    body('ownerEmail').optional().isEmail().withMessage('Email owner non valida')
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email non valida'),
+    body('phone').optional({ checkFalsy: true }).trim(),
+    body('ownerEmail').optional({ checkFalsy: true }).isEmail().withMessage('Email owner non valida')
   ],
   validate,
   logAdminAction('create_activity_for_org'),
