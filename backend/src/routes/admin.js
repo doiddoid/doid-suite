@@ -1387,7 +1387,12 @@ router.put('/discounts/:id',
   [
     param('id').isUUID().withMessage('ID sconto non valido'),
     body('minActivities').optional().isInt({ min: 1 }).withMessage('Min attività non valido'),
-    body('maxActivities').optional().isInt({ min: 1 }).nullable().withMessage('Max attività non valido'),
+    body('maxActivities').optional().custom((value) => {
+      if (value === null || value === undefined) return true;
+      const num = parseInt(value);
+      if (isNaN(num) || num < 1) throw new Error('Max attività non valido');
+      return true;
+    }),
     body('discountPercentage').optional().isFloat({ min: 0, max: 100 }).withMessage('Percentuale sconto deve essere tra 0 e 100'),
     body('isActive').optional().isBoolean().withMessage('isActive deve essere boolean')
   ],
