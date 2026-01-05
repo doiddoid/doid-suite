@@ -107,20 +107,51 @@ router.get('/users/:id',
 router.post('/users',
   [
     body('email').isEmail().withMessage('Email non valida'),
-    body('password').isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri'),
-    body('fullName').trim().notEmpty().withMessage('Nome completo richiesto'),
-    body('emailConfirm').optional().isBoolean().withMessage('emailConfirm deve essere boolean')
+    body('password').optional().isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri'),
+    body('firstName').optional().trim(),
+    body('lastName').optional().trim(),
+    body('fullName').optional().trim(),
+    body('phone').optional().trim(),
+    body('emailConfirm').optional().isBoolean().withMessage('emailConfirm deve essere boolean'),
+    body('sendResetEmail').optional().isBoolean().withMessage('sendResetEmail deve essere boolean'),
+    body('adminNotes').optional().trim()
   ],
   validate,
   logAdminAction('create_user'),
   asyncHandler(async (req, res) => {
-    const { email, password, fullName, emailConfirm = true } = req.body;
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      fullName,
+      phone,
+      emailConfirm = true,
+      sendResetEmail = true,
+      adminNotes
+    } = req.body;
+
+    // Determina il nome completo
+    const resolvedFullName = fullName || (firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || '');
+
+    if (!resolvedFullName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nome richiesto (fullName oppure firstName/lastName)'
+      });
+    }
 
     const user = await adminService.createUser({
       email,
-      password,
-      fullName,
-      emailConfirm
+      password, // Se non fornita, verrà generata automaticamente
+      fullName: resolvedFullName,
+      firstName,
+      lastName,
+      phone,
+      emailConfirm,
+      sendResetEmail,
+      adminNotes,
+      createdBy: req.user.id
     });
 
     res.status(201).json({
@@ -1502,6 +1533,85 @@ router.post('/webhooks/:id/retry',
       success: true,
       data: result,
       message: 'Webhook riprogrammato'
+    });
+  })
+);
+
+// ==================== TRIAL REMINDERS ====================
+
+// Import trial reminder job
+import { processTrialReminders } from '../jobs/trialReminderJob.js';
+
+// POST /api/admin/jobs/trial-reminders/run
+// Esegui manualmente il job dei trial reminders
+router.post('/jobs/trial-reminders/run',
+  logAdminAction('run_trial_reminders'),
+  asyncHandler(async (req, res) => {
+    console.log(`[ADMIN] Trial reminders job triggered manually by ${req.user.email}`);
+
+    const result = await processTrialReminders();
+
+    res.json({
+      success: result.success,
+      data: {
+        processed: result.processed,
+        sent: result.sent,
+        expired: result.expired,
+        errors: result.errors
+      },
+      message: result.success
+        ? `Job completato: ${result.sent} reminder inviati, ${result.expired} trial scaduti`
+        : `Job fallito: ${result.error}`
+    });
+  })
+);
+
+// GET /api/admin/jobs/trial-reminders/stats
+// Statistiche reminder inviati
+router.get('/jobs/trial-reminders/stats',
+  [
+    query('days').optional().isInt({ min: 1, max: 365 }).withMessage('Days deve essere tra 1 e 365')
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const days = parseInt(req.query.days) || 30;
+
+    // Statistiche reminder
+    const { data: reminderStats, error: reminderError } = await supabaseAdmin
+      .rpc('get_reminder_stats', { p_days: days });
+
+    // Statistiche trial attivi
+    const { data: activeTrials, error: trialError } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id, trial_ends_at', { count: 'exact' })
+      .eq('status', 'trial')
+      .not('trial_ends_at', 'is', null);
+
+    // Prossimi trial in scadenza
+    const today = new Date();
+    const next7Days = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const { data: expiringTrials } = await supabaseAdmin
+      .from('subscriptions')
+      .select(`
+        id,
+        trial_ends_at,
+        activities (name)
+      `)
+      .eq('status', 'trial')
+      .gte('trial_ends_at', today.toISOString())
+      .lte('trial_ends_at', next7Days.toISOString())
+      .order('trial_ends_at', { ascending: true })
+      .limit(10);
+
+    res.json({
+      success: true,
+      data: {
+        period: `${days} giorni`,
+        remindersSent: reminderStats || [],
+        activeTrials: activeTrials?.length || 0,
+        expiringIn7Days: expiringTrials || []
+      }
     });
   })
 );

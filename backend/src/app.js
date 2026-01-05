@@ -21,6 +21,9 @@ import activitiesRoutes from './routes/activities.js';
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
+// Import jobs
+import { startTrialReminderScheduler } from './jobs/trialReminderJob.js';
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -172,6 +175,9 @@ app.listen(PORT, () => {
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
   `);
+
+  // Avvia job scheduler per trial reminders
+  startTrialReminderScheduler();
 });
 
 export default app;

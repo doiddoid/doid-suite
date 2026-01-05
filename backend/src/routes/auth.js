@@ -24,13 +24,49 @@ router.post('/register',
   [
     body('email').isEmail().withMessage('Email non valida'),
     body('password').isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri'),
-    body('fullName').trim().notEmpty().withMessage('Nome completo richiesto')
+    body('fullName').trim().notEmpty().withMessage('Nome completo richiesto'),
+    body('activityName')
+      .optional()
+      .trim()
+      .isLength({ min: 3 })
+      .withMessage('Nome attività deve essere almeno 3 caratteri'),
+    body('requestedService')
+      .optional()
+      .isIn(['smart_review', 'smart_page', 'menu_digitale', 'display_suite'])
+      .withMessage('Servizio non valido'),
+    body('utmSource').optional().trim(),
+    body('utmMedium').optional().trim(),
+    body('utmCampaign').optional().trim(),
+    body('utmContent').optional().trim(),
+    body('referralCode').optional().trim()
   ],
   validate,
   asyncHandler(async (req, res) => {
-    const { email, password, fullName } = req.body;
+    const {
+      email,
+      password,
+      fullName,
+      activityName,
+      requestedService,
+      utmSource,
+      utmMedium,
+      utmCampaign,
+      utmContent,
+      referralCode
+    } = req.body;
 
-    const result = await authService.register({ email, password, fullName });
+    const result = await authService.register({
+      email,
+      password,
+      fullName,
+      activityName,
+      requestedService,
+      utmSource,
+      utmMedium,
+      utmCampaign,
+      utmContent,
+      referralCode
+    });
 
     res.status(201).json({
       success: true,

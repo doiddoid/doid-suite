@@ -101,10 +101,32 @@ class ApiService {
 
   // ==================== AUTH ====================
 
-  async register({ email, password, fullName }) {
+  async register({
+    email,
+    password,
+    fullName,
+    activityName,
+    requestedService,
+    utmSource,
+    utmMedium,
+    utmCampaign,
+    utmContent,
+    referralCode
+  }) {
     return this.request('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, fullName }),
+      body: JSON.stringify({
+        email,
+        password,
+        fullName,
+        activityName,
+        requestedService,
+        utmSource,
+        utmMedium,
+        utmCampaign,
+        utmContent,
+        referralCode
+      }),
       auth: false,
     });
   }

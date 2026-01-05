@@ -57,10 +57,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Register
-  const register = useCallback(async (email, password, fullName) => {
+  const register = useCallback(async (data) => {
     setError(null);
     try {
-      const response = await api.register({ email, password, fullName });
+      const response = await api.register(data);
       if (response.success) {
         return { success: true, message: response.message };
       }

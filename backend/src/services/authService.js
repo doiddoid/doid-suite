@@ -2,10 +2,25 @@ import { supabase, supabaseAdmin } from '../config/supabase.js';
 import jwt from 'jsonwebtoken';
 import { Errors } from '../middleware/errorHandler.js';
 import { isSuperAdmin } from '../middleware/adminAuth.js';
+import organizationService from './organizationService.js';
+import activityService from './activityService.js';
+import subscriptionService from './subscriptionService.js';
+import webhookService from './webhookService.js';
 
 class AuthService {
   // Registrazione nuovo utente
-  async register({ email, password, fullName }) {
+  async register({
+    email,
+    password,
+    fullName,
+    activityName = 'La mia attività',
+    requestedService = 'smart_review',
+    utmSource = null,
+    utmMedium = null,
+    utmCampaign = null,
+    utmContent = null,
+    referralCode = null
+  }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -23,10 +38,171 @@ class AuthService {
       throw Errors.BadRequest(error.message);
     }
 
+    // Salva i dati in pending_registrations per processarli dopo verifica email
+    if (data.user) {
+      try {
+        const { error: pendingError } = await supabaseAdmin
+          .from('pending_registrations')
+          .insert({
+            user_id: data.user.id,
+            activity_name: activityName,
+            requested_service: requestedService,
+            utm_source: utmSource,
+            utm_medium: utmMedium,
+            utm_campaign: utmCampaign,
+            utm_content: utmContent,
+            referral_code: referralCode
+          });
+
+        if (pendingError) {
+          console.error('Error saving pending registration:', pendingError);
+          // Non blocchiamo la registrazione se fallisce il salvataggio pending
+        }
+      } catch (err) {
+        console.error('Error in pending registration:', err);
+      }
+    }
+
     return {
       user: data.user,
       session: data.session
     };
+  }
+
+  // Ottieni pending registration per un utente
+  async getPendingRegistration(userId) {
+    const { data, error } = await supabaseAdmin
+      .from('pending_registrations')
+      .select('*')
+      .eq('user_id', userId)
+      .is('processed_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching pending registration:', error);
+      return null;
+    }
+
+    return data;
+  }
+
+  // Segna pending registration come processata
+  async markPendingRegistrationProcessed(userId) {
+    const { error } = await supabaseAdmin
+      .from('pending_registrations')
+      .update({ processed_at: new Date().toISOString() })
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error marking pending registration as processed:', error);
+    }
+  }
+
+  /**
+   * Processa la pending registration: crea organizzazione, attività e attiva trial
+   * Viene chiamato al primo login dopo la verifica email
+   * @param {string} userId - ID utente
+   * @param {string} userEmail - Email utente
+   * @param {string} fullName - Nome completo utente
+   * @returns {object|null} - Oggetto con org, activity, subscription create o null
+   */
+  async processPendingRegistration(userId, userEmail, fullName) {
+    try {
+      // 1. Verifica se c'è una pending registration
+      const pending = await this.getPendingRegistration(userId);
+      if (!pending) {
+        return null;
+      }
+
+      console.log(`[PENDING] Processing registration for user ${userId}:`, {
+        activityName: pending.activity_name,
+        requestedService: pending.requested_service
+      });
+
+      // 2. Verifica che l'utente non abbia già un'organizzazione
+      const existingOrgs = await this.getUserOrganizations(userId);
+      if (existingOrgs.length > 0) {
+        console.log(`[PENDING] User ${userId} already has organizations, marking as processed`);
+        await this.markPendingRegistrationProcessed(userId);
+        return null;
+      }
+
+      // 3. Crea l'organizzazione (single account)
+      const organization = await organizationService.create({
+        name: fullName || pending.activity_name,
+        email: userEmail,
+        userId: userId
+      });
+
+      console.log(`[PENDING] Created organization ${organization.id} for user ${userId}`);
+
+      // 4. Crea l'attività
+      const activity = await activityService.createActivity(userId, {
+        name: pending.activity_name,
+        email: userEmail
+      });
+
+      console.log(`[PENDING] Created activity ${activity.id} for user ${userId}`);
+
+      // 5. Attiva trial per il servizio richiesto
+      let subscription = null;
+      if (pending.requested_service) {
+        try {
+          subscription = await subscriptionService.activateTrial(
+            activity.id,
+            pending.requested_service
+          );
+          console.log(`[PENDING] Activated trial for ${pending.requested_service} on activity ${activity.id}`);
+        } catch (trialError) {
+          // Non bloccare se il trial fallisce (es. servizio non esiste)
+          console.error(`[PENDING] Failed to activate trial:`, trialError.message);
+        }
+      }
+
+      // 6. Segna la pending registration come processata
+      await this.markPendingRegistrationProcessed(userId);
+
+      console.log(`[PENDING] Successfully processed registration for user ${userId}`);
+
+      // 7. Invia webhook a servizi esterni (GHL per email benvenuto)
+      try {
+        await webhookService.sendUserVerified({
+          email: userEmail,
+          fullName,
+          activityName: pending.activity_name,
+          requestedService: pending.requested_service,
+          organizationId: organization.id,
+          activityId: activity.id,
+          trialEndDate: subscription?.trialEndsAt || null,
+          utmSource: pending.utm_source,
+          utmMedium: pending.utm_medium,
+          utmCampaign: pending.utm_campaign,
+          utmContent: pending.utm_content,
+          referralCode: pending.referral_code
+        });
+        console.log(`[PENDING] Webhook sent for user ${userId}`);
+      } catch (webhookError) {
+        // Non bloccare se il webhook fallisce
+        console.error(`[PENDING] Webhook failed for user ${userId}:`, webhookError.message);
+      }
+
+      return {
+        organization,
+        activity,
+        subscription,
+        pendingData: {
+          activityName: pending.activity_name,
+          requestedService: pending.requested_service,
+          utmSource: pending.utm_source,
+          utmCampaign: pending.utm_campaign
+        }
+      };
+    } catch (error) {
+      console.error(`[PENDING] Error processing registration for user ${userId}:`, error);
+      // Non lanciare errore - il login deve comunque funzionare
+      return null;
+    }
   }
 
   // Login utente
@@ -43,10 +219,17 @@ class AuthService {
       throw Errors.BadRequest(error.message);
     }
 
-    // Ottieni le organizzazioni dell'utente
+    // Processa pending registration se esiste (primo login dopo verifica email)
+    const pendingResult = await this.processPendingRegistration(
+      data.user.id,
+      data.user.email,
+      data.user.user_metadata?.full_name
+    );
+
+    // Ottieni le organizzazioni dell'utente (aggiornate dopo eventuale processing)
     const organizations = await this.getUserOrganizations(data.user.id);
 
-    return {
+    const response = {
       user: {
         id: data.user.id,
         email: data.user.email,
@@ -61,6 +244,19 @@ class AuthService {
       },
       organizations
     };
+
+    // Aggiungi info sul setup automatico se è stato processato
+    if (pendingResult) {
+      response.autoSetup = {
+        completed: true,
+        organization: pendingResult.organization,
+        activity: pendingResult.activity,
+        subscription: pendingResult.subscription,
+        requestedService: pendingResult.pendingData?.requestedService
+      };
+    }
+
+    return response;
   }
 
   // Logout utente

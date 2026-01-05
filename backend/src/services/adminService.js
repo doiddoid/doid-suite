@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../config/supabase.js';
 import { Errors } from '../middleware/errorHandler.js';
 import { generateSlug, ensureUniqueSlug } from '../utils/slug.js';
+import webhookService from './webhookService.js';
 
 class AdminService {
   // ==================== USERS ====================
@@ -126,14 +127,53 @@ class AdminService {
     };
   }
 
-  // Crea nuovo utente
-  async createUser({ email, password, fullName, emailConfirm = true }) {
+  /**
+   * Genera password temporanea sicura
+   */
+  generateTempPassword(length = 16) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
+  /**
+   * Crea nuovo utente (admin)
+   * - Genera password temporanea se non fornita
+   * - Genera link reset password
+   * - Invia webhook a GHL
+   * - Logga azione admin
+   */
+  async createUser({
+    email,
+    password,
+    fullName,
+    firstName,
+    lastName,
+    phone,
+    emailConfirm = true,
+    sendResetEmail = true,
+    adminNotes,
+    createdBy
+  }) {
+    // 1. Genera password temporanea se non fornita
+    const tempPassword = password || this.generateTempPassword(16);
+    const isAutoPassword = !password;
+
+    // 2. Crea utente con Supabase Admin API
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password,
+      password: tempPassword,
       email_confirm: emailConfirm,
       user_metadata: {
-        full_name: fullName
+        full_name: fullName,
+        first_name: firstName || fullName?.split(' ')[0] || '',
+        last_name: lastName || fullName?.split(' ').slice(1).join(' ') || '',
+        phone: phone || null,
+        must_reset_password: isAutoPassword,
+        created_by_admin: true
       }
     });
 
@@ -144,11 +184,80 @@ class AdminService {
       throw Errors.BadRequest(error.message);
     }
 
+    const userId = data.user.id;
+    let resetPasswordUrl = null;
+
+    // 3. Genera link reset password se richiesto
+    if (sendResetEmail && isAutoPassword) {
+      try {
+        const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'recovery',
+          email: email,
+          options: {
+            redirectTo: `${process.env.FRONTEND_URL || 'https://suite.doid.it'}/reset-password`
+          }
+        });
+
+        if (!resetError && resetData?.properties?.action_link) {
+          resetPasswordUrl = resetData.properties.action_link;
+        }
+      } catch (resetErr) {
+        console.error('Error generating reset password link:', resetErr);
+      }
+    }
+
+    // 4. Log azione admin (se esiste la tabella)
+    if (createdBy) {
+      try {
+        await supabaseAdmin.from('admin_logs').insert({
+          admin_user_id: createdBy,
+          action: 'create_user',
+          entity_type: 'user',
+          entity_id: userId,
+          details: {
+            email,
+            fullName,
+            firstName,
+            lastName,
+            adminNotes: adminNotes || null,
+            autoPasswordGenerated: isAutoPassword
+          }
+        });
+      } catch (logErr) {
+        // Non bloccare se il log fallisce (tabella potrebbe non esistere)
+        console.error('Error logging admin action:', logErr.message);
+      }
+    }
+
+    // 5. Invia webhook a GHL per email benvenuto/reset password
+    try {
+      await webhookService.send('admin.user_created', {
+        userId,
+        email,
+        firstName: firstName || fullName?.split(' ')[0] || '',
+        lastName: lastName || fullName?.split(' ').slice(1).join(' ') || '',
+        fullName,
+        phone: phone || null,
+        resetPasswordUrl,
+        createdByAdmin: true,
+        mustResetPassword: isAutoPassword
+      });
+      console.log(`[ADMIN] Webhook sent for new user ${email}`);
+    } catch (webhookErr) {
+      // Non bloccare se il webhook fallisce
+      console.error('[ADMIN] Webhook failed for new user:', webhookErr.message);
+    }
+
     return {
-      id: data.user.id,
+      id: userId,
       email: data.user.email,
       fullName: data.user.user_metadata?.full_name,
-      createdAt: data.user.created_at
+      firstName: data.user.user_metadata?.first_name,
+      lastName: data.user.user_metadata?.last_name,
+      phone: data.user.user_metadata?.phone,
+      createdAt: data.user.created_at,
+      mustResetPassword: isAutoPassword,
+      resetPasswordUrl // Incluso nella risposta per debug/admin
     };
   }
 

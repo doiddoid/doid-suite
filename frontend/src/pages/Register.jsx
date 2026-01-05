@@ -1,15 +1,40 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, Store } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+
+// Mappa servizi da query param a valore backend
+const SERVICE_MAP = {
+  'review': 'smart_review',
+  'smart-review': 'smart_review',
+  'page': 'smart_page',
+  'smart-page': 'smart_page',
+  'menu': 'menu_digitale',
+  'display': 'display_suite'
+};
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register } = useAuth();
+
+  // Estrai UTM params e servizio dalla URL
+  const urlParams = useMemo(() => {
+    const serviceParam = searchParams.get('service');
+    return {
+      requestedService: SERVICE_MAP[serviceParam] || 'smart_review',
+      utmSource: searchParams.get('utm_source'),
+      utmMedium: searchParams.get('utm_medium'),
+      utmCampaign: searchParams.get('utm_campaign'),
+      utmContent: searchParams.get('utm_content'),
+      referralCode: searchParams.get('ref') || searchParams.get('referral')
+    };
+  }, [searchParams]);
 
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    activityName: '',
     password: '',
     confirmPassword: '',
   });
@@ -42,11 +67,20 @@ export default function Register() {
       return;
     }
 
-    const result = await register(
-      formData.email,
-      formData.password,
-      formData.fullName
-    );
+    // Validate activity name if provided
+    if (formData.activityName && formData.activityName.length < 3) {
+      setError('Il nome attività deve essere di almeno 3 caratteri');
+      setLoading(false);
+      return;
+    }
+
+    const result = await register({
+      email: formData.email,
+      password: formData.password,
+      fullName: formData.fullName,
+      activityName: formData.activityName || undefined,
+      ...urlParams
+    });
 
     if (result.success) {
       setSuccess(true);
@@ -134,6 +168,28 @@ export default function Register() {
                 className="input"
                 placeholder="nome@azienda.it"
               />
+            </div>
+
+            <div>
+              <label htmlFor="activityName" className="label">
+                Nome della tua attività
+              </label>
+              <div className="relative">
+                <input
+                  id="activityName"
+                  name="activityName"
+                  type="text"
+                  autoComplete="organization"
+                  value={formData.activityName}
+                  onChange={handleChange}
+                  className="input pl-10"
+                  placeholder="Es. Ristorante Da Mario"
+                />
+                <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Il nome dell'attività per cui attiverai i servizi DOID
+              </p>
             </div>
 
             <div>
