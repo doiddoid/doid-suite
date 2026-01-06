@@ -1,59 +1,59 @@
 /**
- * TEST ACCELERATO FLUSSO TRIAL SMART REVIEW
+ * TEST FLUSSO TRIAL SMART REVIEW - VERSIONE REALE
  *
- * Converte i giorni in ore per test rapidi:
- * - Giorno 0 (attivazione) → Ora 0
- * - Giorno 7 → 60 secondi dopo
- * - Giorno 14 → 120 secondi dopo
- * - Giorno 21 → 180 secondi dopo
- * - Giorno 27 → 240 secondi dopo
- * - Giorno 30 (scadenza) → 300 secondi dopo
+ * Questo script crea un utente REALE via API DOID e testa l'intero flusso:
+ * 1. Registrazione utente
+ * 2. Conferma email (via Supabase Admin)
+ * 3. Login (attiva org + activity + trial)
+ * 4. Invio webhook reminder trial (accelerati)
  *
  * Uso: node scripts/test-trial-flow.js [email_test]
+ *
+ * NOTA: L'email deve essere un indirizzo valido per ricevere le email da GHL
  */
 
 import 'dotenv/config';
 import axios from 'axios';
+import { createClient } from '@supabase/supabase-js';
 
 // ============================================
-// CONFIGURAZIONE TEST
+// CONFIGURAZIONE
 // ============================================
+
+const API_BASE_URL = process.env.API_BASE_URL || 'https://doid-suite-e9i5o.ondigitalocean.app';
+// Per test locale: 'http://localhost:3001'
 
 const TEST_CONFIG = {
-  // Email per il test (default o da argomento)
+  // Email per il test (da argomento o default)
   email: process.argv[2] || 'info.doid@gmail.com',
 
   // Dati utente test
-  firstName: 'Mario',
-  lastName: 'Rossi',
-  phone: '+393481234567',
-  activityName: 'Ristorante Test',
+  password: 'TestDoid2026!',
+  fullName: 'Test DOID Flow',
+  activityName: 'Ristorante Test GHL',
 
   // Servizio da testare
-  service: 'smart_review',
-  serviceLabel: 'Smart Review',
-  price: '9.90',
-  hasFree: true,
+  requestedService: 'smart_review',
 
   // Timing (secondi tra un evento e l'altro)
-  // In produzione: giorni, in test: secondi
   timingSeconds: {
-    afterVerified: 5,      // Dopo verifica, attiva trial
-    day7: 60,              // Dopo 60s = reminder giorno 7
-    day14: 60,             // Dopo altri 60s = reminder giorno 14
-    day21: 60,             // Dopo altri 60s = reminder giorno 21
-    day27: 60,             // Dopo altri 60s = reminder giorno 27 (urgente)
-    expired: 60            // Dopo altri 60s = trial scaduto
+    afterLogin: 10,        // Dopo login, aspetta prima dei reminder
+    betweenReminders: 60   // Tra un reminder e l'altro
   }
 };
 
+// Supabase Admin Client (per confermare email)
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
 // ============================================
-// WEBHOOK URLs
+// WEBHOOK URLs (per reminder manuali)
 // ============================================
 
 const WEBHOOKS = {
-  userVerified: process.env.GHL_WEBHOOK_USER_VERIFIED,
-  trialActivated: process.env.GHL_WEBHOOK_SERVICE_TRIAL_ACTIVATED,
   trialDay7: process.env.GHL_WEBHOOK_TRIAL_DAY_7,
   trialDay14: process.env.GHL_WEBHOOK_TRIAL_DAY_14,
   trialDay21: process.env.GHL_WEBHOOK_TRIAL_DAY_21,
@@ -64,14 +64,6 @@ const WEBHOOKS = {
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
-
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
 
 function formatDate(date) {
   return date.toLocaleDateString('it-IT', {
@@ -90,7 +82,6 @@ function sleep(seconds) {
 
 async function sendWebhook(name, url, payload) {
   console.log(`\n\u{1F4E4} Invio webhook: ${name}`);
-  console.log(`   URL: ${url}`);
 
   if (!url) {
     console.log(`   \u274C URL non configurato! Controlla .env`);
@@ -106,107 +97,146 @@ async function sendWebhook(name, url, payload) {
     return true;
   } catch (error) {
     console.log(`   \u274C Errore: ${error.message}`);
-    if (error.response) {
-      console.log(`   Response status: ${error.response.status}`);
-      console.log(`   Response data: ${JSON.stringify(error.response.data)}`);
-    }
     return false;
   }
 }
 
 // ============================================
-// PAYLOADS
+// API CALLS
 // ============================================
 
-const userId = generateUUID();
-const subscriptionId = generateUUID();
-const activityId = generateUUID();
-const trialStartDate = new Date();
-const trialEndDate = new Date(trialStartDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+async function registerUser() {
+  console.log(`\n\u{1F4E4} Chiamata API: POST /api/auth/register`);
 
-function getPayload_UserVerified() {
-  return {
-    event: 'user.verified',
-    timestamp: new Date().toISOString(),
-    data: {
-      user_id: userId,
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
       email: TEST_CONFIG.email,
-      first_name: TEST_CONFIG.firstName,
-      last_name: TEST_CONFIG.lastName,
-      phone: TEST_CONFIG.phone,
-      activity_name: TEST_CONFIG.activityName,
-      dashboard_url: 'https://suite.doid.it',
-      support_email: 'info@doid.biz',
-      support_whatsapp: '+393480890477'
+      password: TEST_CONFIG.password,
+      fullName: TEST_CONFIG.fullName,
+      activityName: TEST_CONFIG.activityName,
+      requestedService: TEST_CONFIG.requestedService
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 30000
+    });
+
+    console.log(`   \u2705 Registrazione completata`);
+    console.log(`   User ID: ${response.data.data?.user?.id}`);
+    return response.data;
+  } catch (error) {
+    if (error.response?.data?.error?.includes('già registrata') ||
+        error.response?.data?.error?.includes('already registered')) {
+      console.log(`   \u26A0\uFE0F  Utente già registrato, procedo con login`);
+      return { alreadyExists: true };
     }
-  };
+    console.log(`   \u274C Errore: ${error.response?.data?.error || error.message}`);
+    throw error;
+  }
 }
 
-function getPayload_TrialActivated() {
-  return {
-    event: 'service.trial_activated',
-    timestamp: new Date().toISOString(),
-    data: {
-      user_id: userId,
-      subscription_id: subscriptionId,
-      activity_id: activityId,
-      email: TEST_CONFIG.email,
-      first_name: TEST_CONFIG.firstName,
-      last_name: TEST_CONFIG.lastName,
-      activity_name: TEST_CONFIG.activityName,
-      service: TEST_CONFIG.service,
-      service_label: TEST_CONFIG.serviceLabel,
-      plan: 'pro',
-      trial_ends_at: trialEndDate.toISOString().split('T')[0],
-      trial_ends_at_formatted: formatDate(trialEndDate),
-      dashboard_url: 'https://review.doid.it',
-      upgrade_url: 'https://review.doid.it/upgrade',
-      price: TEST_CONFIG.price,
-      has_free_plan: TEST_CONFIG.hasFree
+async function confirmEmail() {
+  console.log(`\n\u{1F4E4} Conferma email via Supabase Admin`);
+
+  try {
+    // Trova l'utente per email
+    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    if (listError) throw listError;
+
+    const user = users.users.find(u => u.email === TEST_CONFIG.email);
+    if (!user) {
+      throw new Error('Utente non trovato in Supabase');
     }
-  };
+
+    // Conferma l'email
+    const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      email_confirm: true
+    });
+
+    if (confirmError) throw confirmError;
+
+    console.log(`   \u2705 Email confermata per user ${user.id}`);
+    return user;
+  } catch (error) {
+    console.log(`   \u274C Errore: ${error.message}`);
+    throw error;
+  }
 }
 
-function getPayload_TrialReminder(event, daysRemaining) {
+async function loginUser() {
+  console.log(`\n\u{1F4E4} Chiamata API: POST /api/auth/login`);
+
+  try {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
+      email: TEST_CONFIG.email,
+      password: TEST_CONFIG.password
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 30000
+    });
+
+    console.log(`   \u2705 Login completato`);
+
+    if (response.data.data?.autoSetup?.completed) {
+      console.log(`   \u{1F389} Auto-setup completato:`);
+      console.log(`      - Organization: ${response.data.data.autoSetup.organization?.id}`);
+      console.log(`      - Activity: ${response.data.data.autoSetup.activity?.id}`);
+      console.log(`      - Subscription: ${response.data.data.autoSetup.subscription?.id || 'N/A'}`);
+      console.log(`      - Service: ${response.data.data.autoSetup.requestedService}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    console.log(`   \u274C Errore: ${error.response?.data?.error || error.message}`);
+    throw error;
+  }
+}
+
+// ============================================
+// TRIAL REMINDER PAYLOADS
+// ============================================
+
+function getTrialReminderPayload(event, daysRemaining, userData) {
+  const trialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
   return {
     event: event,
     timestamp: new Date().toISOString(),
     data: {
-      user_id: userId,
-      subscription_id: subscriptionId,
+      user_id: userData.userId,
+      subscription_id: userData.subscriptionId || 'test-sub-id',
       email: TEST_CONFIG.email,
-      first_name: TEST_CONFIG.firstName,
+      first_name: TEST_CONFIG.fullName.split(' ')[0],
       activity_name: TEST_CONFIG.activityName,
-      service: TEST_CONFIG.service,
-      service_label: TEST_CONFIG.serviceLabel,
+      service: 'smart_review',
+      service_label: 'Smart Review',
       days_remaining: daysRemaining,
       trial_ends_at: trialEndDate.toISOString().split('T')[0],
       trial_ends_at_formatted: formatDate(trialEndDate),
       dashboard_url: 'https://review.doid.it',
       upgrade_url: 'https://review.doid.it/upgrade',
-      price: TEST_CONFIG.price,
-      has_free_plan: TEST_CONFIG.hasFree
+      price: '9.90',
+      has_free_plan: true
     }
   };
 }
 
-function getPayload_TrialExpired() {
+function getTrialExpiredPayload(userData) {
   return {
     event: 'trial.expired',
     timestamp: new Date().toISOString(),
     data: {
-      user_id: userId,
-      subscription_id: subscriptionId,
+      user_id: userData.userId,
+      subscription_id: userData.subscriptionId || 'test-sub-id',
       email: TEST_CONFIG.email,
-      first_name: TEST_CONFIG.firstName,
+      first_name: TEST_CONFIG.fullName.split(' ')[0],
       activity_name: TEST_CONFIG.activityName,
-      service: TEST_CONFIG.service,
-      service_label: TEST_CONFIG.serviceLabel,
+      service: 'smart_review',
+      service_label: 'Smart Review',
       expired_at: new Date().toISOString(),
       dashboard_url: 'https://review.doid.it',
       upgrade_url: 'https://review.doid.it/upgrade',
-      price: TEST_CONFIG.price,
-      has_free_plan: TEST_CONFIG.hasFree
+      price: '9.90',
+      has_free_plan: true
     }
   };
 }
@@ -217,108 +247,134 @@ function getPayload_TrialExpired() {
 
 async function runTestFlow() {
   console.log('\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
-  console.log('     TEST FLUSSO TRIAL SMART REVIEW - MODALITA\' ACCELERATA');
+  console.log('     TEST FLUSSO TRIAL SMART REVIEW - UTENTE REALE');
   console.log('\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
   console.log(`\n\u{1F4E7} Email test: ${TEST_CONFIG.email}`);
-  console.log(`\u{1F464} Utente: ${TEST_CONFIG.firstName} ${TEST_CONFIG.lastName}`);
+  console.log(`\u{1F464} Utente: ${TEST_CONFIG.fullName}`);
   console.log(`\u{1F3EA} Attivita': ${TEST_CONFIG.activityName}`);
-  console.log(`\u{1F527} Servizio: ${TEST_CONFIG.serviceLabel}`);
-  console.log(`\n\u23F1\uFE0F  Timing accelerato:`);
-  console.log(`   - Giorni 7, 14, 21, 27 \u2192 ${TEST_CONFIG.timingSeconds.day7}s tra ogni step`);
-  console.log(`   - Durata totale test: ~${
-    (TEST_CONFIG.timingSeconds.afterVerified +
-     TEST_CONFIG.timingSeconds.day7 * 5) / 60
-  } minuti\n`);
+  console.log(`\u{1F527} Servizio: Smart Review`);
+  console.log(`\u{1F310} API: ${API_BASE_URL}`);
 
-  // Verifica configurazione webhook
-  console.log('\u{1F50D} Verifica configurazione webhook...');
-  let missingWebhooks = [];
-  for (const [name, url] of Object.entries(WEBHOOKS)) {
-    if (!url) missingWebhooks.push(name);
-  }
-  if (missingWebhooks.length > 0) {
-    console.log(`\n\u26A0\uFE0F  ATTENZIONE: Webhook mancanti nel .env:`);
-    missingWebhooks.forEach(w => console.log(`   - ${w}`));
-    console.log('\nContinuo comunque il test...\n');
-  } else {
-    console.log('   \u2705 Tutti i webhook configurati\n');
+  let userData = {};
+
+  // ============================================
+  // STEP 1: REGISTRAZIONE
+  // ============================================
+  console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
+  console.log('STEP 1: REGISTRAZIONE UTENTE');
+  console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
+  console.log('Creo utente reale via API DOID Suite.');
+  console.log('\u2192 Webhook user.registered inviato a GHL (crea contatto)');
+
+  const registerResult = await registerUser();
+
+  if (registerResult.data?.user?.id) {
+    userData.userId = registerResult.data.user.id;
   }
 
-  // STEP 1: User Verified
+  await sleep(3);
+
+  // ============================================
+  // STEP 2: CONFERMA EMAIL
+  // ============================================
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('STEP 1: ACCOUNT VERIFICATO');
+  console.log('STEP 2: CONFERMA EMAIL');
   console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('L\'utente ha verificato la sua email. Ricevera\' email di benvenuto generica.');
-  await sendWebhook('user.verified', WEBHOOKS.userVerified, getPayload_UserVerified());
+  console.log('Confermo email via Supabase Admin (simula click su link verifica).');
 
-  await sleep(TEST_CONFIG.timingSeconds.afterVerified);
+  const user = await confirmEmail();
+  userData.userId = user.id;
 
-  // STEP 2: Trial Activated
+  await sleep(2);
+
+  // ============================================
+  // STEP 3: LOGIN (ATTIVA ORG + ACTIVITY + TRIAL)
+  // ============================================
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('STEP 2: TRIAL SMART REVIEW ATTIVATO');
+  console.log('STEP 3: PRIMO LOGIN (AUTO-SETUP)');
   console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('L\'utente ha attivato il trial Smart Review PRO. Ricevera\' email di benvenuto servizio.');
-  await sendWebhook('service.trial_activated', WEBHOOKS.trialActivated, getPayload_TrialActivated());
+  console.log('Il primo login processa la pending registration:');
+  console.log('  - Crea Organization');
+  console.log('  - Crea Activity');
+  console.log('  - Attiva Trial Smart Review PRO');
+  console.log('\u2192 Webhook user.verified inviato a GHL');
+  console.log('\u2192 Webhook service.trial_activated inviato a GHL');
 
-  await sleep(TEST_CONFIG.timingSeconds.day7);
+  const loginResult = await loginUser();
 
-  // STEP 3: Trial Day 7
+  if (loginResult.data?.autoSetup?.subscription?.id) {
+    userData.subscriptionId = loginResult.data.autoSetup.subscription.id;
+  }
+  if (loginResult.data?.autoSetup?.activity?.id) {
+    userData.activityId = loginResult.data.autoSetup.activity.id;
+  }
+
+  console.log('\n\u{1F4EC} A questo punto dovresti aver ricevuto:');
+  console.log('   1. \u2709\uFE0F  Email "Account DOID attivo" (user.verified)');
+  console.log('   2. \u2709\uFE0F  Email "Benvenuto Smart Review PRO" (service.trial_activated)');
+
+  await sleep(TEST_CONFIG.timingSeconds.afterLogin);
+
+  // ============================================
+  // STEP 4-8: REMINDER TRIAL (WEBHOOK MANUALI)
+  // ============================================
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('STEP 3: REMINDER GIORNO 7 (simulato)');
+  console.log('STEP 4: REMINDER GIORNO 7');
   console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('Sono passati 7 giorni. "Come sta andando con Smart Review?"');
-  await sendWebhook('trial.day_7', WEBHOOKS.trialDay7, getPayload_TrialReminder('trial.day_7', 23));
+  console.log('Simulo: "Come sta andando con Smart Review?"');
+  await sendWebhook('trial.day_7', WEBHOOKS.trialDay7, getTrialReminderPayload('trial.day_7', 23, userData));
 
-  await sleep(TEST_CONFIG.timingSeconds.day14);
+  await sleep(TEST_CONFIG.timingSeconds.betweenReminders);
 
-  // STEP 4: Trial Day 14
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('STEP 4: REMINDER GIORNO 14 (simulato)');
+  console.log('STEP 5: REMINDER GIORNO 14');
   console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('Sono passati 14 giorni. "Sei a meta\' della prova!"');
-  await sendWebhook('trial.day_14', WEBHOOKS.trialDay14, getPayload_TrialReminder('trial.day_14', 16));
+  console.log('Simulo: "Sei a meta\' della prova!"');
+  await sendWebhook('trial.day_14', WEBHOOKS.trialDay14, getTrialReminderPayload('trial.day_14', 16, userData));
 
-  await sleep(TEST_CONFIG.timingSeconds.day21);
+  await sleep(TEST_CONFIG.timingSeconds.betweenReminders);
 
-  // STEP 5: Trial Day 21
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('STEP 5: REMINDER GIORNO 21 (simulato)');
+  console.log('STEP 6: REMINDER GIORNO 21');
   console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('Sono passati 21 giorni. "Mancano solo 9 giorni!"');
-  await sendWebhook('trial.day_21', WEBHOOKS.trialDay21, getPayload_TrialReminder('trial.day_21', 9));
+  console.log('Simulo: "Mancano solo 9 giorni!"');
+  await sendWebhook('trial.day_21', WEBHOOKS.trialDay21, getTrialReminderPayload('trial.day_21', 9, userData));
 
-  await sleep(TEST_CONFIG.timingSeconds.day27);
+  await sleep(TEST_CONFIG.timingSeconds.betweenReminders);
 
-  // STEP 6: Trial Day 27 (URGENTE)
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('STEP 6: REMINDER GIORNO 27 - URGENTE (simulato)');
+  console.log('STEP 7: REMINDER GIORNO 27 - URGENTE');
   console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('\u26A0\uFE0F  Sono passati 27 giorni. "ULTIMI 3 GIORNI!"');
-  await sendWebhook('trial.day_27', WEBHOOKS.trialDay27, getPayload_TrialReminder('trial.day_27', 3));
+  console.log('\u26A0\uFE0F  Simulo: "ULTIMI 3 GIORNI!"');
+  await sendWebhook('trial.day_27', WEBHOOKS.trialDay27, getTrialReminderPayload('trial.day_27', 3, userData));
 
-  await sleep(TEST_CONFIG.timingSeconds.expired);
+  await sleep(TEST_CONFIG.timingSeconds.betweenReminders);
 
-  // STEP 7: Trial Expired
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('STEP 7: TRIAL SCADUTO');
+  console.log('STEP 8: TRIAL SCADUTO');
   console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('\u274C Il trial e\' scaduto. L\'utente passa a FREE o puo\' fare upgrade.');
-  await sendWebhook('trial.expired', WEBHOOKS.trialExpired, getPayload_TrialExpired());
+  console.log('\u274C Simulo: "Il tuo trial e\' scaduto"');
+  await sendWebhook('trial.expired', WEBHOOKS.trialExpired, getTrialExpiredPayload(userData));
 
+  // ============================================
   // FINE
+  // ============================================
   console.log('\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
   console.log('     \u2705 TEST COMPLETATO');
   console.log('\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
   console.log(`\n\u{1F4EC} Controlla la casella email: ${TEST_CONFIG.email}`);
   console.log('   Dovresti aver ricevuto 7 email in sequenza:\n');
-  console.log('   1. \u2709\uFE0F  Account DOID attivo');
-  console.log('   2. \u2709\uFE0F  Benvenuto Smart Review PRO');
+  console.log('   1. \u2709\uFE0F  Account DOID attivo (user.verified)');
+  console.log('   2. \u2709\uFE0F  Benvenuto Smart Review PRO (service.trial_activated)');
   console.log('   3. \u2709\uFE0F  Come sta andando? (giorno 7)');
   console.log('   4. \u2709\uFE0F  Sei a meta\'! (giorno 14)');
   console.log('   5. \u2709\uFE0F  Mancano 9 giorni (giorno 21)');
   console.log('   6. \u26A0\uFE0F  ULTIMI 3 GIORNI! (giorno 27)');
   console.log('   7. \u274C  Trial scaduto');
-  console.log('\n\u{1F4CA} Verifica anche i log in GHL per confermare i workflow attivati.\n');
+  console.log('\n\u{1F4CA} Verifica anche i log in GHL per confermare i workflow attivati.');
+  console.log('\n\u{1F464} User ID:', userData.userId);
+  console.log('\u{1F4DD} Subscription ID:', userData.subscriptionId || 'N/A');
+  console.log('\n');
 }
 
 // ============================================
@@ -326,6 +382,6 @@ async function runTestFlow() {
 // ============================================
 
 runTestFlow().catch(error => {
-  console.error('\n\u274C Errore durante il test:', error);
+  console.error('\n\u274C Errore durante il test:', error.message);
   process.exit(1);
 });
