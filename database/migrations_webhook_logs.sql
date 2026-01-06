@@ -106,15 +106,18 @@ $$;
 -- TIPI DI EVENTI WEBHOOK
 -- ================================================================================
 --
--- REGISTRAZIONE:
+-- REGISTRAZIONE (GENERICO - senza servizio):
 --   user.registered         - Nuova registrazione (prima della verifica email)
---   user.verified           - Email verificata + setup completato
+--   user.verified           - Email verificata + setup completato (NO servizio)
+--
+-- ATTIVAZIONE SERVIZI (SPECIFICO - con servizio):
+--   service.trial_activated - Utente ha scelto e attivato trial per un servizio
 --
 -- ADMIN:
 --   admin.user_created      - Utente creato da admin
 --   admin.setup_complete    - Setup completato per utente creato da admin
 --
--- TRIAL:
+-- TRIAL REMINDERS (SPECIFICO - include servizio nel payload):
 --   trial.started           - Trial avviato
 --   trial.day_7             - Reminder 7 giorni dalla scadenza
 --   trial.day_14            - Reminder 14 giorni dalla scadenza
@@ -133,6 +136,12 @@ $$;
 --
 -- PASSWORD:
 --   password.reset_requested - Richiesta reset password
+--
+-- AGENCY (opzionali):
+--   organization.upgraded   - Upgrade organizzazione ad agency
+--   activity.created        - Nuova attività creata (agency)
+--   member.invited          - Membro invitato
+--   member.joined           - Membro ha accettato invito
 --
 -- ================================================================================
 

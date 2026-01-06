@@ -61,6 +61,26 @@ class AuthService {
       } catch (err) {
         console.error('Error in pending registration:', err);
       }
+
+      // Invia webhook user.registered per creare contatto in GHL
+      // Questo viene inviato PRIMA della verifica email
+      try {
+        await webhookService.send('user.registered', {
+          email,
+          fullName,
+          activityName,
+          requestedService,
+          utmSource,
+          utmMedium,
+          utmCampaign,
+          utmContent,
+          referralCode
+        });
+        console.log(`[AUTH] Webhook user.registered inviato per ${email}`);
+      } catch (webhookError) {
+        // Non bloccare la registrazione se il webhook fallisce
+        console.error(`[AUTH] Webhook user.registered fallito per ${email}:`, webhookError.message);
+      }
     }
 
     return {
@@ -146,12 +166,14 @@ class AuthService {
       console.log(`[PENDING] Created activity ${activity.id} for user ${userId}`);
 
       // 5. Attiva trial per il servizio richiesto
+      // NOTA: Il webhook service.trial_activated viene inviato da subscriptionService.activateTrial
       let subscription = null;
       if (pending.requested_service) {
         try {
           subscription = await subscriptionService.activateTrial(
             activity.id,
-            pending.requested_service
+            pending.requested_service,
+            userId // Passa userId per webhook service.trial_activated
           );
           console.log(`[PENDING] Activated trial for ${pending.requested_service} on activity ${activity.id}`);
         } catch (trialError) {
@@ -165,23 +187,26 @@ class AuthService {
 
       console.log(`[PENDING] Successfully processed registration for user ${userId}`);
 
-      // 7. Invia webhook a servizi esterni (GHL per email benvenuto)
+      // 7. Invia webhook user.verified (GENERICO, senza servizio)
+      // NOTA: Questo webhook NON include il servizio perché l'utente potrebbe non averlo ancora scelto.
+      // Il webhook service.trial_activated specifico per servizio viene inviato da subscriptionService.activateTrial
       try {
         await webhookService.sendUserVerified({
           email: userEmail,
           fullName,
           activityName: pending.activity_name,
-          requestedService: pending.requested_service,
+          // NON includiamo requestedService qui - il webhook generico è per benvenuto senza servizio specifico
+          // Se c'era un servizio richiesto, il webhook service.trial_activated è già stato inviato sopra
           organizationId: organization.id,
           activityId: activity.id,
-          trialEndDate: subscription?.trialEndsAt || null,
+          // Metadati UTM per tracking
           utmSource: pending.utm_source,
           utmMedium: pending.utm_medium,
           utmCampaign: pending.utm_campaign,
           utmContent: pending.utm_content,
           referralCode: pending.referral_code
         });
-        console.log(`[PENDING] Webhook sent for user ${userId}`);
+        console.log(`[PENDING] Webhook user.verified sent for user ${userId}`);
       } catch (webhookError) {
         // Non bloccare se il webhook fallisce
         console.error(`[PENDING] Webhook failed for user ${userId}:`, webhookError.message);

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../config/supabase.js';
 import { Errors } from '../middleware/errorHandler.js';
 import serviceService from './serviceService.js';
+import webhookService from './webhookService.js';
 
 class SubscriptionService {
   // ==================== ACTIVITY-BASED SUBSCRIPTIONS ====================
@@ -166,8 +167,11 @@ class SubscriptionService {
 
   /**
    * Attiva trial per un servizio
+   * @param {string} activityId - ID dell'attività
+   * @param {string} serviceCode - Codice del servizio
+   * @param {string} userId - ID dell'utente (opzionale, per webhook)
    */
-  async activateTrial(activityId, serviceCode) {
+  async activateTrial(activityId, serviceCode, userId = null) {
     const service = await serviceService.getServiceByCode(serviceCode);
     if (!service) {
       throw Errors.NotFound('Servizio non trovato');
@@ -179,10 +183,10 @@ class SubscriptionService {
       throw Errors.Conflict('Esiste già un abbonamento per questo servizio');
     }
 
-    // Ottieni organization_id dall'attività (per backwards compatibility)
+    // Ottieni dati completi dell'attività (per backwards compatibility e webhook)
     const { data: activity } = await supabaseAdmin
       .from('activities')
-      .select('organization_id')
+      .select('id, name, email, organization_id')
       .eq('id', activityId)
       .single();
 
@@ -229,6 +233,37 @@ class SubscriptionService {
     if (error) {
       console.error('Error creating trial:', error);
       throw Errors.Internal('Errore nell\'attivazione del trial');
+    }
+
+    // Invia webhook per attivazione trial servizio specifico
+    // Questo viene chiamato quando l'utente SCEGLIE il servizio dalla dashboard
+    if (userId) {
+      try {
+        // Recupera dati utente per il webhook
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+        const user = userData?.user;
+
+        if (user) {
+          await webhookService.sendServiceTrialActivated({
+            userId: user.id,
+            email: user.email,
+            fullName: user.user_metadata?.full_name || 'Utente',
+            firstName: user.user_metadata?.first_name,
+            lastName: user.user_metadata?.last_name,
+            activityId: activityId,
+            activityName: activity?.name || 'La mia attività',
+            organizationId: activity?.organization_id,
+            service: serviceCode,
+            plan: trialPlan.code,
+            trialEndDate: trialEndsAt.toISOString(),
+            daysRemaining: trialPlan.trialDays || 30
+          });
+          console.log(`[SUBSCRIPTION] Webhook service.trial_activated inviato per ${serviceCode}`);
+        }
+      } catch (webhookError) {
+        // Non bloccare se il webhook fallisce
+        console.error('[SUBSCRIPTION] Errore invio webhook trial activated:', webhookError.message);
+      }
     }
 
     return this.formatSubscription(subscription);

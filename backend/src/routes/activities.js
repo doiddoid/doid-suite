@@ -291,7 +291,8 @@ router.post('/:activityId/subscriptions/trial',
   asyncHandler(async (req, res) => {
     const subscription = await subscriptionService.activateTrial(
       req.params.activityId,
-      req.body.serviceCode
+      req.body.serviceCode,
+      req.user.id // Passa userId per webhook service.trial_activated
     );
 
     res.status(201).json({

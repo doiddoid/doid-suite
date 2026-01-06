@@ -28,9 +28,14 @@ const REMINDER_MAP = {
 // Nome servizi leggibili
 const SERVICE_NAMES = {
   'smart_review': 'Smart Review',
+  'smart-review': 'Smart Review',
   'smart_page': 'Smart Page',
+  'smart-page': 'Smart Page',
   'menu_digitale': 'Menu Digitale',
-  'display_suite': 'Display Suite'
+  'menu': 'Menu Digitale',
+  'display_suite': 'Display Suite',
+  'display': 'Display Suite',
+  'accessi': 'Accessi'
 };
 
 /**

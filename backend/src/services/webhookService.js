@@ -12,15 +12,21 @@ class WebhookService {
   constructor() {
     // Mapping eventi -> URL webhook GHL (ogni evento può avere URL diverso)
     this.webhookUrls = {
-      // Registrazione e verifica
+      // ===== ACCOUNT E REGISTRAZIONE =====
+      // Quando l'utente verifica l'email (NO servizio ancora)
       'user.registered': process.env.GHL_WEBHOOK_USER_REGISTERED,
       'user.verified': process.env.GHL_WEBHOOK_USER_VERIFIED,
 
-      // Creazione da admin
+      // ===== ATTIVAZIONE SERVIZI =====
+      // Quando l'utente attiva un trial per un servizio specifico
+      'service.trial_activated': process.env.GHL_WEBHOOK_SERVICE_TRIAL_ACTIVATED,
+
+      // ===== ADMIN =====
       'admin.user_created': process.env.GHL_WEBHOOK_ADMIN_USER_CREATED,
       'admin.setup_complete': process.env.GHL_WEBHOOK_ADMIN_SETUP_COMPLETE,
 
-      // Trial reminders
+      // ===== TRIAL REMINDERS =====
+      // Tutti includono il servizio specifico nel payload
       'trial.started': process.env.GHL_WEBHOOK_TRIAL_STARTED,
       'trial.day_7': process.env.GHL_WEBHOOK_TRIAL_DAY_7,
       'trial.day_14': process.env.GHL_WEBHOOK_TRIAL_DAY_14,
@@ -29,7 +35,7 @@ class WebhookService {
       'trial.expiring': process.env.GHL_WEBHOOK_TRIAL_EXPIRING,
       'trial.expired': process.env.GHL_WEBHOOK_TRIAL_EXPIRED,
 
-      // Subscription
+      // ===== ABBONAMENTI =====
       'subscription.created': process.env.GHL_WEBHOOK_SUBSCRIPTION_CREATED,
       'subscription.activated': process.env.GHL_WEBHOOK_SUBSCRIPTION_ACTIVATED,
       'subscription.renewed': process.env.GHL_WEBHOOK_SUBSCRIPTION_RENEWED,
@@ -37,8 +43,14 @@ class WebhookService {
       'subscription.expired': process.env.GHL_WEBHOOK_SUBSCRIPTION_EXPIRED,
       'payment.failed': process.env.GHL_WEBHOOK_PAYMENT_FAILED,
 
-      // Password
-      'password.reset_requested': process.env.GHL_WEBHOOK_PASSWORD_RESET
+      // ===== PASSWORD =====
+      'password.reset_requested': process.env.GHL_WEBHOOK_PASSWORD_RESET,
+
+      // ===== AGENCY (opzionali) =====
+      'organization.upgraded': process.env.GHL_WEBHOOK_ORG_UPGRADED,
+      'activity.created': process.env.GHL_WEBHOOK_ACTIVITY_CREATED,
+      'member.invited': process.env.GHL_WEBHOOK_MEMBER_INVITED,
+      'member.joined': process.env.GHL_WEBHOOK_MEMBER_JOINED
     };
 
     // URL fallback generico (se l'evento specifico non ha URL dedicato)
@@ -55,6 +67,45 @@ class WebhookService {
     this.supportInfo = {
       support_email: process.env.SUPPORT_EMAIL || 'info@doid.biz',
       support_whatsapp: process.env.SUPPORT_WHATSAPP || '+393480890477'
+    };
+
+    // Mapping servizio → label italiano
+    this.serviceLabels = {
+      'smart_review': 'Smart Review',
+      'smart-review': 'Smart Review',
+      'smart_page': 'Smart Page',
+      'smart-page': 'Smart Page',
+      'menu_digitale': 'Menu Digitale',
+      'menu': 'Menu Digitale',
+      'display_suite': 'Display Suite',
+      'display': 'Display Suite',
+      'accessi': 'Accessi'
+    };
+
+    // Mapping servizio → prezzo PRO mensile
+    this.servicePrices = {
+      'smart_review': '9.90',
+      'smart-review': '9.90',
+      'smart_page': '6.90',
+      'smart-page': '6.90',
+      'menu_digitale': '9.90',
+      'menu': '9.90',
+      'display_suite': '14.90',
+      'display': '14.90',
+      'accessi': '9.90'
+    };
+
+    // Mapping servizio → ha piano FREE?
+    this.serviceHasFree = {
+      'smart_review': true,
+      'smart-review': true,
+      'smart_page': true,
+      'smart-page': true,
+      'menu_digitale': false,
+      'menu': false,
+      'display_suite': false,
+      'display': false,
+      'accessi': false
     };
   }
 
@@ -257,6 +308,36 @@ class WebhookService {
             referral_code: data.referralCode
           },
           tags: this.generateTags(event, data)
+        };
+
+      case 'service.trial_activated':
+        return {
+          ...basePayload,
+          email: data.email,
+          firstName: data.firstName || this.extractFirstName(data.fullName),
+          lastName: data.lastName || this.extractLastName(data.fullName),
+          name: data.fullName,
+          phone: data.phone || '',
+          // Dati servizio arricchiti
+          service: data.service,
+          service_label: this.getServiceLabel(data.service),
+          dashboard_url: this.getDashboardUrl(data.service),
+          upgrade_url: `${this.getDashboardUrl(data.service)}/upgrade`,
+          price: this.getServicePrice(data.service),
+          has_free_plan: this.serviceHasFreePlan(data.service),
+          customField: {
+            user_id: data.userId,
+            activity_id: data.activityId,
+            activity_name: data.activityName,
+            organization_id: data.organizationId,
+            service: data.service,
+            service_label: this.getServiceLabel(data.service),
+            plan: data.plan || 'pro',
+            trial_end_date: data.trialEndDate,
+            trial_end_date_formatted: this.formatDateItalian(data.trialEndDate),
+            days_remaining: data.daysRemaining || 30
+          },
+          tags: ['trial_activated', `service_${data.service}`, 'trial_active']
         };
 
       case 'admin.user_created':
@@ -470,6 +551,40 @@ class WebhookService {
     return fullName.trim().split(' ').slice(1).join(' ') || '';
   }
 
+  /**
+   * Helper: formatta data in italiano (es. "4 febbraio 2025")
+   */
+  formatDateItalian(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const months = [
+      'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
+      'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'
+    ];
+    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+  }
+
+  /**
+   * Helper: ottieni label servizio
+   */
+  getServiceLabel(service) {
+    return this.serviceLabels[service] || service;
+  }
+
+  /**
+   * Helper: ottieni prezzo servizio
+   */
+  getServicePrice(service) {
+    return this.servicePrices[service] || '9.90';
+  }
+
+  /**
+   * Helper: servizio ha piano free?
+   */
+  serviceHasFreePlan(service) {
+    return this.serviceHasFree[service] || false;
+  }
+
   // ==================== METODI HELPER PER EVENTI SPECIFICI ====================
 
   /**
@@ -556,6 +671,71 @@ class WebhookService {
    */
   async sendPasswordResetRequested(resetData) {
     return this.send('password.reset_requested', resetData);
+  }
+
+  // ==================== NUOVI METODI PER FLUSSO SERVIZI ====================
+
+  /**
+   * Invia webhook quando utente attiva trial per un servizio specifico
+   * Questo è il webhook SPECIFICO per servizio (dopo la scelta dell'utente)
+   */
+  async sendServiceTrialActivated(trialData) {
+    // Arricchisci con dati calcolati
+    const enrichedData = {
+      ...trialData,
+      service_label: this.getServiceLabel(trialData.service),
+      dashboard_url: this.getDashboardUrl(trialData.service),
+      upgrade_url: `${this.getDashboardUrl(trialData.service)}/upgrade`,
+      price: this.getServicePrice(trialData.service),
+      has_free_plan: this.serviceHasFreePlan(trialData.service),
+      trial_end_date_formatted: this.formatDateItalian(trialData.trialEndDate)
+    };
+    return this.send('service.trial_activated', enrichedData);
+  }
+
+  /**
+   * Invia webhook per admin setup complete
+   */
+  async sendAdminSetupComplete(setupData) {
+    return this.send('admin.setup_complete', setupData);
+  }
+
+  // ==================== METODI AGENCY (opzionali) ====================
+
+  /**
+   * Invia webhook per upgrade organizzazione ad agency
+   */
+  async sendOrganizationUpgraded(data) {
+    return this.send('organization.upgraded', {
+      ...data,
+      // Arricchisci con dati formattati
+      previous_type_label: data.previousType === 'single' ? 'Account Singolo' : data.previousType,
+      new_type_label: data.newType === 'agency' ? 'Agenzia' : data.newType
+    });
+  }
+
+  /**
+   * Invia webhook per nuova attività creata (agency)
+   */
+  async sendActivityCreated(data) {
+    return this.send('activity.created', data);
+  }
+
+  /**
+   * Invia webhook per membro invitato
+   */
+  async sendMemberInvited(data) {
+    return this.send('member.invited', {
+      ...data,
+      expires_at_formatted: this.formatDateItalian(data.expiresAt)
+    });
+  }
+
+  /**
+   * Invia webhook per membro che ha accettato invito
+   */
+  async sendMemberJoined(data) {
+    return this.send('member.joined', data);
   }
 }
 
