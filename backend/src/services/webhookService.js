@@ -13,8 +13,13 @@ class WebhookService {
     // Mapping eventi -> URL webhook GHL (ogni evento può avere URL diverso)
     this.webhookUrls = {
       // ===== ACCOUNT E REGISTRAZIONE =====
-      // Quando l'utente verifica l'email (NO servizio ancora)
+      // Quando l'utente si registra (richiede conferma email)
       'user.registered': process.env.GHL_WEBHOOK_USER_REGISTERED,
+      // Quando l'utente conferma l'email
+      'user.email_confirmed': process.env.GHL_WEBHOOK_USER_EMAIL_CONFIRMED,
+      // Quando l'utente richiede nuovo link di verifica
+      'user.resend_verification': process.env.GHL_WEBHOOK_USER_RESEND_VERIFICATION,
+      // Dopo che org/activity sono state create (legacy)
       'user.verified': process.env.GHL_WEBHOOK_USER_VERIFIED,
 
       // ===== ATTIVAZIONE SERVIZI =====
@@ -286,9 +291,9 @@ class WebhookService {
     };
 
     switch (event) {
-      // user.registered: SOLO dati base per creare contatto in GHL
-      // L'utente si è appena registrato, NON ha ancora scelto un servizio
-      // NOTA: GHL richiede campi specifici per Create/Update Contact
+      // user.registered: Crea contatto in GHL e invia email di conferma
+      // L'utente si è appena registrato, email NON ancora confermata
+      // Include link di conferma email per il workflow GHL
       case 'user.registered':
         return {
           ...basePayload,
@@ -302,22 +307,65 @@ class WebhookService {
           name: data.fullName,
           full_name: data.fullName,
           phone: data.phone || '',
-          // Campi per abilitare invio email in GHL
-          emailVerified: true,
+          // Campi per abilitare invio email in GHL (ma email non verificata nel nostro sistema)
+          emailVerified: true, // Per GHL - permette invio email
           email_verified: true,
           dnd: false, // Do Not Disturb = false (permetti comunicazioni)
           dndSettings: {
             email: { status: 'active' },
             sms: { status: 'active' }
           },
+          // URL di conferma email (da includere nell'email GHL)
+          confirmation_url: data.confirmationUrl,
+          confirmationUrl: data.confirmationUrl,
           // Custom fields
           customField: {
             activity_name: data.activityName,
-            email_verified: 'true',
-            doid_verified: 'true'
+            confirmation_url: data.confirmationUrl,
+            email_pending_verification: 'true'
           },
           // Tags
-          tags: ['user_registered', 'new_lead', 'email_verified']
+          tags: ['user_registered', 'new_lead', 'email_pending']
+        };
+
+      // user.email_confirmed: Dopo che l'utente ha cliccato sul link di conferma
+      case 'user.email_confirmed':
+        return {
+          ...basePayload,
+          email: data.email,
+          contact_email: data.email,
+          firstName: data.firstName || this.extractFirstName(data.fullName),
+          first_name: data.firstName || this.extractFirstName(data.fullName),
+          lastName: data.lastName || this.extractLastName(data.fullName),
+          last_name: data.lastName || this.extractLastName(data.fullName),
+          name: data.fullName,
+          full_name: data.fullName,
+          customField: {
+            user_id: data.userId,
+            email_verified: 'true',
+            email_pending_verification: 'false'
+          },
+          tags: ['email_confirmed', 'email_verified']
+        };
+
+      // user.resend_verification: Utente richiede nuovo link di conferma
+      case 'user.resend_verification':
+        return {
+          ...basePayload,
+          email: data.email,
+          contact_email: data.email,
+          firstName: data.firstName || this.extractFirstName(data.fullName),
+          first_name: data.firstName || this.extractFirstName(data.fullName),
+          lastName: data.lastName || this.extractLastName(data.fullName),
+          last_name: data.lastName || this.extractLastName(data.fullName),
+          name: data.fullName,
+          full_name: data.fullName,
+          confirmation_url: data.confirmationUrl,
+          confirmationUrl: data.confirmationUrl,
+          customField: {
+            confirmation_url: data.confirmationUrl
+          },
+          tags: ['resend_verification']
         };
 
       // user.verified: Dopo verifica email, l'utente ha org e activity

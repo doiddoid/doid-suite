@@ -1,5 +1,6 @@
 import { supabase, supabaseAdmin } from '../config/supabase.js';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { Errors } from '../middleware/errorHandler.js';
 import { isSuperAdmin } from '../middleware/adminAuth.js';
 import organizationService from './organizationService.js';
@@ -10,7 +11,7 @@ import webhookService from './webhookService.js';
 class AuthService {
   // Registrazione nuovo utente
   // Usa supabaseAdmin per creare l'utente senza inviare email di conferma Supabase
-  // L'email di benvenuto viene gestita da GHL tramite webhook
+  // L'email di conferma viene gestita da GHL tramite webhook
   async register({
     email,
     password,
@@ -23,11 +24,11 @@ class AuthService {
     utmContent = null,
     referralCode = null
   }) {
-    // Crea utente con Admin API (bypassa email di conferma Supabase)
+    // Crea utente con Admin API (NON confermare email - sarà confermata via link GHL)
     const { data: adminData, error: adminError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Conferma automaticamente l'email
+      email_confirm: false, // Email NON confermata - richiede verifica via link
       user_metadata: {
         full_name: fullName
       }
@@ -66,7 +67,18 @@ class AuthService {
         console.error('Error in pending registration:', err);
       }
 
-      // Invia webhook user.registered per creare contatto in GHL
+      // Genera token di conferma email
+      let confirmationUrl = null;
+      try {
+        const confirmationToken = await this.createEmailConfirmationToken(user.id, email);
+        const backendUrl = process.env.BACKEND_URL || 'https://doid-suite-e9i5o.ondigitalocean.app';
+        confirmationUrl = `${backendUrl}/api/auth/verify-email/${confirmationToken}`;
+        console.log(`[AUTH] Token conferma email generato per ${email}`);
+      } catch (tokenError) {
+        console.error(`[AUTH] Errore generazione token conferma per ${email}:`, tokenError.message);
+      }
+
+      // Invia webhook user.registered per creare contatto in GHL (include link conferma)
       try {
         await webhookService.send('user.registered', {
           email,
@@ -77,7 +89,8 @@ class AuthService {
           utmMedium,
           utmCampaign,
           utmContent,
-          referralCode
+          referralCode,
+          confirmationUrl // URL per conferma email
         });
         console.log(`[AUTH] Webhook user.registered inviato per ${email}`);
       } catch (webhookError) {
@@ -522,6 +535,149 @@ class AuthService {
     }
 
     return user;
+  }
+
+  // ============================================
+  // EMAIL CONFIRMATION METHODS
+  // ============================================
+
+  /**
+   * Genera un token sicuro per la conferma email
+   * @returns {string} Token di 64 caratteri hex
+   */
+  generateConfirmationToken() {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  /**
+   * Crea un token di conferma email nel database
+   * @param {string} userId - ID utente
+   * @param {string} email - Email da confermare
+   * @returns {string} Token generato
+   */
+  async createEmailConfirmationToken(userId, email) {
+    const token = this.generateConfirmationToken();
+
+    // Elimina eventuali token precedenti per questo utente
+    await supabaseAdmin
+      .from('email_confirmations')
+      .delete()
+      .eq('user_id', userId);
+
+    // Crea nuovo token
+    const { error } = await supabaseAdmin
+      .from('email_confirmations')
+      .insert({
+        user_id: userId,
+        token,
+        email,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 ore
+      });
+
+    if (error) {
+      console.error('Error creating email confirmation token:', error);
+      throw Errors.Internal('Errore nella creazione del token di conferma');
+    }
+
+    return token;
+  }
+
+  /**
+   * Verifica un token di conferma email e conferma l'email dell'utente
+   * @param {string} token - Token di conferma
+   * @returns {object} Risultato della verifica
+   */
+  async verifyEmailToken(token) {
+    // Cerca il token nel database
+    const { data: confirmation, error: findError } = await supabaseAdmin
+      .from('email_confirmations')
+      .select('*')
+      .eq('token', token)
+      .is('confirmed_at', null)
+      .single();
+
+    if (findError || !confirmation) {
+      throw Errors.BadRequest('Token non valido o già utilizzato');
+    }
+
+    // Verifica scadenza
+    if (new Date(confirmation.expires_at) < new Date()) {
+      throw Errors.BadRequest('Token scaduto. Richiedi un nuovo link di conferma.');
+    }
+
+    // Conferma l'email in Supabase Auth
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      confirmation.user_id,
+      { email_confirm: true }
+    );
+
+    if (updateError) {
+      console.error('Error confirming email in Supabase:', updateError);
+      throw Errors.Internal('Errore nella conferma email');
+    }
+
+    // Segna il token come utilizzato
+    await supabaseAdmin
+      .from('email_confirmations')
+      .update({ confirmed_at: new Date().toISOString() })
+      .eq('id', confirmation.id);
+
+    console.log(`[AUTH] Email confermata per user ${confirmation.user_id}`);
+
+    // Invia webhook user.email_confirmed
+    try {
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(confirmation.user_id);
+      if (userData?.user) {
+        await webhookService.send('user.email_confirmed', {
+          email: confirmation.email,
+          fullName: userData.user.user_metadata?.full_name,
+          userId: confirmation.user_id
+        });
+        console.log(`[AUTH] Webhook user.email_confirmed inviato per ${confirmation.email}`);
+      }
+    } catch (webhookError) {
+      console.error(`[AUTH] Webhook user.email_confirmed fallito:`, webhookError.message);
+    }
+
+    return {
+      success: true,
+      email: confirmation.email,
+      userId: confirmation.user_id
+    };
+  }
+
+  /**
+   * Rinvia l'email di verifica generando un nuovo token
+   * @param {string} email - Email dell'utente
+   */
+  async resendVerificationEmail(email) {
+    // Trova l'utente
+    const user = await this.getUserByEmail(email);
+
+    // Verifica se l'email è già confermata
+    if (user.email_confirmed_at) {
+      throw Errors.BadRequest('Email già confermata');
+    }
+
+    // Genera nuovo token
+    const token = await this.createEmailConfirmationToken(user.id, email);
+    const backendUrl = process.env.BACKEND_URL || 'https://doid-suite-e9i5o.ondigitalocean.app';
+    const confirmationUrl = `${backendUrl}/api/auth/verify-email/${token}`;
+
+    // Invia webhook per reinviare email
+    try {
+      await webhookService.send('user.resend_verification', {
+        email,
+        fullName: user.user_metadata?.full_name,
+        confirmationUrl
+      });
+      console.log(`[AUTH] Webhook user.resend_verification inviato per ${email}`);
+    } catch (webhookError) {
+      console.error(`[AUTH] Webhook user.resend_verification fallito:`, webhookError.message);
+      throw Errors.Internal('Errore nell\'invio dell\'email di verifica');
+    }
+
+    return { success: true };
   }
 }
 

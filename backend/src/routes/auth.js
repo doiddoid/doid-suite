@@ -176,6 +176,39 @@ router.post('/reset-password',
   })
 );
 
+// GET /api/auth/verify-email/:token
+// Conferma email tramite token (link inviato via GHL)
+router.get('/verify-email/:token',
+  asyncHandler(async (req, res) => {
+    const { token } = req.params;
+
+    const result = await authService.verifyEmailToken(token);
+
+    // Redirect alla pagina di successo nel frontend
+    const frontendUrl = process.env.FRONTEND_URL || 'https://suite.doid.it';
+    res.redirect(`${frontendUrl}/email-verified?success=true`);
+  })
+);
+
+// POST /api/auth/resend-verification
+// Rinvia email di verifica
+router.post('/resend-verification',
+  [
+    body('email').isEmail().withMessage('Email non valida')
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    await authService.resendVerificationEmail(email);
+
+    res.json({
+      success: true,
+      message: 'Email di verifica inviata'
+    });
+  })
+);
+
 // POST /api/auth/confirm-email (solo sviluppo)
 // Conferma manualmente l'email di un utente
 if (process.env.NODE_ENV === 'development') {
