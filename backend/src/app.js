@@ -17,6 +17,7 @@ import externalApiRoutes from './routes/api.js';
 import adminRoutes from './routes/admin.js';
 import servicesRoutes from './routes/services.js';
 import activitiesRoutes from './routes/activities.js';
+import webhooksRoutes from './routes/webhooks.js';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -145,6 +146,7 @@ app.use('/api/external', externalApiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/activities', activitiesRoutes);
+app.use('/api/webhooks', webhooksRoutes);
 
 // Root route
 app.get('/', (req, res) => {

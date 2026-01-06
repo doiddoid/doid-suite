@@ -698,6 +698,190 @@ class SubscriptionService {
       } : null
     };
   }
+
+  // ==================== PAYMENT-BASED SUBSCRIPTIONS ====================
+
+  /**
+   * Attiva abbonamento da pagamento esterno (GHL/Stripe)
+   * @param {Object} params
+   * @param {string} params.activityId - ID attività
+   * @param {string} params.serviceCode - Codice servizio
+   * @param {string} params.planCode - Codice piano (default: 'pro')
+   * @param {string} params.billingCycle - 'monthly' o 'yearly'
+   * @param {string} params.externalSubscriptionId - ID abbonamento esterno
+   * @param {string} params.transactionId - ID transazione
+   * @param {number} params.paidAmount - Importo pagato
+   */
+  async activateFromPayment({
+    activityId,
+    serviceCode,
+    planCode = 'pro',
+    billingCycle = 'monthly',
+    externalSubscriptionId,
+    transactionId,
+    paidAmount
+  }) {
+    const service = await serviceService.getServiceByCode(serviceCode);
+    if (!service) {
+      throw Errors.NotFound('Servizio non trovato');
+    }
+
+    const plans = await serviceService.getServicePlans(service.id);
+    const plan = plans.find(p => p.code === planCode) || plans.find(p => p.code === 'pro');
+    if (!plan) {
+      throw Errors.NotFound('Piano non trovato');
+    }
+
+    const now = new Date();
+    const periodEnd = billingCycle === 'yearly'
+      ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
+      : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+
+    // Cerca abbonamento esistente
+    const existingSub = await this.getSubscription(activityId, serviceCode);
+
+    let subscription;
+
+    if (existingSub) {
+      // Aggiorna abbonamento esistente (upgrade da trial o rinnovo)
+      const { data, error } = await supabaseAdmin
+        .from('subscriptions')
+        .update({
+          plan_id: plan.id,
+          status: 'active',
+          billing_cycle: billingCycle,
+          trial_ends_at: null,
+          current_period_start: now.toISOString(),
+          current_period_end: periodEnd.toISOString(),
+          cancelled_at: null,
+          external_subscription_id: externalSubscriptionId,
+          payment_source: 'gohighlevel',
+          upgraded_at: existingSub.status === 'trial' ? now.toISOString() : existingSub.upgradedAt,
+          updated_at: now.toISOString()
+        })
+        .eq('id', existingSub.id)
+        .select(`
+          *,
+          service:services (id, code, name, description, app_url, icon, color),
+          plan:plans (id, code, name, price_monthly, price_yearly, trial_days, features)
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error updating subscription from payment:', error);
+        throw Errors.Internal('Errore nell\'attivazione dell\'abbonamento');
+      }
+      subscription = data;
+      console.log(`[SUBSCRIPTION] Upgraded from ${existingSub.status} to active: ${activityId}/${serviceCode}`);
+
+    } else {
+      // Crea nuovo abbonamento
+      const { data: activity } = await supabaseAdmin
+        .from('activities')
+        .select('organization_id')
+        .eq('id', activityId)
+        .single();
+
+      const insertData = {
+        activity_id: activityId,
+        service_id: service.id,
+        plan_id: plan.id,
+        status: 'active',
+        billing_cycle: billingCycle,
+        current_period_start: now.toISOString(),
+        current_period_end: periodEnd.toISOString(),
+        external_subscription_id: externalSubscriptionId,
+        payment_source: 'gohighlevel',
+        upgraded_at: now.toISOString()
+      };
+
+      if (activity?.organization_id) {
+        insertData.organization_id = activity.organization_id;
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from('subscriptions')
+        .insert(insertData)
+        .select(`
+          *,
+          service:services (id, code, name, description, app_url, icon, color),
+          plan:plans (id, code, name, price_monthly, price_yearly, trial_days, features)
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error creating subscription from payment:', error);
+        throw Errors.Internal('Errore nella creazione dell\'abbonamento');
+      }
+      subscription = data;
+      console.log(`[SUBSCRIPTION] Created new active subscription: ${activityId}/${serviceCode}`);
+    }
+
+    return this.formatSubscription(subscription);
+  }
+
+  /**
+   * Rinnova abbonamento (estende periodo)
+   */
+  async renewSubscription(activityId, serviceCode) {
+    const existingSub = await this.getSubscription(activityId, serviceCode);
+    if (!existingSub) {
+      throw Errors.NotFound('Abbonamento non trovato');
+    }
+
+    const now = new Date();
+    const currentEnd = new Date(existingSub.currentPeriodEnd);
+    const baseDate = currentEnd > now ? currentEnd : now;
+
+    const newPeriodEnd = existingSub.billingCycle === 'yearly'
+      ? new Date(baseDate.getFullYear() + 1, baseDate.getMonth(), baseDate.getDate())
+      : new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, baseDate.getDate());
+
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .update({
+        status: 'active',
+        current_period_start: now.toISOString(),
+        current_period_end: newPeriodEnd.toISOString(),
+        last_renewed_at: now.toISOString(),
+        updated_at: now.toISOString()
+      })
+      .eq('id', existingSub.id);
+
+    if (error) {
+      console.error('Error renewing subscription:', error);
+      throw Errors.Internal('Errore nel rinnovo dell\'abbonamento');
+    }
+
+    console.log(`[SUBSCRIPTION] Renewed: ${activityId}/${serviceCode} until ${newPeriodEnd.toISOString()}`);
+    return { success: true, newPeriodEnd: newPeriodEnd.toISOString() };
+  }
+
+  /**
+   * Segna pagamento fallito (past_due)
+   */
+  async markPaymentFailed(activityId, serviceCode) {
+    const existingSub = await this.getSubscription(activityId, serviceCode);
+    if (!existingSub) {
+      throw Errors.NotFound('Abbonamento non trovato');
+    }
+
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .update({
+        status: 'past_due',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existingSub.id);
+
+    if (error) {
+      console.error('Error marking payment failed:', error);
+      throw Errors.Internal('Errore nell\'aggiornamento dello stato');
+    }
+
+    console.log(`[SUBSCRIPTION] Marked as past_due: ${activityId}/${serviceCode}`);
+    return { success: true };
+  }
 }
 
 export default new SubscriptionService();

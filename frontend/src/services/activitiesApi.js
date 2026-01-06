@@ -139,6 +139,26 @@ class ActivitiesApiService {
     return api.request(`/activities/${activityId}/subscriptions/check/${serviceCode}`);
   }
 
+  // ==================== CHECKOUT / PAYMENT ====================
+
+  /**
+   * Avvia checkout per abbonamento PRO
+   * Ritorna URL per redirect a pagina pagamento GHL
+   */
+  async initiateCheckout(activityId, serviceCode, billingCycle = 'monthly') {
+    return api.request(`/activities/${activityId}/checkout`, {
+      method: 'POST',
+      body: JSON.stringify({ serviceCode, billingCycle }),
+    });
+  }
+
+  /**
+   * Verifica stato checkout dopo redirect da GHL
+   */
+  async getCheckoutStatus(activityId) {
+    return api.request(`/activities/${activityId}/checkout/status`);
+  }
+
   // ==================== EXTERNAL ACCESS ====================
 
   /**

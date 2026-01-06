@@ -451,6 +451,146 @@ router.post('/:activityId/generate-token',
   })
 );
 
+// ==================== CHECKOUT / PAYMENT ====================
+
+// POST /api/activities/:activityId/checkout
+// Genera URL per checkout GHL
+router.post('/:activityId/checkout',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    body('serviceCode').isString().trim().notEmpty().withMessage('Codice servizio richiesto'),
+    body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido')
+  ],
+  validate,
+  loadActivity,
+  requireActivityAccess,
+  asyncHandler(async (req, res) => {
+    const { serviceCode, billingCycle = 'monthly' } = req.body;
+    const activityId = req.params.activityId;
+
+    // Verifica che il servizio esista
+    const service = await serviceService.getServiceByCode(serviceCode);
+    if (!service) {
+      return res.status(404).json({
+        success: false,
+        error: 'Servizio non trovato'
+      });
+    }
+
+    // Mappa servizio + ciclo → Payment Link GHL
+    const paymentLinks = {
+      smart_review: {
+        monthly: process.env.GHL_PAYMENT_LINK_SMART_REVIEW_MONTHLY,
+        yearly: process.env.GHL_PAYMENT_LINK_SMART_REVIEW_YEARLY
+      },
+      smart_page: {
+        monthly: process.env.GHL_PAYMENT_LINK_SMART_PAGE_MONTHLY,
+        yearly: process.env.GHL_PAYMENT_LINK_SMART_PAGE_YEARLY
+      },
+      menu_digitale: {
+        monthly: process.env.GHL_PAYMENT_LINK_MENU_DIGITALE_MONTHLY,
+        yearly: process.env.GHL_PAYMENT_LINK_MENU_DIGITALE_YEARLY
+      },
+      display_suite: {
+        monthly: process.env.GHL_PAYMENT_LINK_DISPLAY_SUITE_MONTHLY,
+        yearly: process.env.GHL_PAYMENT_LINK_DISPLAY_SUITE_YEARLY
+      }
+    };
+
+    const paymentLink = paymentLinks[serviceCode]?.[billingCycle];
+
+    if (!paymentLink) {
+      return res.status(400).json({
+        success: false,
+        error: 'Link di pagamento non configurato per questo servizio',
+        details: { serviceCode, billingCycle }
+      });
+    }
+
+    // Costruisci URL con parametri pre-compilati
+    // GHL accetta alcuni parametri via query string per pre-fill
+    const checkoutUrl = new URL(paymentLink);
+
+    // Pre-compila email (GHL usa 'email' come parametro)
+    if (req.user.email) {
+      checkoutUrl.searchParams.set('email', req.user.email);
+    }
+
+    // Pre-compila nome (se disponibile)
+    const fullName = req.user.user_metadata?.full_name || '';
+    if (fullName) {
+      const [firstName, ...lastNameParts] = fullName.split(' ');
+      if (firstName) {
+        checkoutUrl.searchParams.set('first_name', firstName);
+      }
+      if (lastNameParts.length > 0) {
+        checkoutUrl.searchParams.set('last_name', lastNameParts.join(' '));
+      }
+    }
+
+    // Prezzi per riferimento
+    const prices = {
+      smart_review: { monthly: 9.90, yearly: 99.00 },
+      smart_page: { monthly: 6.90, yearly: 69.00 },
+      menu_digitale: { monthly: 9.90, yearly: 99.00 },
+      display_suite: { monthly: 14.90, yearly: 149.00 }
+    };
+
+    res.json({
+      success: true,
+      data: {
+        checkoutUrl: checkoutUrl.toString(),
+        service: {
+          code: serviceCode,
+          name: service.name
+        },
+        billing: {
+          cycle: billingCycle,
+          price: prices[serviceCode]?.[billingCycle] || 0,
+          currency: 'EUR'
+        }
+      }
+    });
+  })
+);
+
+// GET /api/activities/:activityId/checkout/status
+// Verifica stato dopo checkout (chiamato dal frontend dopo redirect)
+router.get('/:activityId/checkout/status',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido')
+  ],
+  validate,
+  loadActivity,
+  requireActivityAccess,
+  asyncHandler(async (req, res) => {
+    const activityId = req.params.activityId;
+
+    // Ottieni tutti i servizi con stato
+    const services = await subscriptionService.getActivityServicesWithStatus(activityId);
+
+    // Trova servizi attivi (non in trial)
+    const activeSubscriptions = services
+      .filter(s => s.subscription?.status === 'active')
+      .map(s => ({
+        service: s.service.code,
+        serviceName: s.service.name,
+        status: s.subscription.status,
+        billingCycle: s.subscription.billingCycle,
+        currentPeriodEnd: s.subscription.currentPeriodEnd
+      }));
+
+    res.json({
+      success: true,
+      data: {
+        activityId,
+        activeSubscriptions,
+        hasActiveSubscription: activeSubscriptions.length > 0
+      }
+    });
+  })
+);
+
 // ==================== SERVICES (public, no activity needed) ====================
 
 // GET /api/activities/services/all

@@ -276,6 +276,26 @@ export function ActivityProvider({ children }) {
     }
   }, [currentActivity]);
 
+  /**
+   * Avvia checkout per abbonamento PRO
+   * Redirect a pagina pagamento GHL
+   */
+  const initiateCheckout = useCallback(async (serviceCode, billingCycle = 'monthly', activityId = currentActivity?.id) => {
+    if (!activityId) return { success: false, error: 'Nessuna attività selezionata' };
+
+    try {
+      const response = await activitiesApi.initiateCheckout(activityId, serviceCode, billingCycle);
+      if (response.success && response.data.checkoutUrl) {
+        // Redirect alla pagina di pagamento GHL
+        window.location.href = response.data.checkoutUrl;
+        return { success: true, data: response.data };
+      }
+      return { success: false, error: response.error || 'Errore nel checkout' };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }, [currentActivity]);
+
   const checkSubscriptionStatus = useCallback(async (serviceCode, activityId = currentActivity?.id) => {
     if (!activityId) return { success: false, error: 'Nessuna attività selezionata' };
 
@@ -356,6 +376,7 @@ export function ActivityProvider({ children }) {
     activateSubscription,
     cancelSubscription,
     checkSubscriptionStatus,
+    initiateCheckout,
 
     // External Access
     accessService,
