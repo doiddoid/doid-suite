@@ -294,20 +294,30 @@ class WebhookService {
           ...basePayload,
           // Campi standard GHL per contatti
           email: data.email,
-          contact_email: data.email, // Alias per GHL
+          contact_email: data.email,
           firstName: data.firstName || this.extractFirstName(data.fullName),
-          first_name: data.firstName || this.extractFirstName(data.fullName), // Alias snake_case
+          first_name: data.firstName || this.extractFirstName(data.fullName),
           lastName: data.lastName || this.extractLastName(data.fullName),
-          last_name: data.lastName || this.extractLastName(data.fullName), // Alias snake_case
+          last_name: data.lastName || this.extractLastName(data.fullName),
           name: data.fullName,
-          full_name: data.fullName, // Alias
+          full_name: data.fullName,
           phone: data.phone || '',
+          // Campi per abilitare invio email in GHL
+          emailVerified: true,
+          email_verified: true,
+          dnd: false, // Do Not Disturb = false (permetti comunicazioni)
+          dndSettings: {
+            email: { status: 'active' },
+            sms: { status: 'active' }
+          },
           // Custom fields
           customField: {
-            activity_name: data.activityName
+            activity_name: data.activityName,
+            email_verified: 'true',
+            doid_verified: 'true'
           },
           // Tags
-          tags: ['user_registered', 'new_lead']
+          tags: ['user_registered', 'new_lead', 'email_verified']
         };
 
       // user.verified: Dopo verifica email, l'utente ha org e activity
