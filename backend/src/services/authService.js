@@ -347,20 +347,147 @@ class AuthService {
     };
   }
 
-  // Recupero password
-  async resetPassword(email) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.FRONTEND_URL}/reset-password`
-    });
+  // ============================================
+  // PASSWORD RESET METHODS (Custom via GHL)
+  // ============================================
 
-    if (error) {
-      throw Errors.BadRequest(error.message);
-    }
-
-    return { success: true };
+  /**
+   * Genera un token sicuro per il reset password
+   * @returns {string} Token di 64 caratteri hex
+   */
+  generatePasswordResetToken() {
+    return crypto.randomBytes(32).toString('hex');
   }
 
-  // Aggiorna password
+  /**
+   * Crea un token di reset password nel database
+   * @param {string} userId - ID utente
+   * @param {string} email - Email utente
+   * @returns {string} Token generato
+   */
+  async createPasswordResetToken(userId, email) {
+    const token = this.generatePasswordResetToken();
+
+    // Elimina eventuali token precedenti per questo utente
+    await supabaseAdmin
+      .from('password_resets')
+      .delete()
+      .eq('user_id', userId);
+
+    // Crea nuovo token (scade in 1 ora)
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const { error } = await supabaseAdmin
+      .from('password_resets')
+      .insert({
+        user_id: userId,
+        token,
+        email,
+        expires_at: expiresAt.toISOString()
+      });
+
+    if (error) {
+      console.error('Error creating password reset token:', error);
+      throw Errors.Internal('Errore nella creazione del token di reset');
+    }
+
+    return { token, expiresAt };
+  }
+
+  /**
+   * Richiesta recupero password - genera token e invia webhook a GHL
+   * @param {string} email - Email dell'utente
+   */
+  async resetPassword(email) {
+    try {
+      // Trova l'utente
+      const user = await this.getUserByEmail(email);
+
+      // Genera token di reset
+      const { token, expiresAt } = await this.createPasswordResetToken(user.id, email);
+      const frontendUrl = process.env.FRONTEND_URL || 'https://suite.doid.it';
+      const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+      console.log(`[AUTH] Token reset password generato per ${email}`);
+
+      // Invia webhook per email reset password
+      try {
+        await webhookService.sendPasswordResetRequested({
+          email,
+          fullName: user.user_metadata?.full_name,
+          resetUrl,
+          expiresAt: expiresAt.toISOString()
+        });
+        console.log(`[AUTH] Webhook password.reset_requested inviato per ${email}`);
+      } catch (webhookError) {
+        console.error(`[AUTH] Webhook password.reset_requested fallito:`, webhookError.message);
+        // Non bloccare - l'utente potrebbe non ricevere l'email ma non riveliamo l'esistenza dell'account
+      }
+
+      return { success: true };
+    } catch (error) {
+      // Non rivelare se l'email esiste o meno per sicurezza
+      console.log(`[AUTH] Reset password request for ${email}: ${error.message}`);
+      return { success: true };
+    }
+  }
+
+  /**
+   * Verifica token di reset password
+   * @param {string} token - Token di reset
+   * @returns {object} Dati del token se valido
+   */
+  async verifyPasswordResetToken(token) {
+    const { data: resetData, error: findError } = await supabaseAdmin
+      .from('password_resets')
+      .select('*')
+      .eq('token', token)
+      .is('used_at', null)
+      .single();
+
+    if (findError || !resetData) {
+      throw Errors.BadRequest('Token non valido o già utilizzato');
+    }
+
+    // Verifica scadenza
+    if (new Date(resetData.expires_at) < new Date()) {
+      throw Errors.BadRequest('Token scaduto. Richiedi un nuovo link di reset.');
+    }
+
+    return resetData;
+  }
+
+  /**
+   * Completa il reset password con il token
+   * @param {string} token - Token di reset
+   * @param {string} newPassword - Nuova password
+   */
+  async completePasswordReset(token, newPassword) {
+    // Verifica token
+    const resetData = await this.verifyPasswordResetToken(token);
+
+    // Aggiorna password tramite Admin API
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      resetData.user_id,
+      { password: newPassword }
+    );
+
+    if (updateError) {
+      console.error('Error updating password:', updateError);
+      throw Errors.Internal('Errore nell\'aggiornamento della password');
+    }
+
+    // Segna token come utilizzato
+    await supabaseAdmin
+      .from('password_resets')
+      .update({ used_at: new Date().toISOString() })
+      .eq('id', resetData.id);
+
+    console.log(`[AUTH] Password resettata per user ${resetData.user_id}`);
+
+    return { success: true, email: resetData.email };
+  }
+
+  // Aggiorna password (utente autenticato)
   async updatePassword(token, newPassword) {
     const { error } = await supabase.auth.updateUser({
       password: newPassword

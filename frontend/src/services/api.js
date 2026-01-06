@@ -166,6 +166,20 @@ class ApiService {
     });
   }
 
+  async verifyResetToken(token) {
+    return this.request(`/auth/verify-reset-token/${token}`, {
+      auth: false,
+    });
+  }
+
+  async resetPassword(token, password) {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+      auth: false,
+    });
+  }
+
   // ==================== ORGANIZATIONS ====================
 
   async getOrganizations() {

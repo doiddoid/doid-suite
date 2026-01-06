@@ -158,7 +158,47 @@ router.post('/forgot-password',
 );
 
 // POST /api/auth/reset-password
+// Completa il reset password con token (dal link email)
 router.post('/reset-password',
+  [
+    body('token').notEmpty().withMessage('Token richiesto'),
+    body('password').isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri')
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { token, password } = req.body;
+
+    const result = await authService.completePasswordReset(token, password);
+
+    res.json({
+      success: true,
+      message: 'Password aggiornata con successo',
+      data: { email: result.email }
+    });
+  })
+);
+
+// GET /api/auth/verify-reset-token/:token
+// Verifica se un token di reset è valido (per il frontend)
+router.get('/verify-reset-token/:token',
+  asyncHandler(async (req, res) => {
+    const { token } = req.params;
+
+    const resetData = await authService.verifyPasswordResetToken(token);
+
+    res.json({
+      success: true,
+      data: {
+        email: resetData.email,
+        expiresAt: resetData.expires_at
+      }
+    });
+  })
+);
+
+// POST /api/auth/update-password
+// Aggiorna password per utente autenticato
+router.post('/update-password',
   [
     body('password').isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri')
   ],
