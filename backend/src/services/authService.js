@@ -9,6 +9,8 @@ import webhookService from './webhookService.js';
 
 class AuthService {
   // Registrazione nuovo utente
+  // Usa supabaseAdmin per creare l'utente senza inviare email di conferma Supabase
+  // L'email di benvenuto viene gestita da GHL tramite webhook
   async register({
     email,
     password,
@@ -21,30 +23,33 @@ class AuthService {
     utmContent = null,
     referralCode = null
   }) {
-    const { data, error } = await supabase.auth.signUp({
+    // Crea utente con Admin API (bypassa email di conferma Supabase)
+    const { data: adminData, error: adminError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName
-        }
+      email_confirm: true, // Conferma automaticamente l'email
+      user_metadata: {
+        full_name: fullName
       }
     });
 
-    if (error) {
-      if (error.message.includes('already registered')) {
+    if (adminError) {
+      if (adminError.message.includes('already been registered') ||
+          adminError.message.includes('already registered')) {
         throw Errors.Conflict('Email già registrata');
       }
-      throw Errors.BadRequest(error.message);
+      throw Errors.BadRequest(adminError.message);
     }
 
-    // Salva i dati in pending_registrations per processarli dopo verifica email
-    if (data.user) {
+    const user = adminData.user;
+
+    // Salva i dati in pending_registrations per processarli al primo login
+    if (user) {
       try {
         const { error: pendingError } = await supabaseAdmin
           .from('pending_registrations')
           .insert({
-            user_id: data.user.id,
+            user_id: user.id,
             activity_name: activityName,
             requested_service: requestedService,
             utm_source: utmSource,
@@ -56,14 +61,12 @@ class AuthService {
 
         if (pendingError) {
           console.error('Error saving pending registration:', pendingError);
-          // Non blocchiamo la registrazione se fallisce il salvataggio pending
         }
       } catch (err) {
         console.error('Error in pending registration:', err);
       }
 
       // Invia webhook user.registered per creare contatto in GHL
-      // Questo viene inviato PRIMA della verifica email
       try {
         await webhookService.send('user.registered', {
           email,
@@ -78,14 +81,13 @@ class AuthService {
         });
         console.log(`[AUTH] Webhook user.registered inviato per ${email}`);
       } catch (webhookError) {
-        // Non bloccare la registrazione se il webhook fallisce
         console.error(`[AUTH] Webhook user.registered fallito per ${email}:`, webhookError.message);
       }
     }
 
     return {
-      user: data.user,
-      session: data.session
+      user: user,
+      session: null // Admin API non crea sessione, l'utente deve fare login
     };
   }
 
