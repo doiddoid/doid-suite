@@ -286,7 +286,8 @@ class WebhookService {
     };
 
     switch (event) {
-      case 'user.verified':
+      // user.registered: SOLO dati base per creare contatto in GHL
+      // L'utente si è appena registrato, NON ha ancora scelto un servizio
       case 'user.registered':
         return {
           ...basePayload,
@@ -296,18 +297,29 @@ class WebhookService {
           name: data.fullName,
           phone: data.phone || '',
           customField: {
-            activity_name: data.activityName,
-            requested_service: data.requestedService,
-            organization_id: data.organizationId,
-            activity_id: data.activityId,
-            trial_end_date: data.trialEndDate,
-            utm_source: data.utmSource,
-            utm_medium: data.utmMedium,
-            utm_campaign: data.utmCampaign,
-            utm_content: data.utmContent,
-            referral_code: data.referralCode
+            activity_name: data.activityName
+            // NON includiamo: requested_service, utm_*, referral_code
+            // Questi sono dati interni, non per GHL in questa fase
           },
-          tags: this.generateTags(event, data)
+          tags: ['user_registered', 'new_lead']
+        };
+
+      // user.verified: Dopo verifica email, l'utente ha org e activity
+      case 'user.verified':
+        return {
+          ...basePayload,
+          email: data.email,
+          firstName: data.firstName || this.extractFirstName(data.fullName),
+          lastName: data.lastName || this.extractLastName(data.fullName),
+          name: data.fullName,
+          phone: data.phone || '',
+          customField: {
+            activity_name: data.activityName,
+            organization_id: data.organizationId,
+            activity_id: data.activityId
+            // NON includiamo servizio - verrà inviato con service.trial_activated
+          },
+          tags: ['user_verified', 'email_confirmed']
         };
 
       case 'service.trial_activated':
