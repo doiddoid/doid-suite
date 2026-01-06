@@ -288,19 +288,25 @@ class WebhookService {
     switch (event) {
       // user.registered: SOLO dati base per creare contatto in GHL
       // L'utente si è appena registrato, NON ha ancora scelto un servizio
+      // NOTA: GHL richiede campi specifici per Create/Update Contact
       case 'user.registered':
         return {
           ...basePayload,
+          // Campi standard GHL per contatti
           email: data.email,
+          contact_email: data.email, // Alias per GHL
           firstName: data.firstName || this.extractFirstName(data.fullName),
+          first_name: data.firstName || this.extractFirstName(data.fullName), // Alias snake_case
           lastName: data.lastName || this.extractLastName(data.fullName),
+          last_name: data.lastName || this.extractLastName(data.fullName), // Alias snake_case
           name: data.fullName,
+          full_name: data.fullName, // Alias
           phone: data.phone || '',
+          // Custom fields
           customField: {
             activity_name: data.activityName
-            // NON includiamo: requested_service, utm_*, referral_code
-            // Questi sono dati interni, non per GHL in questa fase
           },
+          // Tags
           tags: ['user_registered', 'new_lead']
         };
 
@@ -308,16 +314,20 @@ class WebhookService {
       case 'user.verified':
         return {
           ...basePayload,
+          // Campi standard GHL
           email: data.email,
+          contact_email: data.email,
           firstName: data.firstName || this.extractFirstName(data.fullName),
+          first_name: data.firstName || this.extractFirstName(data.fullName),
           lastName: data.lastName || this.extractLastName(data.fullName),
+          last_name: data.lastName || this.extractLastName(data.fullName),
           name: data.fullName,
+          full_name: data.fullName,
           phone: data.phone || '',
           customField: {
             activity_name: data.activityName,
             organization_id: data.organizationId,
             activity_id: data.activityId
-            // NON includiamo servizio - verrà inviato con service.trial_activated
           },
           tags: ['user_verified', 'email_confirmed']
         };
@@ -325,10 +335,15 @@ class WebhookService {
       case 'service.trial_activated':
         return {
           ...basePayload,
+          // Campi standard GHL
           email: data.email,
+          contact_email: data.email,
           firstName: data.firstName || this.extractFirstName(data.fullName),
+          first_name: data.firstName || this.extractFirstName(data.fullName),
           lastName: data.lastName || this.extractLastName(data.fullName),
+          last_name: data.lastName || this.extractLastName(data.fullName),
           name: data.fullName,
+          full_name: data.fullName,
           phone: data.phone || '',
           // Dati servizio arricchiti
           service: data.service,
