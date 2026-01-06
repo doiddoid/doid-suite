@@ -58,6 +58,8 @@ frontend/
 │   ├── pages/
 │   │   ├── Login.jsx           # Login
 │   │   ├── Register.jsx        # Registrazione con trial opzionale
+│   │   ├── ForgotPassword.jsx  # Richiesta reset password
+│   │   ├── ResetPassword.jsx   # Reset password con token
 │   │   ├── Dashboard.jsx       # Dashboard principale con servizi
 │   │   ├── Settings.jsx        # Impostazioni utente
 │   │   ├── Activities.jsx      # Lista attività
@@ -116,6 +118,19 @@ frontend/
   - Nome attività (opzionale)
   - Servizio richiesto per trial (opzionale)
 - Supporto UTM parameters e referral code
+
+### Forgot Password (`/forgot-password`)
+- Form per richiedere reset password
+- Inserimento email
+- Mostra messaggio di conferma (non rivela se email esiste)
+- Link per tornare al login
+
+### Reset Password (`/reset-password`)
+- Verifica token dal parametro URL `?token=xxx`
+- Form per inserire nuova password (minimo 8 caratteri)
+- Conferma password
+- Mostra errore se token invalido/scaduto
+- Redirect al login dopo reset completato
 
 ### Dashboard (`/dashboard`)
 - Panoramica servizi con stato abbonamento
@@ -259,6 +274,8 @@ Dropdown per selezionare attività:
 <Routes>
   <Route path="/login" element={<Login />} />
   <Route path="/register" element={<Register />} />
+  <Route path="/forgot-password" element={<ForgotPassword />} />
+  <Route path="/reset-password" element={<ResetPassword />} />
   <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
   <Route path="/activities" element={<ProtectedRoute><Activities /></ProtectedRoute>} />

@@ -31,6 +31,8 @@ Backend API per DOID Suite, costruito con Node.js, Express e Supabase.
    - `database/migrations_admin_logs.sql` - Log admin
    - `database/migrations_sent_reminders.sql` - Reminder trial
    - `database/migrations_webhook_logs.sql` - Log webhook
+   - `database/migrations_email_confirmation.sql` - Token conferma email
+   - `database/migrations_password_reset.sql` - Token reset password
 3. Copia le chiavi API dal pannello Supabase:
    - `SUPABASE_URL`: URL del progetto
    - `SUPABASE_ANON_KEY`: Chiave anonima (pubblica)
@@ -70,6 +72,7 @@ DISPLAY_SUITE_URL=https://display.doid.it
 
 # Webhook GoHighLevel
 GHL_WEBHOOK_URL=https://services.leadconnectorhq.com/hooks/...
+GHL_WEBHOOK_PASSWORD_RESET=https://services.leadconnectorhq.com/hooks/.../password-reset
 
 # Trial Reminder Job
 ENABLE_TRIAL_REMINDERS=true
@@ -85,8 +88,12 @@ ENABLE_TRIAL_REMINDERS=true
 | POST | /logout | Logout |
 | GET | /me | Utente corrente con organizzazioni e attività |
 | POST | /refresh | Refresh token |
-| POST | /forgot-password | Reset password via email |
-| POST | /reset-password | Aggiorna password |
+| POST | /forgot-password | Richiesta reset password (invia webhook GHL) |
+| POST | /reset-password | Completa reset password con token |
+| GET | /verify-reset-token/:token | Verifica validità token reset |
+| POST | /update-password | Aggiorna password (utente autenticato) |
+| GET | /verify-email/:token | Conferma email via token |
+| POST | /resend-verification | Rinvia email di verifica |
 
 ### Activities (`/api/activities`)
 | Metodo | Endpoint | Descrizione |
@@ -268,6 +275,7 @@ Il sistema invia webhook a GoHighLevel per i seguenti eventi:
 - `service.subscription_cancelled` - Abbonamento cancellato
 - `trial.day_7`, `trial.day_14`, `trial.day_21`, `trial.day_27` - Reminder trial
 - `trial.expired` - Trial scaduto
+- `password.reset_requested` - Richiesta reset password (include resetUrl)
 
 ## Sicurezza
 
