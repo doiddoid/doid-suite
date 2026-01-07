@@ -273,7 +273,7 @@ export default function Admin() {
     setItemDetails(null);
     try {
       let endpoint = '';
-      if (type === 'user') endpoint = `/admin/users/${id}`;
+      if (type === 'user') endpoint = `/admin/users/${id}/details`;
       else if (type === 'organization') endpoint = `/admin/organizations/${id}`;
       else if (type === 'activity') endpoint = `/admin/activities/${id}`;
 
