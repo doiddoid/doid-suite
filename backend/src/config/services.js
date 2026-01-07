@@ -52,12 +52,12 @@ export const PLANS = {
   pro: {
     code: 'pro',
     name: 'Pro',
-    trialDays: 14
+    trialDays: 30
   },
   business: {
     code: 'business',
     name: 'Business',
-    trialDays: 14
+    trialDays: 30
   }
 };
 

@@ -193,9 +193,25 @@ export default function ServiceCard({
 
         {/* Piano info */}
         {subscription?.plan && (
-          <p className="text-xs text-gray-400 mb-4">
-            Piano: <span className="font-medium">{subscription.plan.name}</span>
-          </p>
+          <div className="mb-4">
+            <p className="text-xs text-gray-400">
+              Piano: <span className="font-medium">{subscription.plan.name}</span>
+              {subscription.status === 'trial' && (
+                <span className="ml-1 text-emerald-600 font-medium">- Trial</span>
+              )}
+            </p>
+            {subscription.status === 'trial' && trialDaysLeft !== null && (
+              <p className={`text-xs mt-1 ${trialDaysLeft <= 7 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                {trialDaysLeft > 1 ? (
+                  <>{trialDaysLeft} giorni rimanenti</>
+                ) : trialDaysLeft === 1 ? (
+                  <>Ultimo giorno!</>
+                ) : (
+                  <>Scade oggi</>
+                )}
+              </p>
+            )}
+          </div>
         )}
       </div>
 
