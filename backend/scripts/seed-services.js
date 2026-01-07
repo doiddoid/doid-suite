@@ -87,7 +87,7 @@ const PLANS = {
       description: 'Per attività in crescita',
       price_monthly: 29,
       price_yearly: 290,
-      trial_days: 14,
+      trial_days: 30,
       features: {
         max_reviews_month: 100,
         ai_responses: true,
@@ -104,7 +104,7 @@ const PLANS = {
       description: 'Per attività con volumi elevati',
       price_monthly: 79,
       price_yearly: 790,
-      trial_days: 14,
+      trial_days: 30,
       features: {
         max_reviews_month: -1, // unlimited
         ai_responses: true,
@@ -136,7 +136,7 @@ const PLANS = {
       description: 'Pagine illimitate',
       price_monthly: 19,
       price_yearly: 190,
-      trial_days: 14,
+      trial_days: 30,
       features: { max_pages: -1, custom_domain: true, analytics: 'advanced', forms: true },
       is_active: true,
       sort_order: 2
@@ -160,7 +160,7 @@ const PLANS = {
       description: 'Menu completo',
       price_monthly: 15,
       price_yearly: 150,
-      trial_days: 14,
+      trial_days: 30,
       features: { max_items: -1, qr_codes: -1, images: true, translations: true },
       is_active: true,
       sort_order: 2
@@ -173,7 +173,7 @@ const PLANS = {
       description: 'Per iniziare',
       price_monthly: 25,
       price_yearly: 250,
-      trial_days: 14,
+      trial_days: 30,
       features: { max_screens: 1, max_playlists: 5, cloud_storage_gb: 5 },
       is_active: true,
       sort_order: 1
@@ -184,7 +184,7 @@ const PLANS = {
       description: 'Per più schermi',
       price_monthly: 49,
       price_yearly: 490,
-      trial_days: 14,
+      trial_days: 30,
       features: { max_screens: 5, max_playlists: -1, cloud_storage_gb: 50, scheduling: true },
       is_active: true,
       sort_order: 2
