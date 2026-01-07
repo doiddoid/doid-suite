@@ -580,11 +580,36 @@ class AdminService {
     );
 
     // Ottieni attività dell'organizzazione
-    const { data: activities } = await supabaseAdmin
+    // 1. Cerca attività direttamente collegate all'organizzazione
+    const { data: directActivities } = await supabaseAdmin
       .from('activities')
       .select('*')
       .eq('organization_id', organizationId)
       .eq('status', 'active');
+
+    // 2. Cerca attività collegate tramite activity_users degli utenti membri
+    const memberUserIds = (members || []).map(m => m.user_id);
+    let userActivities = [];
+    if (memberUserIds.length > 0) {
+      const { data: activityUsers } = await supabaseAdmin
+        .from('activity_users')
+        .select('activity:activities(*)')
+        .in('user_id', memberUserIds)
+        .eq('role', 'owner');
+
+      userActivities = (activityUsers || [])
+        .map(au => au.activity)
+        .filter(a => a && a.status === 'active');
+    }
+
+    // 3. Unisci e deduplica le attività (usando Map per evitare duplicati)
+    const activitiesMap = new Map();
+    [...(directActivities || []), ...userActivities].forEach(a => {
+      if (a && !activitiesMap.has(a.id)) {
+        activitiesMap.set(a.id, a);
+      }
+    });
+    const activities = Array.from(activitiesMap.values());
 
     // Ottieni servizi con stato per ogni attività
     const activitiesWithServices = await Promise.all(
@@ -603,8 +628,12 @@ class AdminService {
       })
     );
 
-    // Ottieni abbonamenti
-    const { data: subscriptions } = await supabaseAdmin
+    // Ottieni abbonamenti (sia per organizzazione che per attività)
+    const activityIds = activities.map(a => a.id);
+    let subscriptions = [];
+
+    // 1. Abbonamenti diretti dell'organizzazione
+    const { data: orgSubscriptions } = await supabaseAdmin
       .from('subscriptions')
       .select(`
         *,
@@ -614,6 +643,31 @@ class AdminService {
         )
       `)
       .eq('organization_id', organizationId);
+
+    // 2. Abbonamenti delle attività
+    if (activityIds.length > 0) {
+      const { data: activitySubscriptions } = await supabaseAdmin
+        .from('subscriptions')
+        .select(`
+          *,
+          plan:plans (
+            id, code, name, price_monthly, price_yearly,
+            service:services (id, code, name)
+          )
+        `)
+        .in('activity_id', activityIds);
+
+      // Unisci e deduplica
+      const subsMap = new Map();
+      [...(orgSubscriptions || []), ...(activitySubscriptions || [])].forEach(s => {
+        if (!subsMap.has(s.id)) {
+          subsMap.set(s.id, s);
+        }
+      });
+      subscriptions = Array.from(subsMap.values());
+    } else {
+      subscriptions = orgSubscriptions || [];
+    }
 
     // Ottieni pacchetti
     const { data: packages } = await supabaseAdmin
