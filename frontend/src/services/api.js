@@ -180,6 +180,13 @@ class ApiService {
     });
   }
 
+  async updatePassword(password) {
+    return this.request('/auth/update-password', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    });
+  }
+
   // ==================== ORGANIZATIONS ====================
 
   async getOrganizations() {

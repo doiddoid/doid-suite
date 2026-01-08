@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Building2, CreditCard, Users, Loader2, Save, Trash2, ExternalLink, Calendar, Clock } from 'lucide-react';
+import { User, Building2, CreditCard, Users, Loader2, Save, Trash2, ExternalLink, Calendar, Clock, Lock, Eye, EyeOff, Mail } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useActivities } from '../hooks/useActivities';
 import api from '../services/api';
@@ -38,6 +38,16 @@ export default function Settings() {
 
   // Services with subscription status (activity-based)
   const [services, setServices] = useState([]);
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
   // Load organization data and services
   useEffect(() => {
@@ -130,31 +140,184 @@ export default function Settings() {
     }
   };
 
+  // Password validation
+  const validatePassword = (password) => {
+    if (password.length < 8) {
+      return 'La password deve essere di almeno 8 caratteri';
+    }
+    if (!/\d/.test(password)) {
+      return 'La password deve contenere almeno un numero';
+    }
+    return null;
+  };
+
+  // Handle password change
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordMessage({ type: '', text: '' });
+
+    // Validate passwords match
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Le password non coincidono' });
+      return;
+    }
+
+    // Validate password strength
+    const validationError = validatePassword(passwordData.newPassword);
+    if (validationError) {
+      setPasswordMessage({ type: 'error', text: validationError });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const response = await api.updatePassword(passwordData.newPassword);
+      if (response.success) {
+        setPasswordMessage({ type: 'success', text: 'Password aggiornata con successo' });
+        setPasswordData({ newPassword: '', confirmPassword: '' });
+      }
+    } catch (error) {
+      setPasswordMessage({ type: 'error', text: error.message || 'Errore nell\'aggiornamento della password' });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Handle forgot password (send reset email)
+  const handleForgotPassword = async () => {
+    if (!user?.email) return;
+
+    setPasswordLoading(true);
+    setPasswordMessage({ type: '', text: '' });
+
+    try {
+      const response = await api.forgotPassword(user.email);
+      if (response.success) {
+        setResetEmailSent(true);
+        setPasswordMessage({ type: 'success', text: 'Email di reset inviata! Controlla la tua casella di posta.' });
+      }
+    } catch (error) {
+      setPasswordMessage({ type: 'error', text: error.message || 'Errore nell\'invio dell\'email' });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'profile':
         return (
-          <div className="space-y-6">
-            <div>
-              <label className="label">Nome completo</label>
-              <input
-                type="text"
-                value={profile.fullName}
-                onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-                className="input"
-              />
+          <div className="space-y-8">
+            {/* Profile Info */}
+            <div className="space-y-6">
+              <div>
+                <label className="label">Nome completo</label>
+                <input
+                  type="text"
+                  value={profile.fullName}
+                  onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="label">Email</label>
+                <input
+                  type="email"
+                  value={profile.email}
+                  disabled
+                  className="input bg-gray-50"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  L'email non può essere modificata
+                </p>
+              </div>
             </div>
-            <div>
-              <label className="label">Email</label>
-              <input
-                type="email"
-                value={profile.email}
-                disabled
-                className="input bg-gray-50"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                L'email non può essere modificata
-              </p>
+
+            {/* Security Section */}
+            <div className="border-t border-gray-200 pt-8">
+              <div className="flex items-center gap-2 mb-6">
+                <Lock className="w-5 h-5 text-gray-600" />
+                <h3 className="text-lg font-medium text-gray-900">Sicurezza</h3>
+              </div>
+
+              {/* Password Message */}
+              {passwordMessage.text && (
+                <div
+                  className={`mb-4 p-3 rounded-lg text-sm ${
+                    passwordMessage.type === 'success'
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}
+                >
+                  {passwordMessage.text}
+                </div>
+              )}
+
+              {/* Change Password Form */}
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="label">Nuova password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      placeholder="Minimo 8 caratteri, almeno 1 numero"
+                      className="input pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">Conferma nuova password</label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    placeholder="Ripeti la nuova password"
+                    className="input"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="submit"
+                    disabled={passwordLoading || !passwordData.newPassword || !passwordData.confirmPassword}
+                    className="btn-primary"
+                  >
+                    {passwordLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Aggiorna password
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Forgot Password Link */}
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={passwordLoading || resetEmailSent}
+                  className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 disabled:text-gray-400"
+                >
+                  <Mail className="w-4 h-4" />
+                  {resetEmailSent
+                    ? 'Email di reset inviata'
+                    : 'Hai dimenticato la password? Invia email di reset'}
+                </button>
+              </div>
             </div>
           </div>
         );
