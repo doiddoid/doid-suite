@@ -4,6 +4,48 @@ import serviceService from './serviceService.js';
 import webhookService from './webhookService.js';
 
 class SubscriptionService {
+  /**
+   * Helper: Recupera dati utente per webhook license sync
+   * @param {string} userId - ID utente Supabase
+   * @returns {Promise<{id: string, email: string}|null>}
+   */
+  async getUserForLicenseSync(userId) {
+    if (!userId) return null;
+    try {
+      const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (data?.user) {
+        return { id: data.user.id, email: data.user.email };
+      }
+    } catch (e) {
+      console.error('[LICENSE_SYNC] Error fetching user:', e.message);
+    }
+    return null;
+  }
+
+  /**
+   * Helper: Invia webhook license sync (non bloccante)
+   * @param {object} params
+   */
+  async sendLicenseSyncWebhook({ serviceCode, action, userId, activity, subscription }) {
+    // Non bloccare il flusso principale se il webhook fallisce
+    try {
+      const user = await this.getUserForLicenseSync(userId);
+      if (!user) {
+        console.log(`[LICENSE_SYNC] Skipped: no user data for ${action}`);
+        return;
+      }
+
+      await webhookService.sendLicenseSync({
+        serviceCode,
+        action,
+        user,
+        activity: activity ? { id: activity.id, name: activity.name } : null,
+        subscription
+      });
+    } catch (error) {
+      console.error(`[LICENSE_SYNC] Error sending ${action} webhook:`, error.message);
+    }
+  }
   // ==================== ACTIVITY-BASED SUBSCRIPTIONS ====================
 
   /**
@@ -259,6 +301,19 @@ class SubscriptionService {
             daysRemaining: trialPlan.trialDays || 30
           });
           console.log(`[SUBSCRIPTION] Webhook service.trial_activated inviato per ${serviceCode}`);
+
+          // Invia webhook license sync verso app DOID (Review/Page)
+          this.sendLicenseSyncWebhook({
+            serviceCode,
+            action: 'trial_activated',
+            userId,
+            activity,
+            subscription: {
+              status: 'trial',
+              planCode: trialPlan.code,
+              trialEndsAt: trialEndsAt.toISOString()
+            }
+          });
         }
       } catch (webhookError) {
         // Non bloccare se il webhook fallisce
@@ -271,8 +326,13 @@ class SubscriptionService {
 
   /**
    * Attiva abbonamento
+   * @param {string} activityId - ID attività
+   * @param {string} serviceCode - Codice servizio
+   * @param {string} planCode - Codice piano
+   * @param {string} billingCycle - Ciclo fatturazione (monthly/yearly)
+   * @param {string} userId - ID utente (opzionale, per webhook)
    */
-  async activateSubscription(activityId, serviceCode, planCode, billingCycle = 'monthly') {
+  async activateSubscription(activityId, serviceCode, planCode, billingCycle = 'monthly', userId = null) {
     const service = await serviceService.getServiceByCode(serviceCode);
     if (!service) {
       throw Errors.NotFound('Servizio non trovato');
@@ -283,6 +343,13 @@ class SubscriptionService {
     if (!plan) {
       throw Errors.NotFound('Piano non trovato');
     }
+
+    // Ottieni dati attività per webhook
+    const { data: activity } = await supabaseAdmin
+      .from('activities')
+      .select('id, name, organization_id')
+      .eq('id', activityId)
+      .single();
 
     const now = new Date();
     const periodEnd = billingCycle === 'yearly'
@@ -346,17 +413,43 @@ class SubscriptionService {
       subscription = data;
     }
 
+    // Invia webhook license sync verso app DOID (Review/Page)
+    if (userId || activity?.organization_id) {
+      this.sendLicenseSyncWebhook({
+        serviceCode,
+        action: 'activated',
+        userId,
+        activity,
+        subscription: {
+          status: 'active',
+          planCode: plan.code,
+          billingCycle,
+          currentPeriodEnd: periodEnd.toISOString()
+        }
+      });
+    }
+
     return this.formatSubscription(subscription);
   }
 
   /**
    * Cancella abbonamento
+   * @param {string} activityId - ID attività
+   * @param {string} serviceCode - Codice servizio
+   * @param {string} userId - ID utente (opzionale, per webhook)
    */
-  async cancelSubscription(activityId, serviceCode) {
+  async cancelSubscription(activityId, serviceCode, userId = null) {
     const existingSub = await this.getSubscription(activityId, serviceCode);
     if (!existingSub) {
       throw Errors.NotFound('Abbonamento non trovato');
     }
+
+    // Ottieni dati attività per webhook
+    const { data: activity } = await supabaseAdmin
+      .from('activities')
+      .select('id, name, organization_id')
+      .eq('id', activityId)
+      .single();
 
     const now = new Date();
     const { error } = await supabaseAdmin
@@ -372,6 +465,19 @@ class SubscriptionService {
       console.error('Error cancelling subscription:', error);
       throw Errors.Internal('Errore nella cancellazione dell\'abbonamento');
     }
+
+    // Invia webhook license sync verso app DOID (Review/Page)
+    this.sendLicenseSyncWebhook({
+      serviceCode,
+      action: 'cancelled',
+      userId,
+      activity,
+      subscription: {
+        status: 'cancelled',
+        planCode: existingSub.plan?.code,
+        currentPeriodEnd: existingSub.currentPeriodEnd
+      }
+    });
 
     return { success: true, message: 'Abbonamento cancellato' };
   }
@@ -709,8 +815,9 @@ class SubscriptionService {
    * @param {string} params.planCode - Codice piano (default: 'pro')
    * @param {string} params.billingCycle - 'monthly' o 'yearly'
    * @param {string} params.externalSubscriptionId - ID abbonamento esterno
-   * @param {string} params.transactionId - ID transazione
-   * @param {number} params.paidAmount - Importo pagato
+   * @param {string} params.transactionId - ID transazione (non usato, per logging futuro)
+   * @param {number} params.paidAmount - Importo pagato (non usato, per logging futuro)
+   * @param {string} params.userId - ID utente (opzionale, per webhook)
    */
   async activateFromPayment({
     activityId,
@@ -719,7 +826,8 @@ class SubscriptionService {
     billingCycle = 'monthly',
     externalSubscriptionId,
     transactionId,
-    paidAmount
+    paidAmount,
+    userId = null
   }) {
     const service = await serviceService.getServiceByCode(serviceCode);
     if (!service) {
@@ -732,6 +840,13 @@ class SubscriptionService {
       throw Errors.NotFound('Piano non trovato');
     }
 
+    // Ottieni dati attività per webhook
+    const { data: activity } = await supabaseAdmin
+      .from('activities')
+      .select('id, name, organization_id')
+      .eq('id', activityId)
+      .single();
+
     const now = new Date();
     const periodEnd = billingCycle === 'yearly'
       ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
@@ -741,6 +856,7 @@ class SubscriptionService {
     const existingSub = await this.getSubscription(activityId, serviceCode);
 
     let subscription;
+    const wasTrialOrNew = !existingSub || existingSub.status === 'trial';
 
     if (existingSub) {
       // Aggiorna abbonamento esistente (upgrade da trial o rinnovo)
@@ -776,12 +892,6 @@ class SubscriptionService {
 
     } else {
       // Crea nuovo abbonamento
-      const { data: activity } = await supabaseAdmin
-        .from('activities')
-        .select('organization_id')
-        .eq('id', activityId)
-        .single();
-
       const insertData = {
         activity_id: activityId,
         service_id: service.id,
@@ -817,17 +927,41 @@ class SubscriptionService {
       console.log(`[SUBSCRIPTION] Created new active subscription: ${activityId}/${serviceCode}`);
     }
 
+    // Invia webhook license sync verso app DOID (Review/Page)
+    this.sendLicenseSyncWebhook({
+      serviceCode,
+      action: wasTrialOrNew ? 'activated' : 'renewed',
+      userId,
+      activity,
+      subscription: {
+        status: 'active',
+        planCode: plan.code,
+        billingCycle,
+        currentPeriodEnd: periodEnd.toISOString()
+      }
+    });
+
     return this.formatSubscription(subscription);
   }
 
   /**
    * Rinnova abbonamento (estende periodo)
+   * @param {string} activityId - ID attività
+   * @param {string} serviceCode - Codice servizio
+   * @param {string} userId - ID utente (opzionale, per webhook)
    */
-  async renewSubscription(activityId, serviceCode) {
+  async renewSubscription(activityId, serviceCode, userId = null) {
     const existingSub = await this.getSubscription(activityId, serviceCode);
     if (!existingSub) {
       throw Errors.NotFound('Abbonamento non trovato');
     }
+
+    // Ottieni dati attività per webhook
+    const { data: activity } = await supabaseAdmin
+      .from('activities')
+      .select('id, name, organization_id')
+      .eq('id', activityId)
+      .single();
 
     const now = new Date();
     const currentEnd = new Date(existingSub.currentPeriodEnd);
@@ -853,18 +987,42 @@ class SubscriptionService {
       throw Errors.Internal('Errore nel rinnovo dell\'abbonamento');
     }
 
+    // Invia webhook license sync verso app DOID (Review/Page)
+    this.sendLicenseSyncWebhook({
+      serviceCode,
+      action: 'renewed',
+      userId,
+      activity,
+      subscription: {
+        status: 'active',
+        planCode: existingSub.plan?.code,
+        billingCycle: existingSub.billingCycle,
+        currentPeriodEnd: newPeriodEnd.toISOString()
+      }
+    });
+
     console.log(`[SUBSCRIPTION] Renewed: ${activityId}/${serviceCode} until ${newPeriodEnd.toISOString()}`);
     return { success: true, newPeriodEnd: newPeriodEnd.toISOString() };
   }
 
   /**
    * Segna pagamento fallito (past_due)
+   * @param {string} activityId - ID attività
+   * @param {string} serviceCode - Codice servizio
+   * @param {string} userId - ID utente (opzionale, per webhook)
    */
-  async markPaymentFailed(activityId, serviceCode) {
+  async markPaymentFailed(activityId, serviceCode, userId = null) {
     const existingSub = await this.getSubscription(activityId, serviceCode);
     if (!existingSub) {
       throw Errors.NotFound('Abbonamento non trovato');
     }
+
+    // Ottieni dati attività per webhook
+    const { data: activity } = await supabaseAdmin
+      .from('activities')
+      .select('id, name, organization_id')
+      .eq('id', activityId)
+      .single();
 
     const { error } = await supabaseAdmin
       .from('subscriptions')
@@ -878,6 +1036,19 @@ class SubscriptionService {
       console.error('Error marking payment failed:', error);
       throw Errors.Internal('Errore nell\'aggiornamento dello stato');
     }
+
+    // Invia webhook license sync verso app DOID (Review/Page)
+    this.sendLicenseSyncWebhook({
+      serviceCode,
+      action: 'payment_failed',
+      userId,
+      activity,
+      subscription: {
+        status: 'past_due',
+        planCode: existingSub.plan?.code,
+        currentPeriodEnd: existingSub.currentPeriodEnd
+      }
+    });
 
     console.log(`[SUBSCRIPTION] Marked as past_due: ${activityId}/${serviceCode}`);
     return { success: true };

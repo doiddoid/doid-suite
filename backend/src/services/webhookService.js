@@ -58,6 +58,17 @@ class WebhookService {
       'member.joined': process.env.GHL_WEBHOOK_MEMBER_JOINED
     };
 
+    // URL webhook per sincronizzazione licenze verso app DOID
+    this.licenseSyncUrls = {
+      'smart_review': process.env.DOID_WEBHOOK_SMART_REVIEW || 'https://review.doid.it/api/webhook/sync-license',
+      'smart_page': process.env.DOID_WEBHOOK_SMART_PAGE || 'https://page.doid.it/api/webhook/sync-license',
+      'menu_digitale': process.env.DOID_WEBHOOK_MENU_DIGITALE,
+      'display_suite': process.env.DOID_WEBHOOK_DISPLAY_SUITE
+    };
+
+    // Secret per firmare i webhook verso le app DOID
+    this.licenseSyncSecret = process.env.DOID_LICENSE_SYNC_SECRET || process.env.SSO_SECRET_KEY || '';
+
     // URL fallback generico (se l'evento specifico non ha URL dedicato)
     this.fallbackUrl = process.env.GHL_WEBHOOK_URL || null;
 
@@ -821,6 +832,221 @@ class WebhookService {
    */
   async sendMemberJoined(data) {
     return this.send('member.joined', data);
+  }
+
+  // ==================== LICENSE SYNC VERSO APP DOID ====================
+
+  /**
+   * Genera firma HMAC per webhook license sync
+   * @param {object} payload - Payload da firmare
+   * @returns {string} Firma HMAC-SHA256
+   */
+  generateLicenseSyncSignature(payload) {
+    const crypto = require('crypto');
+    const dataString = JSON.stringify(payload);
+    return crypto.createHmac('sha256', this.licenseSyncSecret).update(dataString).digest('hex');
+  }
+
+  /**
+   * Invia webhook di sincronizzazione licenza verso app DOID (Review/Page)
+   * Questo metodo notifica le app esterne quando una subscription cambia
+   *
+   * @param {object} params
+   * @param {string} params.serviceCode - Codice servizio (smart_review, smart_page, etc.)
+   * @param {string} params.action - Azione (trial_activated, activated, renewed, cancelled, expired, payment_failed)
+   * @param {object} params.user - Dati utente {id, email}
+   * @param {object} params.activity - Dati attività {id, name}
+   * @param {object} params.subscription - Dati subscription {status, planCode, billingCycle, expiresAt, trialEndsAt}
+   * @returns {Promise<object>} Risultato invio
+   */
+  async sendLicenseSync({ serviceCode, action, user, activity, subscription }) {
+    const webhookUrl = this.licenseSyncUrls[serviceCode];
+
+    if (!webhookUrl) {
+      console.log(`[LICENSE_SYNC] No webhook URL configured for service: ${serviceCode}`);
+      return { success: false, error: 'No webhook URL configured', serviceCode };
+    }
+
+    const timestamp = new Date().toISOString();
+
+    // Costruisci payload nel formato atteso da syncLicenseFromSuite()
+    const payload = {
+      event: 'license.updated',
+      timestamp,
+      action,
+      service: serviceCode,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email
+        },
+        activity: {
+          id: activity?.id,
+          name: activity?.name
+        },
+        license: {
+          isValid: ['trial', 'active'].includes(subscription.status),
+          subscription: {
+            status: subscription.status,
+            planCode: subscription.planCode || 'pro',
+            billingCycle: subscription.billingCycle || 'monthly',
+            expiresAt: subscription.expiresAt || subscription.trialEndsAt || subscription.currentPeriodEnd,
+            trialEndsAt: subscription.trialEndsAt
+          }
+        }
+      }
+    };
+
+    // Genera firma HMAC
+    const signature = this.generateLicenseSyncSignature(payload);
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-DOID-Event': 'license.updated',
+          'X-DOID-Signature': signature,
+          'X-DOID-Timestamp': timestamp,
+          'X-Webhook-Source': 'doid-suite'
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(this.timeout)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      console.log(`[LICENSE_SYNC] ${action} sent to ${serviceCode}: ${webhookUrl}`);
+
+      // Log nel database
+      await this.logWebhook('license.sync', payload, 'success', `${action} - ${serviceCode}`, webhookUrl);
+
+      return {
+        success: true,
+        serviceCode,
+        action,
+        status: response.status
+      };
+
+    } catch (error) {
+      console.error(`[LICENSE_SYNC] Failed to sync ${serviceCode}:`, error.message);
+
+      // Log errore nel database
+      await this.logWebhook('license.sync', payload, 'failed', error.message, webhookUrl);
+
+      return {
+        success: false,
+        serviceCode,
+        action,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Helper: Sincronizza licenza dopo attivazione trial
+   */
+  async syncLicenseTrialActivated({ serviceCode, user, activity, subscription }) {
+    return this.sendLicenseSync({
+      serviceCode,
+      action: 'trial_activated',
+      user,
+      activity,
+      subscription: {
+        status: 'trial',
+        planCode: subscription.planCode || 'pro',
+        trialEndsAt: subscription.trialEndsAt,
+        expiresAt: subscription.trialEndsAt
+      }
+    });
+  }
+
+  /**
+   * Helper: Sincronizza licenza dopo attivazione abbonamento
+   */
+  async syncLicenseActivated({ serviceCode, user, activity, subscription }) {
+    return this.sendLicenseSync({
+      serviceCode,
+      action: 'activated',
+      user,
+      activity,
+      subscription: {
+        status: 'active',
+        planCode: subscription.planCode || 'pro',
+        billingCycle: subscription.billingCycle,
+        expiresAt: subscription.currentPeriodEnd
+      }
+    });
+  }
+
+  /**
+   * Helper: Sincronizza licenza dopo rinnovo
+   */
+  async syncLicenseRenewed({ serviceCode, user, activity, subscription }) {
+    return this.sendLicenseSync({
+      serviceCode,
+      action: 'renewed',
+      user,
+      activity,
+      subscription: {
+        status: 'active',
+        planCode: subscription.planCode || 'pro',
+        billingCycle: subscription.billingCycle,
+        expiresAt: subscription.currentPeriodEnd
+      }
+    });
+  }
+
+  /**
+   * Helper: Sincronizza licenza dopo cancellazione
+   */
+  async syncLicenseCancelled({ serviceCode, user, activity, subscription }) {
+    return this.sendLicenseSync({
+      serviceCode,
+      action: 'cancelled',
+      user,
+      activity,
+      subscription: {
+        status: 'cancelled',
+        planCode: subscription.planCode,
+        expiresAt: subscription.currentPeriodEnd // Accesso fino a fine periodo
+      }
+    });
+  }
+
+  /**
+   * Helper: Sincronizza licenza dopo scadenza
+   */
+  async syncLicenseExpired({ serviceCode, user, activity, subscription }) {
+    return this.sendLicenseSync({
+      serviceCode,
+      action: 'expired',
+      user,
+      activity,
+      subscription: {
+        status: 'expired',
+        planCode: subscription.planCode
+      }
+    });
+  }
+
+  /**
+   * Helper: Sincronizza licenza dopo pagamento fallito
+   */
+  async syncLicensePaymentFailed({ serviceCode, user, activity, subscription }) {
+    return this.sendLicenseSync({
+      serviceCode,
+      action: 'payment_failed',
+      user,
+      activity,
+      subscription: {
+        status: 'past_due',
+        planCode: subscription.planCode,
+        expiresAt: subscription.currentPeriodEnd
+      }
+    });
   }
 }
 
