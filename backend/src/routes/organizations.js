@@ -86,10 +86,26 @@ router.put('/:organizationId',
   [
     param('organizationId').isUUID().withMessage('ID organizzazione non valido'),
     body('name').optional().trim().notEmpty().withMessage('Nome non può essere vuoto'),
-    body('email').optional().isEmail().withMessage('Email non valida'),
+    body('email').optional({ values: 'falsy' }).isEmail().withMessage('Email non valida'),
     body('phone').optional().trim(),
-    body('vatNumber').optional().trim(),
-    body('logoUrl').optional().isURL().withMessage('URL logo non valido')
+    body('vatNumber').optional({ values: 'falsy' }).trim()
+      .matches(/^\d{11}$/).withMessage('Partita IVA deve essere di 11 cifre'),
+    body('logoUrl').optional({ values: 'falsy' }).isURL().withMessage('URL logo non valido'),
+    // Billing fields
+    body('businessName').optional().trim(),
+    body('fiscalCode').optional({ values: 'falsy' }).trim()
+      .matches(/^[A-Z0-9]{16}$/i).withMessage('Codice fiscale deve essere di 16 caratteri alfanumerici'),
+    body('address').optional().trim(),
+    body('postalCode').optional({ values: 'falsy' }).trim()
+      .matches(/^\d{5}$/).withMessage('CAP deve essere di 5 cifre'),
+    body('city').optional().trim(),
+    body('province').optional({ values: 'falsy' }).trim().toUpperCase()
+      .isLength({ min: 2, max: 2 }).withMessage('Provincia deve essere di 2 lettere'),
+    body('country').optional().trim(),
+    body('sdiCode').optional({ values: 'falsy' }).trim()
+      .matches(/^[A-Z0-9]{7}$/i).withMessage('Codice SDI deve essere di 7 caratteri'),
+    body('pec').optional({ values: 'falsy' }).isEmail().withMessage('PEC non valida'),
+    body('usePec').optional().isBoolean().withMessage('usePec deve essere boolean')
   ],
   validate,
   requireOrganization('admin'),

@@ -124,7 +124,12 @@ class OrganizationService {
 
   // Aggiorna organizzazione
   async update(organizationId, updates) {
-    const allowedUpdates = ['name', 'email', 'phone', 'vat_number', 'logo_url'];
+    const allowedUpdates = [
+      'name', 'email', 'phone', 'vat_number', 'logo_url',
+      // Billing fields
+      'business_name', 'fiscal_code', 'address', 'postal_code',
+      'city', 'province', 'country', 'sdi_code', 'pec', 'use_pec'
+    ];
     const sanitizedUpdates = {};
 
     for (const key of allowedUpdates) {
@@ -303,6 +308,17 @@ class OrganizationService {
       vatNumber: org.vat_number,
       logoUrl: org.logo_url,
       status: org.status,
+      // Billing fields
+      businessName: org.business_name,
+      fiscalCode: org.fiscal_code,
+      address: org.address,
+      postalCode: org.postal_code,
+      city: org.city,
+      province: org.province,
+      country: org.country,
+      sdiCode: org.sdi_code,
+      pec: org.pec,
+      usePec: org.use_pec,
       createdAt: org.created_at,
       updatedAt: org.updated_at
     };

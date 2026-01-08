@@ -30,6 +30,17 @@ export default function Settings() {
     email: '',
     phone: '',
     vatNumber: '',
+    // Billing fields
+    businessName: '',
+    fiscalCode: '',
+    address: '',
+    postalCode: '',
+    city: '',
+    province: '',
+    country: 'Italia',
+    sdiCode: '',
+    pec: '',
+    usePec: false,
   });
 
   // Team state
@@ -63,11 +74,23 @@ export default function Settings() {
       // Load organization details
       const orgResponse = await api.getOrganization(currentOrganization.id);
       if (orgResponse.success) {
+        const data = orgResponse.data;
         setOrganization({
-          name: orgResponse.data.name || '',
-          email: orgResponse.data.email || '',
-          phone: orgResponse.data.phone || '',
-          vatNumber: orgResponse.data.vatNumber || '',
+          name: data.name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          vatNumber: data.vatNumber || '',
+          // Billing fields
+          businessName: data.businessName || '',
+          fiscalCode: data.fiscalCode || '',
+          address: data.address || '',
+          postalCode: data.postalCode || '',
+          city: data.city || '',
+          province: data.province || '',
+          country: data.country || 'Italia',
+          sdiCode: data.sdiCode || '',
+          pec: data.pec || '',
+          usePec: data.usePec || false,
         });
       }
 
@@ -323,60 +346,225 @@ export default function Settings() {
         );
 
       case 'organization':
+        // Italian provinces list
+        const provinces = [
+          'AG', 'AL', 'AN', 'AO', 'AR', 'AP', 'AT', 'AV', 'BA', 'BT', 'BL', 'BN', 'BG', 'BI', 'BO', 'BZ', 'BS', 'BR',
+          'CA', 'CL', 'CB', 'CE', 'CT', 'CZ', 'CH', 'CO', 'CS', 'CR', 'KR', 'CN', 'EN', 'FM', 'FE', 'FI', 'FG', 'FC',
+          'FR', 'GE', 'GO', 'GR', 'IM', 'IS', 'SP', 'AQ', 'LT', 'LE', 'LC', 'LI', 'LO', 'LU', 'MC', 'MN', 'MS', 'MT',
+          'ME', 'MI', 'MO', 'MB', 'NA', 'NO', 'NU', 'OR', 'PD', 'PA', 'PR', 'PV', 'PG', 'PU', 'PE', 'PC', 'PI', 'PT',
+          'PN', 'PZ', 'PO', 'RG', 'RA', 'RC', 'RE', 'RI', 'RN', 'RM', 'RO', 'SA', 'SS', 'SV', 'SI', 'SR', 'SO', 'SU',
+          'TA', 'TE', 'TR', 'TO', 'TP', 'TN', 'TV', 'TS', 'UD', 'VA', 'VE', 'VB', 'VC', 'VR', 'VV', 'VI', 'VT'
+        ];
+
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            {/* Dati Azienda */}
             <div>
-              <label className="label">Nome organizzazione</label>
-              <input
-                type="text"
-                value={organization.name}
-                onChange={(e) => setOrganization({ ...organization, name: e.target.value })}
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="label">Email</label>
-              <input
-                type="email"
-                value={organization.email}
-                onChange={(e) => setOrganization({ ...organization, email: e.target.value })}
-                className="input"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">Telefono</label>
-                <input
-                  type="tel"
-                  value={organization.phone}
-                  onChange={(e) => setOrganization({ ...organization, phone: e.target.value })}
-                  className="input"
-                />
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Dati Azienda</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Nome organizzazione *</label>
+                  <input
+                    type="text"
+                    value={organization.name}
+                    onChange={(e) => setOrganization({ ...organization, name: e.target.value })}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Ragione sociale</label>
+                  <input
+                    type="text"
+                    value={organization.businessName}
+                    onChange={(e) => setOrganization({ ...organization, businessName: e.target.value })}
+                    placeholder="Se diversa dal nome organizzazione"
+                    className="input"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Codice Fiscale</label>
+                    <input
+                      type="text"
+                      value={organization.fiscalCode}
+                      onChange={(e) => setOrganization({ ...organization, fiscalCode: e.target.value.toUpperCase() })}
+                      placeholder="16 caratteri"
+                      maxLength={16}
+                      className="input font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Partita IVA</label>
+                    <input
+                      type="text"
+                      value={organization.vatNumber}
+                      onChange={(e) => setOrganization({ ...organization, vatNumber: e.target.value.replace(/\D/g, '') })}
+                      placeholder="11 cifre"
+                      maxLength={11}
+                      className="input font-mono"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="label">Partita IVA</label>
-                <input
-                  type="text"
-                  value={organization.vatNumber}
-                  onChange={(e) => setOrganization({ ...organization, vatNumber: e.target.value })}
-                  className="input"
-                />
+            </div>
+
+            {/* Indirizzo */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Indirizzo</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Via / Indirizzo</label>
+                  <input
+                    type="text"
+                    value={organization.address}
+                    onChange={(e) => setOrganization({ ...organization, address: e.target.value })}
+                    placeholder="Via Roma, 1"
+                    className="input"
+                  />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="label">CAP</label>
+                    <input
+                      type="text"
+                      value={organization.postalCode}
+                      onChange={(e) => setOrganization({ ...organization, postalCode: e.target.value.replace(/\D/g, '') })}
+                      placeholder="00000"
+                      maxLength={5}
+                      className="input font-mono"
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="label">Città</label>
+                    <input
+                      type="text"
+                      value={organization.city}
+                      onChange={(e) => setOrganization({ ...organization, city: e.target.value })}
+                      placeholder="Milano"
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Provincia</label>
+                    <select
+                      value={organization.province}
+                      onChange={(e) => setOrganization({ ...organization, province: e.target.value })}
+                      className="input"
+                    >
+                      <option value="">--</option>
+                      {provinces.map(p => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Nazione</label>
+                  <input
+                    type="text"
+                    value={organization.country}
+                    onChange={(e) => setOrganization({ ...organization, country: e.target.value })}
+                    className="input"
+                  />
+                </div>
               </div>
             </div>
-            <button
-              onClick={handleSaveOrganization}
-              disabled={loading}
-              className="btn-primary"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Salva modifiche
-                </>
-              )}
-            </button>
+
+            {/* Fatturazione Elettronica */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Fatturazione Elettronica</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <input
+                    type="checkbox"
+                    id="usePec"
+                    checked={organization.usePec}
+                    onChange={(e) => setOrganization({ ...organization, usePec: e.target.checked })}
+                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="usePec" className="text-sm text-gray-700">
+                    Usa PEC invece di Codice SDI
+                  </label>
+                </div>
+
+                {!organization.usePec ? (
+                  <div>
+                    <label className="label">Codice SDI (Codice Destinatario)</label>
+                    <input
+                      type="text"
+                      value={organization.sdiCode}
+                      onChange={(e) => setOrganization({ ...organization, sdiCode: e.target.value.toUpperCase() })}
+                      placeholder="7 caratteri (es: M5UXCR1)"
+                      maxLength={7}
+                      className="input font-mono"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Codice univoco per la ricezione delle fatture elettroniche
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="label">PEC (Posta Elettronica Certificata)</label>
+                    <input
+                      type="email"
+                      value={organization.pec}
+                      onChange={(e) => setOrganization({ ...organization, pec: e.target.value })}
+                      placeholder="azienda@pec.it"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Indirizzo PEC per la ricezione delle fatture elettroniche
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Contatti */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Contatti</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Email</label>
+                  <input
+                    type="email"
+                    value={organization.email}
+                    onChange={(e) => setOrganization({ ...organization, email: e.target.value })}
+                    placeholder="info@azienda.it"
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="label">Telefono</label>
+                  <input
+                    type="tel"
+                    value={organization.phone}
+                    onChange={(e) => setOrganization({ ...organization, phone: e.target.value })}
+                    placeholder="+39 02 1234567"
+                    className="input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="border-t border-gray-200 pt-6">
+              <button
+                onClick={handleSaveOrganization}
+                disabled={loading}
+                className="btn-primary"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Salva modifiche
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         );
 
