@@ -1616,4 +1616,235 @@ router.get('/jobs/trial-reminders/stats',
   })
 );
 
+// ==================== WEBHOOK DEBUG (DEVELOPMENT ONLY) ====================
+
+// GET /api/admin/webhook/test/:activityId
+// Forza l'invio di un webhook di test per una specifica activity
+// Solo in development o con flag esplicito
+router.get('/webhook/test/:activityId',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    query('service').optional().isIn(['smart_review', 'smart_page', 'menu_digitale', 'display_suite'])
+      .withMessage('Servizio non valido'),
+    query('action').optional().isIn(['trial_activated', 'activated', 'renewed', 'cancelled', 'expired', 'payment_failed'])
+      .withMessage('Azione non valida')
+  ],
+  validate,
+  logAdminAction('test_webhook'),
+  asyncHandler(async (req, res) => {
+    // Blocca in produzione se non esplicitamente abilitato
+    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_WEBHOOK_DEBUG !== 'true') {
+      return res.status(403).json({
+        success: false,
+        error: 'Endpoint disabilitato in produzione. Imposta ENABLE_WEBHOOK_DEBUG=true per abilitare.'
+      });
+    }
+
+    const { activityId } = req.params;
+    const serviceCode = req.query.service || 'smart_review';
+    const action = req.query.action || 'trial_activated';
+
+    // Ottieni dati attività
+    const { data: activity, error: actError } = await supabaseAdmin
+      .from('activities')
+      .select(`
+        id, name, organization_id,
+        activity_users!inner(user_id, role)
+      `)
+      .eq('id', activityId)
+      .single();
+
+    if (actError || !activity) {
+      return res.status(404).json({
+        success: false,
+        error: 'Attività non trovata'
+      });
+    }
+
+    // Trova owner
+    const ownerRelation = activity.activity_users.find(au => au.role === 'owner');
+    const userId = ownerRelation?.user_id || activity.activity_users[0]?.user_id;
+
+    if (!userId) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nessun utente associato all\'attività'
+      });
+    }
+
+    // Ottieni email utente
+    const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const userEmail = authData?.user?.email || 'unknown@example.com';
+
+    // Ottieni subscription se esiste
+    const { data: subscription } = await supabaseAdmin
+      .from('subscriptions')
+      .select(`
+        *,
+        plan:plans(code, name),
+        service:services(code)
+      `)
+      .eq('activity_id', activityId)
+      .eq('service:services.code', serviceCode)
+      .single();
+
+    // Import webhook service
+    const webhookService = (await import('../services/webhookService.js')).default;
+
+    // Costruisci dati subscription (usa esistente o mock)
+    const subscriptionData = {
+      status: subscription?.status || 'trial',
+      planCode: subscription?.plan?.code || 'pro',
+      billingCycle: subscription?.billing_cycle || 'monthly',
+      trialEndsAt: subscription?.trial_ends_at || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      currentPeriodEnd: subscription?.current_period_end || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    };
+
+    // Aggiusta status in base all'action
+    if (action === 'activated' || action === 'renewed') {
+      subscriptionData.status = 'active';
+    } else if (action === 'cancelled') {
+      subscriptionData.status = 'cancelled';
+    } else if (action === 'expired') {
+      subscriptionData.status = 'expired';
+    } else if (action === 'payment_failed') {
+      subscriptionData.status = 'past_due';
+    }
+
+    // Invia webhook
+    const result = await webhookService.sendLicenseSync({
+      serviceCode,
+      action,
+      user: { id: userId, email: userEmail },
+      activity: { id: activity.id, name: activity.name },
+      subscription: subscriptionData
+    });
+
+    res.json({
+      success: result.success,
+      data: {
+        action,
+        serviceCode,
+        activity: {
+          id: activity.id,
+          name: activity.name
+        },
+        user: {
+          id: userId,
+          email: userEmail
+        },
+        subscription: subscriptionData,
+        webhookResult: result
+      },
+      message: result.success
+        ? `Webhook ${action} inviato a ${serviceCode}`
+        : `Errore invio webhook: ${result.error}`
+    });
+  })
+);
+
+// GET /api/admin/webhook/logs
+// Visualizza ultimi log webhook
+router.get('/webhook/logs',
+  [
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100'),
+    query('eventType').optional().trim()
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const limit = parseInt(req.query.limit) || 20;
+    const eventType = req.query.eventType;
+
+    let query = supabaseAdmin
+      .from('webhook_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (eventType) {
+      query = query.eq('event_type', eventType);
+    }
+
+    const { data: logs, error } = await query;
+
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        count: logs?.length || 0,
+        logs: logs?.map(log => ({
+          id: log.id,
+          eventType: log.event_type,
+          status: log.status,
+          response: log.response,
+          webhookUrl: log.webhook_url,
+          createdAt: log.created_at
+        })) || []
+      }
+    });
+  })
+);
+
+// GET /api/admin/webhook/health
+// Verifica stato endpoint webhook delle app esterne
+router.get('/webhook/health',
+  asyncHandler(async (req, res) => {
+    const services = ['smart_review', 'smart_page'];
+    const results = {};
+
+    for (const service of services) {
+      const webhookUrl = process.env[`DOID_WEBHOOK_${service.toUpperCase().replace('_', '_')}`]
+        || `https://${service.replace('_', '.')}.doid.it/api/webhook/sync-license`;
+
+      const healthUrl = webhookUrl.replace('/sync-license', '/health');
+
+      try {
+        const startTime = Date.now();
+        const response = await fetch(healthUrl, {
+          method: 'GET',
+          signal: AbortSignal.timeout(10000)
+        });
+
+        const elapsed = Date.now() - startTime;
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          data = null;
+        }
+
+        results[service] = {
+          status: response.ok ? 'ok' : 'error',
+          httpStatus: response.status,
+          responseTime: elapsed,
+          url: healthUrl,
+          data
+        };
+      } catch (error) {
+        results[service] = {
+          status: 'unreachable',
+          error: error.message,
+          url: healthUrl
+        };
+      }
+    }
+
+    const allOk = Object.values(results).every(r => r.status === 'ok');
+
+    res.json({
+      success: true,
+      data: {
+        overall: allOk ? 'healthy' : 'degraded',
+        services: results
+      }
+    });
+  })
+);
+
 export default router;
