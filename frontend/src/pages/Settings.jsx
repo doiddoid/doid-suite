@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { User, Building2, CreditCard, Users, Loader2, Save, Trash2, ExternalLink, Calendar, Clock, Lock, Eye, EyeOff, Mail } from 'lucide-react';
+import { User, Building2, CreditCard, Users, Loader2, Save, Trash2, ExternalLink, Calendar, Clock, Lock, Eye, EyeOff, Mail, Receipt, Download, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useActivities } from '../hooks/useActivities';
 import api from '../services/api';
+import activitiesApi from '../services/activitiesApi';
 
 const tabs = [
   { id: 'profile', name: 'Profilo', icon: User },
@@ -59,6 +60,14 @@ export default function Settings() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
   const [resetEmailSent, setResetEmailSent] = useState(false);
+
+  // Billing state
+  const [payments, setPayments] = useState([]);
+  const [paymentsTotal, setPaymentsTotal] = useState(0);
+  const [paymentsPage, setPaymentsPage] = useState(0);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [billingProfile, setBillingProfile] = useState(null);
+  const [useOrgDataForBilling, setUseOrgDataForBilling] = useState(true);
 
   // Load organization data and services
   useEffect(() => {
@@ -225,6 +234,46 @@ export default function Settings() {
       setPasswordLoading(false);
     }
   };
+
+  // Load payments for activity
+  const loadPayments = async (page = 0) => {
+    if (!currentActivity?.id) return;
+
+    setPaymentsLoading(true);
+    try {
+      const response = await activitiesApi.getPayments(currentActivity.id, 10, page * 10);
+      if (response.success) {
+        setPayments(response.data.payments);
+        setPaymentsTotal(response.data.total);
+        setPaymentsPage(page);
+      }
+    } catch (error) {
+      console.error('Error loading payments:', error);
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
+  // Load billing profile
+  const loadBillingProfile = async () => {
+    try {
+      const response = await activitiesApi.getBillingProfile();
+      if (response.success && response.data.billingProfile) {
+        setBillingProfile(response.data.billingProfile);
+        setUseOrgDataForBilling(false);
+      }
+    } catch (error) {
+      console.error('Error loading billing profile:', error);
+    }
+  };
+
+  // Load payments and billing profile when billing tab is active
+  useEffect(() => {
+    if (activeTab === 'billing' && currentActivity?.id) {
+      loadPayments(0);
+      loadBillingProfile();
+    }
+  }, [activeTab, currentActivity]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -785,6 +834,151 @@ export default function Settings() {
                 </div>
               </div>
             )}
+
+            {/* Dati Fatturazione */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="font-medium text-gray-900 mb-4">Dati Fatturazione</h3>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <input
+                    type="checkbox"
+                    id="useOrgData"
+                    checked={useOrgDataForBilling}
+                    onChange={(e) => setUseOrgDataForBilling(e.target.checked)}
+                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="useOrgData" className="text-sm text-gray-700">
+                    Usa dati organizzazione per fatturazione
+                  </label>
+                </div>
+
+                {useOrgDataForBilling ? (
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><span className="font-medium">Ragione sociale:</span> {organization.businessName || organization.name || '-'}</p>
+                    <p><span className="font-medium">P.IVA:</span> {organization.vatNumber || '-'}</p>
+                    <p><span className="font-medium">Indirizzo:</span> {organization.address ? `${organization.address}, ${organization.postalCode} ${organization.city} (${organization.province})` : '-'}</p>
+                    <p><span className="font-medium">SDI/PEC:</span> {organization.usePec ? organization.pec : organization.sdiCode || '-'}</p>
+                    <button
+                      onClick={() => setActiveTab('organization')}
+                      className="mt-2 text-sm text-primary-600 hover:text-primary-700"
+                    >
+                      Modifica dati organizzazione →
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-600 space-y-1">
+                    {billingProfile ? (
+                      <>
+                        <p><span className="font-medium">Ragione sociale:</span> {billingProfile.companyName || '-'}</p>
+                        <p><span className="font-medium">P.IVA:</span> {billingProfile.vatNumber || '-'}</p>
+                        <p><span className="font-medium">C.F.:</span> {billingProfile.fiscalCode || '-'}</p>
+                        <p><span className="font-medium">Indirizzo:</span> {billingProfile.addressLine1 ? `${billingProfile.addressLine1}, ${billingProfile.postalCode} ${billingProfile.city}` : '-'}</p>
+                        <p><span className="font-medium">SDI/PEC:</span> {billingProfile.pecEmail || billingProfile.sdiCode || '-'}</p>
+                      </>
+                    ) : (
+                      <p className="text-gray-500 italic">Nessun profilo di fatturazione configurato</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Storico Pagamenti/Fatture */}
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Receipt className="w-5 h-5 text-gray-600" />
+                <h3 className="font-medium text-gray-900">Storico Pagamenti</h3>
+              </div>
+
+              {paymentsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                </div>
+              ) : payments.length === 0 ? (
+                <p className="text-gray-500 text-sm py-4">Nessun pagamento registrato</p>
+              ) : (
+                <>
+                  {/* Payments table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-2 font-medium text-gray-600">Data</th>
+                          <th className="text-left py-3 px-2 font-medium text-gray-600">Descrizione</th>
+                          <th className="text-right py-3 px-2 font-medium text-gray-600">Importo</th>
+                          <th className="text-center py-3 px-2 font-medium text-gray-600">Stato</th>
+                          <th className="text-center py-3 px-2 font-medium text-gray-600"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payments.map((payment) => (
+                          <tr key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-2 text-gray-600">
+                              {new Date(payment.date).toLocaleDateString('it-IT')}
+                            </td>
+                            <td className="py-3 px-2 text-gray-900">{payment.description}</td>
+                            <td className="py-3 px-2 text-right font-medium text-gray-900">
+                              €{payment.amount?.toFixed(2)}
+                            </td>
+                            <td className="py-3 px-2 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
+                                payment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                payment.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                payment.status === 'failed' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {payment.status === 'completed' && <CheckCircle className="w-3 h-3" />}
+                                {payment.status === 'pending' && <AlertCircle className="w-3 h-3" />}
+                                {payment.status === 'failed' && <XCircle className="w-3 h-3" />}
+                                {payment.status === 'completed' ? 'Pagato' :
+                                 payment.status === 'pending' ? 'In attesa' :
+                                 payment.status === 'failed' ? 'Fallito' :
+                                 payment.status}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-center">
+                              {payment.status === 'completed' && (
+                                <button
+                                  className="p-1 text-gray-400 hover:text-gray-600"
+                                  title="Scarica fattura"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {paymentsTotal > 10 && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                      <p className="text-sm text-gray-500">
+                        {paymentsPage * 10 + 1}-{Math.min((paymentsPage + 1) * 10, paymentsTotal)} di {paymentsTotal}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => loadPayments(paymentsPage - 1)}
+                          disabled={paymentsPage === 0}
+                          className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => loadPayments(paymentsPage + 1)}
+                          disabled={(paymentsPage + 1) * 10 >= paymentsTotal}
+                          className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         );
 

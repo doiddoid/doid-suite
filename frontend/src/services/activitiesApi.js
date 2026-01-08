@@ -172,6 +172,34 @@ class ActivitiesApiService {
     });
   }
 
+  // ==================== PAYMENTS / INVOICES ====================
+
+  /**
+   * Lista pagamenti/fatture per attività
+   */
+  async getPayments(activityId, limit = 20, offset = 0) {
+    return api.request(`/activities/${activityId}/payments?limit=${limit}&offset=${offset}`);
+  }
+
+  // ==================== BILLING PROFILE ====================
+
+  /**
+   * Ottieni profilo fatturazione utente
+   */
+  async getBillingProfile() {
+    return api.request('/activities/billing-profile/me');
+  }
+
+  /**
+   * Aggiorna profilo fatturazione utente
+   */
+  async updateBillingProfile(data) {
+    return api.request('/activities/billing-profile/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // ==================== SERVICES (public) ====================
 
   /**

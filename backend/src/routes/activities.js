@@ -591,6 +591,183 @@ router.get('/:activityId/checkout/status',
   })
 );
 
+// ==================== PAYMENTS / INVOICES ====================
+
+// GET /api/activities/:activityId/payments
+// Lista pagamenti/fatture per attività
+router.get('/:activityId/payments',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido')
+  ],
+  validate,
+  loadActivity,
+  requireActivityAccess,
+  asyncHandler(async (req, res) => {
+    const activityId = req.params.activityId;
+    const { limit = 20, offset = 0 } = req.query;
+
+    const { data: payments, error, count } = await req.supabase
+      .from('payment_transactions')
+      .select('*', { count: 'exact' })
+      .eq('activity_id', activityId)
+      .order('created_at', { ascending: false })
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+    if (error) {
+      console.error('Error fetching payments:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Errore nel recupero dei pagamenti'
+      });
+    }
+
+    // Format payments for frontend
+    const formattedPayments = (payments || []).map(p => ({
+      id: p.id,
+      date: p.created_at,
+      description: `${p.service_code?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} - ${p.billing_cycle === 'yearly' ? 'Annuale' : 'Mensile'}`,
+      amount: p.amount,
+      currency: p.currency || 'EUR',
+      status: p.status,
+      transactionId: p.transaction_id,
+      paymentMethod: p.payment_method,
+      source: p.source
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        payments: formattedPayments,
+        total: count || 0,
+        limit: parseInt(limit),
+        offset: parseInt(offset)
+      }
+    });
+  })
+);
+
+// ==================== BILLING PROFILE ====================
+
+// GET /api/activities/billing-profile
+// Ottieni profilo fatturazione utente
+router.get('/billing-profile/me',
+  asyncHandler(async (req, res) => {
+    const { data: profile, error } = await req.supabase
+      .from('billing_profiles')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .eq('is_default', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+      console.error('Error fetching billing profile:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Errore nel recupero del profilo fatturazione'
+      });
+    }
+
+    // Format for frontend
+    const formattedProfile = profile ? {
+      id: profile.id,
+      billingType: profile.billing_type,
+      companyName: profile.company_name,
+      vatNumber: profile.vat_number,
+      fiscalCode: profile.fiscal_code,
+      addressLine1: profile.address_line1,
+      addressLine2: profile.address_line2,
+      city: profile.city,
+      province: profile.province,
+      postalCode: profile.postal_code,
+      country: profile.country,
+      billingEmail: profile.billing_email,
+      phone: profile.phone,
+      pecEmail: profile.pec_email,
+      sdiCode: profile.sdi_code,
+      useOrganizationData: false
+    } : null;
+
+    res.json({
+      success: true,
+      data: { billingProfile: formattedProfile }
+    });
+  })
+);
+
+// PUT /api/activities/billing-profile
+// Aggiorna/crea profilo fatturazione utente
+router.put('/billing-profile/me',
+  [
+    body('billingType').optional().isIn(['personal', 'business']),
+    body('companyName').optional().trim(),
+    body('vatNumber').optional({ values: 'falsy' }).trim()
+      .matches(/^\d{11}$/).withMessage('Partita IVA deve essere di 11 cifre'),
+    body('fiscalCode').optional({ values: 'falsy' }).trim()
+      .matches(/^[A-Z0-9]{16}$/i).withMessage('Codice fiscale deve essere di 16 caratteri'),
+    body('addressLine1').optional().trim(),
+    body('addressLine2').optional().trim(),
+    body('city').optional().trim(),
+    body('province').optional({ values: 'falsy' }).trim().toUpperCase()
+      .isLength({ min: 2, max: 2 }).withMessage('Provincia deve essere di 2 lettere'),
+    body('postalCode').optional({ values: 'falsy' }).trim()
+      .matches(/^\d{5}$/).withMessage('CAP deve essere di 5 cifre'),
+    body('country').optional().trim(),
+    body('billingEmail').optional({ values: 'falsy' }).isEmail(),
+    body('phone').optional().trim(),
+    body('pecEmail').optional({ values: 'falsy' }).isEmail(),
+    body('sdiCode').optional({ values: 'falsy' }).trim()
+      .matches(/^[A-Z0-9]{7}$/i).withMessage('Codice SDI deve essere di 7 caratteri')
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+
+    // Map camelCase to snake_case
+    const profileData = {
+      user_id: userId,
+      billing_type: req.body.billingType || 'personal',
+      company_name: req.body.companyName || null,
+      vat_number: req.body.vatNumber || null,
+      fiscal_code: req.body.fiscalCode || null,
+      address_line1: req.body.addressLine1 || null,
+      address_line2: req.body.addressLine2 || null,
+      city: req.body.city || null,
+      province: req.body.province || null,
+      postal_code: req.body.postalCode || null,
+      country: req.body.country || 'IT',
+      billing_email: req.body.billingEmail || null,
+      phone: req.body.phone || null,
+      pec_email: req.body.pecEmail || null,
+      sdi_code: req.body.sdiCode || null,
+      is_default: true
+    };
+
+    // Upsert: insert or update if exists
+    const { data: profile, error } = await req.supabase
+      .from('billing_profiles')
+      .upsert(profileData, {
+        onConflict: 'user_id,is_default',
+        ignoreDuplicates: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving billing profile:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Errore nel salvataggio del profilo fatturazione'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { billingProfile: profile },
+      message: 'Profilo fatturazione aggiornato'
+    });
+  })
+);
+
 // ==================== SERVICES (public, no activity needed) ====================
 
 // GET /api/activities/services/all
