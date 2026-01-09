@@ -250,9 +250,10 @@ class AuthService {
    * Se migration_status = 'pending', lo aggiorna a 'confirmed' e salva il timestamp
    * Verifica anche se password_changed = false per forzare il cambio password
    * @param {string} userId - ID utente
+   * @param {string} userEmail - Email utente (per notifica GHL)
    * @returns {object|null} - { requirePasswordChange, migratedFrom } o null se non migrato
    */
-  async checkAndUpdateMigrationStatus(userId) {
+  async checkAndUpdateMigrationStatus(userId, userEmail) {
     try {
       // Verifica se esiste un profilo con dati di migrazione
       const { data: profile, error: fetchError } = await supabaseAdmin
@@ -285,6 +286,15 @@ class AuthService {
           console.error(`[MIGRATION] Errore aggiornamento stato per user ${userId}:`, updateError);
         } else {
           console.log(`[MIGRATION] Primo login confermato per user ${userId}, migrato da: ${profile.migrated_from}`);
+
+          // Notifica GHL per aggiungere tag "migrazione-confermata"
+          // Questo fa uscire l'utente dall'automazione email di reminder
+          try {
+            await webhookService.notifyMigrationConfirmed(userEmail, profile.migrated_from);
+          } catch (webhookError) {
+            // Non bloccare il login se GHL non risponde
+            console.error(`[MIGRATION] Webhook GHL fallito per ${userEmail}:`, webhookError.message);
+          }
         }
       }
 
@@ -320,7 +330,7 @@ class AuthService {
     }
 
     // Verifica stato migrazione
-    const migrationResult = await this.checkAndUpdateMigrationStatus(data.user.id);
+    const migrationResult = await this.checkAndUpdateMigrationStatus(data.user.id, data.user.email);
 
     // Processa pending registration se esiste (primo login dopo verifica email)
     const pendingResult = await this.processPendingRegistration(
