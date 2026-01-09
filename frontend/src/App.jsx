@@ -1,10 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { ActivityProvider } from './hooks/useActivities';
-import { ProtectedRoute } from './components/Auth';
+import { ProtectedRoute, PublicRoute } from './components/Auth';
 import { Layout } from './components/Layout';
 
 // Pages
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -48,8 +49,8 @@ function App() {
               <Route path="/admin" element={<Admin />} />
             </Route>
 
-            {/* Redirect root to dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Landing page for public, redirect to dashboard for authenticated */}
+            <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
 
             {/* 404 - redirect to dashboard */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
