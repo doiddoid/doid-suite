@@ -46,6 +46,16 @@ export function AuthProvider({ children }) {
         setUser(response.data.user);
         setOrganizations(response.data.organizations || []);
         setCurrentOrganization(response.data.organizations?.[0] || null);
+
+        // Gestione utenti migrati che devono cambiare password
+        if (response.data.requirePasswordChange) {
+          return {
+            success: true,
+            requirePasswordChange: true,
+            migratedFrom: response.data.migratedFrom
+          };
+        }
+
         return { success: true };
       }
       return { success: false, error: response.error };

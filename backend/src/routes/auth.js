@@ -198,6 +198,7 @@ router.get('/verify-reset-token/:token',
 
 // POST /api/auth/update-password
 // Aggiorna password per utente autenticato
+// Passa anche userId per aggiornare password_changed nel profilo (utenti migrati)
 router.post('/update-password',
   [
     body('password').isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri')
@@ -207,7 +208,7 @@ router.post('/update-password',
   asyncHandler(async (req, res) => {
     const { password } = req.body;
 
-    await authService.updatePassword(req.token, password);
+    await authService.updatePassword(req.token, password, req.user.id);
 
     res.json({
       success: true,

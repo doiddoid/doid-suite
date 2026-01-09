@@ -31,7 +31,15 @@ export default function Login() {
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      navigate(from, { replace: true });
+      // Utente migrato: deve cambiare password
+      if (result.requirePasswordChange) {
+        navigate('/change-password', {
+          replace: true,
+          state: { migratedFrom: result.migratedFrom, required: true }
+        });
+      } else {
+        navigate(from, { replace: true });
+      }
     } else {
       setError(result.error);
     }

@@ -245,6 +245,66 @@ class AuthService {
     }
   }
 
+  /**
+   * Verifica e aggiorna lo stato di migrazione al primo login
+   * Se migration_status = 'pending', lo aggiorna a 'confirmed' e salva il timestamp
+   * Verifica anche se password_changed = false per forzare il cambio password
+   * @param {string} userId - ID utente
+   * @returns {object|null} - { requirePasswordChange, migratedFrom } o null se non migrato
+   */
+  async checkAndUpdateMigrationStatus(userId) {
+    try {
+      // Verifica se esiste un profilo con dati di migrazione
+      const { data: profile, error: fetchError } = await supabaseAdmin
+        .from('profiles')
+        .select('migration_status, migrated_from, password_changed')
+        .eq('id', userId)
+        .single();
+
+      // Se non esiste profilo o errore, l'utente non è migrato
+      if (fetchError || !profile) {
+        return null;
+      }
+
+      // Se non è un utente migrato (migration_status NULL), nessuna azione
+      if (!profile.migration_status) {
+        return null;
+      }
+
+      // Se migration_status = 'pending', è il primo login: aggiorna a 'confirmed'
+      if (profile.migration_status === 'pending') {
+        const { error: updateError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            migration_status: 'confirmed',
+            first_login_after_migration: new Date().toISOString()
+          })
+          .eq('id', userId);
+
+        if (updateError) {
+          console.error(`[MIGRATION] Errore aggiornamento stato per user ${userId}:`, updateError);
+        } else {
+          console.log(`[MIGRATION] Primo login confermato per user ${userId}, migrato da: ${profile.migrated_from}`);
+        }
+      }
+
+      // Se password non ancora cambiata, forza il cambio
+      if (profile.password_changed === false) {
+        return {
+          requirePasswordChange: true,
+          migratedFrom: profile.migrated_from
+        };
+      }
+
+      // Password già cambiata, login normale
+      return null;
+    } catch (error) {
+      console.error(`[MIGRATION] Errore check migrazione per user ${userId}:`, error);
+      // Non bloccare il login in caso di errore
+      return null;
+    }
+  }
+
   // Login utente
   async login({ email, password }) {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -258,6 +318,9 @@ class AuthService {
       }
       throw Errors.BadRequest(error.message);
     }
+
+    // Verifica stato migrazione
+    const migrationResult = await this.checkAndUpdateMigrationStatus(data.user.id);
 
     // Processa pending registration se esiste (primo login dopo verifica email)
     const pendingResult = await this.processPendingRegistration(
@@ -294,6 +357,12 @@ class AuthService {
         subscription: pendingResult.subscription,
         requestedService: pendingResult.pendingData?.requestedService
       };
+    }
+
+    // Aggiungi flag per cambio password obbligatorio (utenti migrati)
+    if (migrationResult?.requirePasswordChange) {
+      response.requirePasswordChange = true;
+      response.migratedFrom = migrationResult.migratedFrom;
     }
 
     return response;
@@ -488,13 +557,30 @@ class AuthService {
   }
 
   // Aggiorna password (utente autenticato)
-  async updatePassword(token, newPassword) {
+  async updatePassword(token, newPassword, userId = null) {
     const { error } = await supabase.auth.updateUser({
       password: newPassword
     });
 
     if (error) {
       throw Errors.BadRequest(error.message);
+    }
+
+    // Se userId fornito, aggiorna password_changed nel profilo (per utenti migrati)
+    if (userId) {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          password_changed: true,
+          password_changed_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error(`[MIGRATION] Errore aggiornamento password_changed per user ${userId}:`, profileError);
+      } else {
+        console.log(`[MIGRATION] Password cambiata per user ${userId}`);
+      }
     }
 
     return { success: true };
