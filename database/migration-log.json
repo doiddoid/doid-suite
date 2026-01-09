@@ -1,0 +1,537 @@
+{
+  "users": {
+    "created": 0,
+    "updated": 0,
+    "exists": 73,
+    "errors": 0
+  },
+  "organizations": {
+    "created": 23,
+    "exists": 50,
+    "errors": 0
+  },
+  "activities": {
+    "created": 23,
+    "exists": 50,
+    "errors": 0
+  },
+  "subscriptions": {
+    "created": 0,
+    "exists": 0,
+    "errors": 0
+  },
+  "mapping": [
+    {
+      "email": "admin@doid.biz",
+      "smart_review_id": "8461ce84-1865-4fb4-b46c-69506838d380",
+      "supabase_id": "f732ed6e-f652-47a5-9153-5fb9d9af40ea",
+      "organization_id": "0b76058f-eac7-4d84-b330-c6ca9c50d3a4",
+      "activity_id": "ae2c8c0d-e095-401c-aeab-b56bb2166a63"
+    },
+    {
+      "email": "alessandro.magoga92@gmail.com",
+      "smart_review_id": "61174838-a78d-4d4e-975c-b13d95c43791",
+      "supabase_id": "f4e20bcd-7a3e-43e0-83ec-640efd27b54e",
+      "organization_id": "01410635-241b-4bf1-b952-085e2b109e2c",
+      "activity_id": "68d49ae5-4dd3-4c53-955f-2538522d10d6"
+    },
+    {
+      "email": "alessandro@dialbevande.com",
+      "smart_review_id": "4cb4f38c-72d0-4cfc-bf6d-b9e163b6c311",
+      "supabase_id": "95df8d24-b905-4444-92c7-787fa5fcb5be",
+      "organization_id": "a394fb12-ed3a-4917-820e-7e782fdb1a43",
+      "activity_id": "40699e2c-5cd1-4c4f-aa00-c097d4fa6d8f"
+    },
+    {
+      "email": "angelofusaro1978@gmail.com",
+      "smart_review_id": "8ba55ce1-30d1-4d73-99a0-5d1f0e60a941",
+      "supabase_id": "f0153e40-768e-40dd-a818-818365dd155e",
+      "organization_id": "3d1c9a18-90bf-4987-9438-c4ac1edd576a",
+      "activity_id": "f330a97d-7a15-4af3-b54f-939b334a8fbc"
+    },
+    {
+      "email": "antonio.ongaretto@breassicura.it",
+      "smart_review_id": "d9b2024c-72eb-4387-ac92-5870227ff5f5",
+      "supabase_id": "ee799dcb-b0dc-444f-9ce5-e7f84da83180",
+      "organization_id": "1abd92a9-3c4f-42c0-b3bb-f056301f8744",
+      "activity_id": "4060e1f8-db65-4727-9278-2562b1a69336"
+    },
+    {
+      "email": "bdv@uppercervicaltreviso.it",
+      "smart_review_id": "da29ad16-185a-4286-9ef2-3b07e4cc3385",
+      "supabase_id": "c5b83354-bd97-4400-94eb-6c6283d3f15c",
+      "organization_id": "9b3341f7-50bc-419d-8543-f383bb4f4156",
+      "activity_id": "612662e7-2671-49e5-a94d-474e381826df"
+    },
+    {
+      "email": "beatrice.om@libero.it",
+      "smart_review_id": "ff7684be-8853-4dd7-9474-812ea5e68d24",
+      "supabase_id": "f0b343b3-51ff-4ca0-bb98-b85846fc59af",
+      "organization_id": "d3813e28-7401-4556-9670-162b694c8646",
+      "activity_id": "333f24e8-91bb-4c50-a14a-1748151bdd2b"
+    },
+    {
+      "email": "betty@dialbevande.com",
+      "smart_review_id": "b750acd4-c5cc-4985-a5d9-16d389db8632",
+      "supabase_id": "7b1cef6d-926a-4175-8ea3-32e0212b3158",
+      "organization_id": "2d9e936c-d659-493a-8add-a82d26ab925e",
+      "activity_id": "aa89ac31-0f36-4a18-bec2-0d8f7eb05a49"
+    },
+    {
+      "email": "caorle@agenziamalvi.it",
+      "smart_review_id": "f0ad2fb5-e3c3-46c3-a490-20e6ad4ea31f",
+      "supabase_id": "db2d69af-841c-49cb-811f-043d66ec0723",
+      "organization_id": "6506a214-9e62-446e-adaa-2b3ec975cf09",
+      "activity_id": "0d437d8d-1854-4121-8407-99c62e02965b"
+    },
+    {
+      "email": "carlodileo.cdl@gmail.com",
+      "smart_review_id": "fb8c68d5-1f00-4b4e-a7de-8463da72ac9f",
+      "supabase_id": "f700b306-16ba-454a-884c-a5057121e238",
+      "organization_id": "3bacc32f-633d-483e-901e-0f45463ac65a",
+      "activity_id": "9f4d5e35-4bd2-43fb-ab95-f9d2d1247406"
+    },
+    {
+      "email": "cesare.ufficio@gmail.com",
+      "smart_review_id": "fe97d648-c1bf-4434-b83a-084b17e14b96",
+      "supabase_id": "1b2366ec-3e46-450b-a746-0e2cbd301188",
+      "organization_id": "4c5fda3e-7cb1-48dd-bd1e-cadc4c5b1d74",
+      "activity_id": "3a86ff2f-f2f0-4679-b35e-04da46f072c0"
+    },
+    {
+      "email": "cinzia.tonello1974@gmail.com",
+      "smart_review_id": "01e3469c-583e-4a75-9254-ad5422bc0e20",
+      "supabase_id": "9dbeda7b-6194-41e6-88f9-24f696f992b9",
+      "organization_id": "b675df84-317f-457a-8cd0-7f7716651ddd",
+      "activity_id": "36452230-5e6b-429d-9e6a-914dbbece527"
+    },
+    {
+      "email": "cocari70@gmail.com",
+      "smart_review_id": "b5cce5b1-df41-4bf4-a59c-58d2c46376a4",
+      "supabase_id": "21886df4-fa7f-4cb5-8c77-5b3381b0859b",
+      "organization_id": "a29b26d5-3125-433f-b2ee-cba4c177d5b3",
+      "activity_id": "be60550f-67d6-4f19-87e7-cd792382ec14"
+    },
+    {
+      "email": "commerciale@lapostaprivatanazionale.it",
+      "smart_review_id": "57a35697-ed15-4374-b39d-44874f531510",
+      "supabase_id": "b6f723e0-58a6-4f3f-8706-1a870a301ac8",
+      "organization_id": "a9f1a1ae-5d61-49ef-ae60-48bb3cc67296",
+      "activity_id": "a9609770-e340-403d-a482-e8722856e235"
+    },
+    {
+      "email": "davide.demurtas@cormik.it",
+      "smart_review_id": "73ec6487-0a79-47f0-a24d-1594fa4ece4c",
+      "supabase_id": "25ab8cf3-80f9-4c8c-abfe-f045499e6d7d",
+      "organization_id": "01dcbe1e-25fe-424d-ba7f-379b30a94b14",
+      "activity_id": "4bcbe50b-b0b3-48be-ae82-0499e6dfbda8"
+    },
+    {
+      "email": "dott.francescotangari@gmail.com",
+      "smart_review_id": "d91d6c4c-7282-4bde-baad-10bf3eb79352",
+      "supabase_id": "20e7a901-719f-4a08-b92d-ba1ab599a8e9",
+      "organization_id": "18a59519-356b-4499-80c2-57b4b4492759",
+      "activity_id": "25a7923b-1fab-49a6-baad-96058da4b33e"
+    },
+    {
+      "email": "drusian.alberto@gmail.com",
+      "smart_review_id": "b7c11ffc-f190-4e1c-a012-2b0e71cba089",
+      "supabase_id": "fea67ae7-a43c-403b-b338-104afeffa607",
+      "organization_id": "9b2e830d-e531-4176-86fb-33fc2559460c",
+      "activity_id": "817e288a-9e7e-4c2a-bafd-7a9753efb5ce"
+    },
+    {
+      "email": "elio.catarinella@gmail.com",
+      "smart_review_id": "425e286d-9139-4a61-86e8-c9db47a26932",
+      "supabase_id": "e4a80362-a36f-4ef3-a280-c9295d93f9c6",
+      "organization_id": "c245142f-15fa-4e78-b044-7913da09cdb6",
+      "activity_id": "37fe552b-a726-4880-8a29-0a1b4271257e"
+    },
+    {
+      "email": "elisacanta.filmaker@gmail.com",
+      "smart_review_id": "d3b02281-6261-4733-bc16-ab1d84678c90",
+      "supabase_id": "60da1ecb-fe0f-4203-90d0-4f3872bb91be",
+      "organization_id": "f733ea1d-9554-4307-a391-8d5c43c38448",
+      "activity_id": "531f5c8c-2519-4572-a817-56a749b3b019"
+    },
+    {
+      "email": "emmegicomputer@emmegicomputer.com",
+      "smart_review_id": "d38120e4-ab5d-4852-87b4-524642af8094",
+      "supabase_id": "479dafcf-e978-42c3-874e-dfbd3cc91949",
+      "organization_id": "ea61ee91-714b-4af2-ae3a-6a2166bf544e",
+      "activity_id": "f1d58287-ddc1-453b-8f60-f71eda3a7645"
+    },
+    {
+      "email": "enrico.zambusi@finacom.it",
+      "smart_review_id": "8f603599-ee35-487d-bfb2-ac630e362cc0",
+      "supabase_id": "59f7335d-96be-49b8-9dc3-c2031c0bdf1d",
+      "organization_id": "0baea01f-aa42-4ac7-a47b-da5fa2814798",
+      "activity_id": "7266d0d5-f194-428f-8312-7b340d68e593"
+    },
+    {
+      "email": "eventisumarte@gmail.com",
+      "smart_review_id": "26b9ce3b-66da-4866-9268-1f53ac5d4982",
+      "supabase_id": "0834e43a-02ff-4173-9119-57c1e0770fd2",
+      "organization_id": "5b4df738-e0fb-436c-b665-fefbd5ccfb23",
+      "activity_id": "edfbf93f-a467-492c-a4b8-272ed033623c"
+    },
+    {
+      "email": "federica.barabas90@gmail.com",
+      "smart_review_id": "66678d57-1493-474e-8ad6-b84913ed845c",
+      "supabase_id": "d45415d3-8500-4269-935b-1a5b1bf374db",
+      "organization_id": "23ecbd43-7531-4342-9660-fae439cdef85",
+      "activity_id": "5c1489f6-dfff-4075-94e6-3b6130f9580a"
+    },
+    {
+      "email": "fiamma@msmcomunicazione.com",
+      "smart_review_id": "887e6944-4e1a-4e14-94dc-f95446246dd6",
+      "supabase_id": "9f45ca9a-1820-4045-81f0-5c2df21d555c",
+      "organization_id": "961c0dc9-a394-47f5-a778-53236d799a7d",
+      "activity_id": "87204bd7-61a9-4bca-9170-2876fd547946"
+    },
+    {
+      "email": "fiammengogiulia@gmail.com",
+      "smart_review_id": "191bf34c-b207-4d72-8e2c-d1e8e0ef11ce",
+      "supabase_id": "23ae986b-173a-492a-9111-b69449d41abe",
+      "organization_id": "a06ec9b8-79bf-4e56-9b3b-873580437ada",
+      "activity_id": "6656ff7c-88f9-4931-8093-5a1fff2ae7b0"
+    },
+    {
+      "email": "filipponadalon@gmail.com",
+      "smart_review_id": "22d02f09-bbc7-4531-8036-bfe042798bba",
+      "supabase_id": "8111ec6d-3ece-4eef-9a6a-69676dadbcb8",
+      "organization_id": "6da80bde-4ad6-4ad5-b039-f30ff4f96bf4",
+      "activity_id": "46821a28-93a4-438a-b692-61823529692b"
+    },
+    {
+      "email": "francesco.basso@breassicura.it",
+      "smart_review_id": "3974471e-94aa-4f4a-9250-4dab3a07b1e5",
+      "supabase_id": "092e3710-c44a-4125-8f10-3add6d08baf7",
+      "organization_id": "92552f61-2167-4729-a143-494f51b1664a",
+      "activity_id": "c8dc30d0-385d-46d6-b7f0-3eeb0a0032f8"
+    },
+    {
+      "email": "furlannicolo@gmail.com",
+      "smart_review_id": "3b0c432b-1bb8-408e-9c17-5e0e50cabea8",
+      "supabase_id": "039978a7-3f89-4f13-a061-032882c1f034",
+      "organization_id": "01b2f0c6-1e52-48a5-bd9e-1120aff7cfa1",
+      "activity_id": "566b870a-a11a-4c09-9d9c-73a8aa9af2ee"
+    },
+    {
+      "email": "gelaterialeccalecca@libero.it",
+      "smart_review_id": "d8f8996d-af72-4b55-a027-9663ecc28fed",
+      "supabase_id": "9c527029-2411-4c4a-a54f-0bf2bb0d4e67",
+      "organization_id": "58611575-a898-4e3f-b3f8-8007b5f24372",
+      "activity_id": "9fb4e8fc-3415-4ad6-aba9-cbbcacdb4918"
+    },
+    {
+      "email": "gemma@uovosodoconsale.com",
+      "smart_review_id": "200b6567-f1f8-4180-8078-755fa45019b5",
+      "supabase_id": "04d6a89c-99fb-4c5b-8d9a-3a0fce6129d1",
+      "organization_id": "26a5d297-618c-429b-a1d7-dfa9ec815683",
+      "activity_id": "dee8db31-8024-4e09-8907-cf02b269c082"
+    },
+    {
+      "email": "giglioladorigo@gmail.com",
+      "smart_review_id": "eb95e91b-097e-415b-90da-5b8d603ab9c3",
+      "supabase_id": "a569b52d-54b2-4262-9460-6a1a815f4a0d",
+      "organization_id": "48ec7a47-e9d0-41ab-ba4b-545c8aacde64",
+      "activity_id": "7b298220-a957-4b9a-846f-ee58dd8ba3bf"
+    },
+    {
+      "email": "giovanniantoniazzi@tiscali.it",
+      "smart_review_id": "8e6c28be-ecfb-4fce-9c77-4aa951ccf3d1",
+      "supabase_id": "d44b7c8d-adb6-4a2c-b281-98af046a342c",
+      "organization_id": "369d3340-d463-47af-90c1-b3f5b5ad03e3",
+      "activity_id": "322d586e-27ff-4d44-84ba-2cf537767236"
+    },
+    {
+      "email": "gussoste0@gmail.com",
+      "smart_review_id": "0e3c5d08-bfd4-4cbc-a2ed-2217fc4ba069",
+      "supabase_id": "63a4d521-6cf3-4228-bae1-0689689f9f59",
+      "organization_id": "57e75e9b-1ecc-481b-8292-681b89795e38",
+      "activity_id": "72e4f928-e6f2-49d9-a948-80dd15482bf9"
+    },
+    {
+      "email": "info.doid@gmail.com",
+      "smart_review_id": "a46800c0-a91c-427a-8d95-b8282ce6effe",
+      "supabase_id": "59bf2a64-8a86-4071-8f7c-28f33ea6f2b9",
+      "organization_id": "0da5bdc4-6026-44ed-92b8-ba30abceb059",
+      "activity_id": "d76712c3-160c-420d-89c4-a7c9ef094463"
+    },
+    {
+      "email": "info.studiopalumbo@gmail.com",
+      "smart_review_id": "8e00fd61-e69e-4251-b4ab-3c5d5f407dca",
+      "supabase_id": "1e52736f-4ed4-41b1-8d16-f167dc50b851",
+      "organization_id": "dea9d61a-aeda-4783-bb68-c3f95b1f7218",
+      "activity_id": "cff99f1f-8ca1-4ad6-beb0-5a4e22a0d184"
+    },
+    {
+      "email": "info@aparthotelgioia.com",
+      "smart_review_id": "bb8849f8-3fe9-4d64-a712-ba245ea35b34",
+      "supabase_id": "70bafd89-5a89-44c7-9f72-c0e3359c5216",
+      "organization_id": "509aee1f-01d8-4c9d-a11c-959d666ed067",
+      "activity_id": "84345660-d6cf-44b1-ba85-89c07c1dfb0c"
+    },
+    {
+      "email": "info@collaboratio.it",
+      "smart_review_id": "3ae9f350-1b59-4fac-9848-79fa3a5d76c6",
+      "supabase_id": "4fd453aa-f2a4-4595-b406-0ffd585ea167",
+      "organization_id": "232d5b6b-eeb4-4fba-8f1f-f680f07f4b88",
+      "activity_id": "32b0a3da-8b64-453c-b413-55a98b09e292"
+    },
+    {
+      "email": "info@domiciliando.it",
+      "smart_review_id": "0377ffea-0e23-44bd-8ae0-7981a07c03a8",
+      "supabase_id": "ef5928c9-cf90-40e6-9a24-f5f1e24b2db0",
+      "organization_id": "ed4d92f4-cf15-4e2d-8f5d-a3ce12e763ba",
+      "activity_id": "e403bc7d-d10e-4b7b-b01c-88b9db955364"
+    },
+    {
+      "email": "info@frigieri.it",
+      "smart_review_id": "cf675b22-3db9-472c-bd11-25ec54802c57",
+      "supabase_id": "57d4abaf-c94d-460d-a49d-bb2d851f40cc",
+      "organization_id": "fc6eb1b5-2443-4fb6-a15b-293a3e5c598d",
+      "activity_id": "1ac2ab51-699a-4ec0-ac63-c87b5157048d"
+    },
+    {
+      "email": "info@ongarorappresentanze.com",
+      "smart_review_id": "dc51226b-61c8-43eb-b42c-818f2bd35d09",
+      "supabase_id": "87519b66-ed5d-4900-8f7e-aa9b5903dd4c",
+      "organization_id": "7e4fc38a-1ee1-4d70-97e9-6a109ae059e7",
+      "activity_id": "feae89d9-ad34-4d23-9b15-55dac55eac53"
+    },
+    {
+      "email": "info@studiopinni.it",
+      "smart_review_id": "62985c49-b5ff-414d-b19f-f923cab16201",
+      "supabase_id": "41cc01a0-4b49-4c57-9350-8ff6e4327ed6",
+      "organization_id": "63ccc083-cd55-4642-880c-8fa7f85a2527",
+      "activity_id": "ae4fc831-3e51-45be-aa43-9c4ba4829a65"
+    },
+    {
+      "email": "info@suminagashiexperience.it",
+      "smart_review_id": "9d6e68f1-2183-4777-a94c-717995c9ff7b",
+      "supabase_id": "e9439a6d-40c3-4070-9f96-98a4288e83fd",
+      "organization_id": "4d717be9-f284-4aea-befb-9163efe9d49e",
+      "activity_id": "86f13986-af73-4352-b1bd-4ebbeab943e7"
+    },
+    {
+      "email": "infomaretour@libero.it",
+      "smart_review_id": "9b0060bd-bbd1-45e1-bc9f-ff6fcd1bfb11",
+      "supabase_id": "0cdb3dd1-b03e-40fd-b405-be44d3b50517",
+      "organization_id": "a7a73a64-35d2-47d0-a47e-c84951261985",
+      "activity_id": "031693b6-bf39-43a6-baf1-c8305b389e6b"
+    },
+    {
+      "email": "kay71@hotmail.it",
+      "smart_review_id": "97a9389a-4e9e-4100-ad67-e4f90e71b4ea",
+      "supabase_id": "9ae4f187-624d-4f7c-a8d0-bb481ff52574",
+      "organization_id": "2f015c9a-5e36-4c94-8d38-541a353badd5",
+      "activity_id": "a3b49116-8ca5-4056-8047-541f42e94a09"
+    },
+    {
+      "email": "kornfeind@gmail.com",
+      "smart_review_id": "5635714d-502a-4131-b329-4c22faf1a9d8",
+      "supabase_id": "358d3e01-a9ae-4d8a-946a-91260f4b506e",
+      "organization_id": "ee791165-cef9-4691-b5b8-8e61ddb8b575",
+      "activity_id": "8f4d69ed-046d-4541-9912-f8611431daa3"
+    },
+    {
+      "email": "kristian.nicoletti@breassicura.it",
+      "smart_review_id": "bbe54f4a-f30c-4b5d-ae7d-e1e7e1e51b63",
+      "supabase_id": "b5b86876-3303-4098-a3ae-b1ed67d9e0e2",
+      "organization_id": "ec0d2c8d-4b7e-46bc-8539-9c9ae3941934",
+      "activity_id": "f99c4391-7dd4-4a64-bbc3-cdad272a5a13"
+    },
+    {
+      "email": "kyle331@gmail.com",
+      "smart_review_id": "a90d82a9-14f0-4bbf-90d9-8a1959ac21cb",
+      "supabase_id": "6c2f99ef-9f14-4261-98a6-d84ad148b051",
+      "organization_id": "442b9120-e7bb-4af5-b367-6dfc1fcdfbbf",
+      "activity_id": "d372066c-7092-428e-a654-cf4da2cc5ac3"
+    },
+    {
+      "email": "lisa.bdv@uppercervicaltreviso.it",
+      "smart_review_id": "a7f3d15d-8b2a-4c80-8faa-ef9657569c98",
+      "supabase_id": "ef188696-9399-43de-8931-2bcfc1910120",
+      "organization_id": "13c40be8-501e-4fe9-b112-ef620c7bd719",
+      "activity_id": "197364ea-b35b-49ed-a617-76867ab0d876"
+    },
+    {
+      "email": "livio.trevisiol@gmail.com",
+      "smart_review_id": "785eb935-55bd-4f4a-8855-4dc72e21c55d",
+      "supabase_id": "cb7977c4-d5b1-4e90-bf06-b82adcedde5d",
+      "organization_id": "6582d8f1-7fbf-4557-b1c6-3fdbafd99da2",
+      "activity_id": "73aa12bc-b2dd-4b75-aa31-944546b66f0a"
+    },
+    {
+      "email": "lorenzo@dialbevande.com",
+      "smart_review_id": "89ed3a68-f7c4-4abb-b609-a67867062a7d",
+      "supabase_id": "71d1171e-a887-4312-bef4-6f059da3da67",
+      "organization_id": "8860d38b-b7d6-4573-972c-eb010b622283",
+      "activity_id": "5c6706d8-4165-41de-a7fb-f8cc9e411a22"
+    },
+    {
+      "email": "lucamattiuzzo92@gmail.com",
+      "smart_review_id": "40320935-dfca-45bd-b484-aa7667d4413d",
+      "supabase_id": "b5426e21-61bc-406c-bd28-ed77f3c48ccb",
+      "organization_id": "7405d571-930e-4420-938f-d0eec7273b72",
+      "activity_id": "712a1c79-844f-4833-8d35-6a38c329dcbf"
+    },
+    {
+      "email": "lucrezia@msmcomunicazione.com",
+      "smart_review_id": "a06aacd1-e39d-4f8c-a9e8-b6a2a0d9fa49",
+      "supabase_id": "8844248a-2d70-43d6-9a2d-f32911286d69",
+      "organization_id": "3f8f1abc-1b77-4324-ae92-da847d21e6b5",
+      "activity_id": "3c96aa39-0dee-4b0b-919c-5069fa4f2cb7"
+    },
+    {
+      "email": "mara@spaziomeg.com",
+      "smart_review_id": "e3d50bf9-7102-43dc-95ab-10c2415e4956",
+      "supabase_id": "65292af3-0ffd-4f07-bc4d-3f28c29866d4",
+      "organization_id": "4ec197c4-f04e-4dd1-83ee-51b92e278461",
+      "activity_id": "a2d2d234-f3a7-45f2-aa67-e8ae9811633e"
+    },
+    {
+      "email": "marco.biancon.05@gmail.com",
+      "smart_review_id": "5f14d375-35d5-49f1-bc26-59ab3566a360",
+      "supabase_id": "2ef0225e-e441-4422-ad82-213f302bc168",
+      "organization_id": "2ddc3600-09f5-40a3-9962-a941274b017a",
+      "activity_id": "1480ea26-a976-48ba-accb-ddbeff365d13"
+    },
+    {
+      "email": "matteo.bragagna@gmail.com",
+      "smart_review_id": "7956b68c-1b5f-410f-b739-53303596694a",
+      "supabase_id": "0e1fad8f-b5a3-4a2d-8fdc-977e6461c334",
+      "organization_id": "837daf67-5568-4e34-9e1d-b9e1e6087f70",
+      "activity_id": "2075b739-bd15-4381-94c1-80b6ad6692cb"
+    },
+    {
+      "email": "Matteo@spaziomeg.com",
+      "smart_review_id": "2d78716e-71f8-491e-bceb-2a04d6f8261d",
+      "supabase_id": "55d84af3-0190-4e44-bad0-f21b0c998393",
+      "organization_id": "eccba40c-e0c8-49a3-8590-6e590eba1d43",
+      "activity_id": "0b56d183-60de-4d43-b07d-1a83e12e6640"
+    },
+    {
+      "email": "office@spaziomeg.com",
+      "smart_review_id": "05261bbf-a0ce-4f5c-880c-a75b651d3c77",
+      "supabase_id": "810a31d1-1ea6-49a6-a6c6-bd3aa4d4804e",
+      "organization_id": "b5eda00b-07bd-4ba4-bb51-5995c5713f8b",
+      "activity_id": "a43d9c2a-983e-4965-a677-c789820c8a36"
+    },
+    {
+      "email": "olivieri@dialbevande.com",
+      "smart_review_id": "f9f380ca-bb37-412d-8280-c9733b63cdfa",
+      "supabase_id": "0926c314-71ea-4941-b5fa-961fef976273",
+      "organization_id": "7633be00-8c8f-4671-b9df-d246f99aecb0",
+      "activity_id": "d9b38ffa-7924-4361-acb8-2d4b1d66e913"
+    },
+    {
+      "email": "order@wellingtonaccessories.com",
+      "smart_review_id": "005841ad-da06-4505-a74a-d03e87354b4e",
+      "supabase_id": "cc682152-8adf-457f-88f2-9b2fdef6b41a",
+      "organization_id": "ea0bd8ac-66fd-43c5-88be-4460153dd428",
+      "activity_id": "e447dcf4-dc48-4faf-9988-0e1a9e8ad287"
+    },
+    {
+      "email": "pasquale@spaziomeg.com",
+      "smart_review_id": "4596dba8-1f2a-4137-846c-780e8cf6bb0a",
+      "supabase_id": "a6b9450b-ad7f-451c-9e8c-a31f0eba4a0e",
+      "organization_id": "97c196b2-db9c-4169-8f13-17054f39dd7b",
+      "activity_id": "82ab11a7-1d0e-45bf-9927-6a72666ec387"
+    },
+    {
+      "email": "peter.bdv@uppercervicaltreviso.it",
+      "smart_review_id": "00980163-9c3d-4653-9a69-4f4ee7b35d1b",
+      "supabase_id": "7dbc0a0c-fb3f-4ed4-b067-83e09ac7e5dc",
+      "organization_id": "7693451f-f83d-4ded-8dbd-0845dcb96a98",
+      "activity_id": "9c85f48f-1824-4dd2-a060-839f7684331c"
+    },
+    {
+      "email": "progetti@agrelliebasta.it",
+      "smart_review_id": "75267535-77bd-4452-8bc4-924af502fd6a",
+      "supabase_id": "950f22ae-cc86-4bce-b445-298c5d313440",
+      "organization_id": "2205fc6c-4a1a-4f21-95ac-40f8987de3a2",
+      "activity_id": "454a00a2-2282-4d13-81b0-4e4d6fc00db4"
+    },
+    {
+      "email": "rebeccacastellammaredelgolfo@gmail.com",
+      "smart_review_id": "2c6f5653-c651-4584-864d-ca3383e964fa",
+      "supabase_id": "3e67fd23-99b2-4c28-b531-b2aa4ec96b15",
+      "organization_id": "2b9bfdb0-a2d5-4e2e-82af-0e2aa000ed04",
+      "activity_id": "f977d7a0-57a3-4500-9571-8f94558b02d3"
+    },
+    {
+      "email": "robyx@piccolidettagli.it",
+      "smart_review_id": "a88f7200-8b07-48d3-892b-56852855e72f",
+      "supabase_id": "e5d920ef-c0f6-4903-be8b-778e6b1b0e9f",
+      "organization_id": "0e821fd5-4742-43bb-8044-95aabb1b8242",
+      "activity_id": "5a1a4c3e-1c06-4f74-9e67-4fe1cc365495"
+    },
+    {
+      "email": "s.scrignoli@gmail.com",
+      "smart_review_id": "862833fa-8d29-4d50-a214-759fd6bbebbc",
+      "supabase_id": "02420aba-8439-41a6-bd2f-47c3f8d5ec99",
+      "organization_id": "72f9dcbe-f8f8-4b51-b815-32c62a89fe03",
+      "activity_id": "fbeaeb21-f7a2-426b-96b5-b415b54171b8"
+    },
+    {
+      "email": "silviamoro174@gmail.com",
+      "smart_review_id": "676aaecd-fc54-4ae0-9342-03e5a1742b7c",
+      "supabase_id": "2eb8f0cb-10e5-458c-b1dc-56e54434ea35",
+      "organization_id": "34c24c15-4c83-4bab-93ec-ca24155356e7",
+      "activity_id": "03a16cfc-359d-4cf1-b620-5b72024098a6"
+    },
+    {
+      "email": "soniaangotzi@tiscali.it",
+      "smart_review_id": "6d97cbc0-f5bc-431e-a7a8-91de510fd464",
+      "supabase_id": "612354b2-34ff-4bf0-9292-681e3f01d45d",
+      "organization_id": "ed8cd853-7d80-4c41-9164-75906da54184",
+      "activity_id": "59e23fb4-31d0-42a8-aead-d59cf1b809a3"
+    },
+    {
+      "email": "stefano.toscasrl@gmail.com",
+      "smart_review_id": "cc32d672-1971-4e69-8fe9-52144650f9c4",
+      "supabase_id": "3b34231e-e4ac-46a1-8a6b-8ed15b4e7d71",
+      "organization_id": "698f98be-b4d6-4a24-bba7-57255ba91d7a",
+      "activity_id": "24c2a026-692e-4bff-ab2e-75fc5c83f913"
+    },
+    {
+      "email": "sushiamiciviale21@gmail.com",
+      "smart_review_id": "a3147e5c-6edb-42f7-a605-99a47915b9ac",
+      "supabase_id": "80d44844-31c2-409c-af57-23f540e188a3",
+      "organization_id": "bd165b32-1dd7-4657-b4a8-d93cb04716e8",
+      "activity_id": "c5b6611d-e6f6-4525-b778-11b3e129b16b"
+    },
+    {
+      "email": "tangaricarola@gmail.com",
+      "smart_review_id": "1a489823-1cbc-44fd-a200-3b6e34bde042",
+      "supabase_id": "3e51513c-bbaa-4fed-b8d9-3cfd34804e37",
+      "organization_id": "eff40275-c78c-4806-a8c9-4ee212f274f9",
+      "activity_id": "e8b060ce-06bf-4aee-a43c-917eddd5c4a3"
+    },
+    {
+      "email": "tennisclubcastiglioncello@gmail.com",
+      "smart_review_id": "e49e9a5c-e69c-4f53-93e9-1a03f0023751",
+      "supabase_id": "fbff1bb5-606b-4fbb-ac56-c225392bcdb7",
+      "organization_id": "9a908c67-5b92-46db-93dd-b6631b987c42",
+      "activity_id": "3613c66e-ad62-4bc2-8e56-7e842f87fd2c"
+    },
+    {
+      "email": "zachary.bdv@uppercervicaltreviso.it",
+      "smart_review_id": "2a825910-7d01-4d59-93c6-f8942ed87e37",
+      "supabase_id": "e3e24fa2-108c-4efd-aa12-c5d4a6e65fa0",
+      "organization_id": "da73d28b-7e06-4919-9d24-a5d8ae0b61c6",
+      "activity_id": "8829781f-4e68-447b-bf8b-4bd51a67de82"
+    },
+    {
+      "email": "zanonichantal@gmail.com",
+      "smart_review_id": "2285eb6b-2352-4e57-9edc-a43c4c062b9c",
+      "supabase_id": "a7f0cf8c-cd48-49c0-85d8-1898bfa0971a",
+      "organization_id": "62d38d86-421d-4bcd-a99e-af4e8045baca",
+      "activity_id": "4f2e6828-4dbd-4d05-bc1f-9c35a8da6425"
+    }
+  ],
+  "errors": []
+}

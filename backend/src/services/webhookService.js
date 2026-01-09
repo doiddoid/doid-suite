@@ -1072,7 +1072,7 @@ class WebhookService {
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${this.ghlApiKey}`,
+            'Authorization': this.ghlApiKey,
             'Content-Type': 'application/json'
           },
           signal: AbortSignal.timeout(this.timeout)
