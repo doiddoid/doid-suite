@@ -72,7 +72,8 @@ const services = [
     bgLight: 'bg-emerald-50',
     textColor: 'text-emerald-600',
     borderColor: 'border-t-emerald-500',
-    url: 'https://menu.doid.it',
+    url: null,
+    comingSoon: true,
     features: ['Aggiornamenti real-time', 'Multi-lingua', 'Allergeni integrati', 'Design responsive']
   },
   {
@@ -98,7 +99,6 @@ const services = [
 const futureServices = [
   { name: 'Smart Accessi', icon: UserCheck, description: 'Gestione ingressi e prenotazioni' },
   { name: 'Smart CRM', icon: Users, description: 'Clienti e comunicazioni' },
-  { name: 'Smart Marketing', icon: Megaphone, description: 'Campagne automatizzate' }
 ];
 
 // ============================================
@@ -139,7 +139,7 @@ const TrustBadges = () => (
     </div>
     <div className="flex items-center gap-2">
       <Check className="w-4 h-4 text-teal-500" />
-      <span>Piano Free disponibile</span>
+      <span>Registrazione gratuita</span>
     </div>
     <div className="flex items-center gap-2">
       <HeartHandshake className="w-4 h-4 text-teal-500" />
@@ -166,7 +166,7 @@ export default function Landing() {
             <nav className="hidden md:flex items-center gap-8">
               <a href="#servizi" className="text-sm text-gray-600 hover:text-teal-600 transition-colors">Servizi</a>
               <a href="#per-chi" className="text-sm text-gray-600 hover:text-teal-600 transition-colors">Per chi</a>
-              <a href="#perche-noi" className="text-sm text-gray-600 hover:text-teal-600 transition-colors">Perche noi</a>
+              <a href="#perche-noi" className="text-sm text-gray-600 hover:text-teal-600 transition-colors">Perchè noi</a>
               <a href="#contatti" className="text-sm text-gray-600 hover:text-teal-600 transition-colors">Contatti</a>
             </nav>
 
@@ -202,7 +202,7 @@ export default function Landing() {
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
             doID Suite riunisce recensioni, biglietti da visita digitali, menu e display in un'unica dashboard.
-            Attivi solo cio che ti serve, quando ti serve.
+            <br />Attivi solo cio che ti serve, quando ti serve.
           </p>
 
           {/* CTA */}
@@ -393,7 +393,7 @@ export default function Landing() {
                 <div className="w-3 h-3 rounded-full bg-teal-500"></div>
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">Oggi disponibili</p>
-                  <p className="text-sm text-gray-500">Smart Review, Smart Page, Menu Digitale</p>
+                  <p className="text-sm text-gray-500">Smart Review, Smart Page</p>
                 </div>
                 <span className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded-full">Attivi</span>
               </div>
@@ -403,16 +403,16 @@ export default function Landing() {
                 <div className="w-3 h-3 rounded-full bg-violet-500"></div>
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">In arrivo</p>
-                  <p className="text-sm text-gray-500">Display Suite</p>
+                  <p className="text-sm text-gray-500">Menu Digitale, Display Suite</p>
                 </div>
-                <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">2025</span>
+                <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">2026</span>
               </div>
 
               {/* Futuri */}
               <div className="flex items-center gap-4">
                 <div className="w-3 h-3 rounded-full bg-gray-300"></div>
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900">Nel futuro</p>
+                  <p className="font-medium text-gray-900">Prossimamente</p>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {futureServices.map((fs, idx) => (
                       <span key={idx} className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
@@ -446,7 +446,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Per chi e doID Suite?
+              Per chi è doID Suite?
             </h2>
           </div>
 
@@ -459,7 +459,7 @@ export default function Landing() {
               <h3 className="text-xl font-bold text-gray-900 mb-4">Per la tua attivita</h3>
               <p className="text-gray-600 mb-6">
                 Sei un titolare e vuoi gestire in autonomia la presenza digitale della tua attivita?
-                La Suite e pensata per te.
+                La Suite è pensata per te.
               </p>
               <ul className="space-y-3 mb-6">
                 {[
@@ -497,7 +497,6 @@ export default function Landing() {
                   'Sconti volume progressivi',
                   'Dashboard centralizzata',
                   'Fatturazione semplificata',
-                  'Opzioni white-label',
                   'Supporto dedicato'
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-center gap-2 text-sm text-gray-300">
@@ -543,13 +542,13 @@ export default function Landing() {
               },
               {
                 icon: Palette,
-                title: 'Semplicita',
+                title: 'Semplicità',
                 description: 'Dashboard pulita, niente funzioni inutili. Vai dritto al punto.'
               },
               {
                 icon: TrendingUp,
                 title: 'Cresciamo insieme',
-                description: 'Nuovi servizi in arrivo. La tua Suite diventa sempre piu completa.'
+                description: 'Nuovi servizi in arrivo. La tua Suite diventa sempre più completa.'
               }
             ].map((item, idx) => (
               <div key={idx} className="bg-white rounded-xl p-6 text-center border border-gray-100">
@@ -593,7 +592,7 @@ export default function Landing() {
               {
                 step: '3',
                 title: 'Attiva cio che ti serve',
-                description: 'Inizia con un servizio o attivali tutti. Tu decidi.',
+                description: 'Inizia con un servizio o attivali tutti. Decidi tu.',
                 icon: Rocket
               }
             ].map((item, idx) => (
@@ -654,10 +653,10 @@ export default function Landing() {
       <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-teal-500 to-teal-600">
         <div className="max-w-4xl mx-auto text-center text-white">
           <h2 className="text-2xl sm:text-3xl font-bold mb-4">
-            Pronto a semplificare la gestione della tua attivita?
+            Pronto a semplificare la gestione della tua attività?
           </h2>
           <p className="text-teal-100 mb-8 max-w-xl mx-auto">
-            Unisciti a centinaia di attivita italiane che usano doID Suite ogni giorno.
+            Unisciti a centinaia di imprenditori italiani che usano doID Suite ogni giorno.
           </p>
 
           <Link
@@ -675,7 +674,7 @@ export default function Landing() {
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4" />
-              <span>Piano Free disponibile</span>
+              <span>Registrazione gratuita</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4" />
