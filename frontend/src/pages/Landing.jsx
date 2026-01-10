@@ -702,13 +702,13 @@ export default function Landing() {
 
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400">
               <a href="https://doid.it" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">doID.it</a>
-              <a href="https://doid.it/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="https://www.iubenda.com/privacy-policy/86826482" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Privacy Policy</a>
               <a href="https://doid.it/termini" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Termini di Servizio</a>
               <a href="mailto:info@doid.it" className="hover:text-white transition-colors">Contatti</a>
             </nav>
 
             <p className="text-sm text-gray-500">
-              © {new Date().getFullYear()} doID. Tutti i diritti riservati.
+              © {new Date().getFullYear()} doID. Tutti i diritti riservati. | P.IVA IT04031700273
             </p>
           </div>
         </div>
