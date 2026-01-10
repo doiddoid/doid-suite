@@ -56,7 +56,7 @@ export default function NewOrganization() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Nuova Organizzazione</h1>
           <p className="text-gray-500 mt-2">
-            Crea una nuova organizzazione per gestire i tuoi servizi DOID
+            Crea una nuova organizzazione per gestire i tuoi servizi doID
           </p>
         </div>
 

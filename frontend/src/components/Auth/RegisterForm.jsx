@@ -137,11 +137,11 @@ export default function RegisterForm({ onSubmit, loading, error }) {
           />
           <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
             Accetto i{' '}
-            <a href="#" className="text-primary-600 hover:underline">
+            <a href="https://doid.it/termini-di-servizio/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
               Termini di Servizio
             </a>{' '}
             e la{' '}
-            <a href="#" className="text-primary-600 hover:underline">
+            <a href="https://www.iubenda.com/privacy-policy/86826482" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
               Privacy Policy
             </a>
           </label>

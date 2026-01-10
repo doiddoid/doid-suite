@@ -122,7 +122,7 @@ export default function Register() {
           <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <span className="text-white font-bold text-2xl">D</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">DOID Suite</h1>
+          <h1 className="text-3xl font-bold text-gray-900">doID Suite</h1>
           <p className="text-gray-500 mt-2">Crea il tuo account</p>
         </div>
 
@@ -188,7 +188,7 @@ export default function Register() {
                 <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                Il nome dell'attività per cui attiverai i servizi DOID
+                Il nome dell'attività per cui attiverai i servizi doID
               </p>
             </div>
 
@@ -248,11 +248,11 @@ export default function Register() {
               />
               <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
                 Accetto i{' '}
-                <a href="#" className="text-primary-600 hover:underline">
+                <a href="https://doid.it/termini-di-servizio/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
                   Termini di Servizio
                 </a>{' '}
                 e la{' '}
-                <a href="#" className="text-primary-600 hover:underline">
+                <a href="https://www.iubenda.com/privacy-policy/86826482" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
                   Privacy Policy
                 </a>
               </label>
@@ -286,7 +286,7 @@ export default function Register() {
 
         {/* Footer */}
         <p className="mt-8 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} DOID. Tutti i diritti riservati.
+          © {new Date().getFullYear()} doID. Tutti i diritti riservati.
         </p>
       </div>
     </div>

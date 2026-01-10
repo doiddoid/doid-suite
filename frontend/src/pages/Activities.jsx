@@ -59,7 +59,7 @@ export default function Activities() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Le tue Attività</h1>
           <p className="text-gray-500 mt-1">
-            Gestisci le attività per cui utilizzi i servizi DOID
+            Gestisci le attività per cui utilizzi i servizi doID
           </p>
         </div>
         <Link
@@ -89,7 +89,7 @@ export default function Activities() {
             Nessuna attività
           </h3>
           <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-            Crea la tua prima attività per iniziare ad utilizzare i servizi DOID
+            Crea la tua prima attività per iniziare ad utilizzare i servizi doID
           </p>
           <Link to="/activities/new" className="btn-primary inline-flex items-center">
             <Plus className="w-4 h-4 mr-2" />

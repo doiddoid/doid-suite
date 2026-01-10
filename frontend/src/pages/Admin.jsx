@@ -670,7 +670,7 @@ export default function Admin() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold">Pannello Amministrazione</h1>
-                  <p className="text-indigo-100 mt-1">Gestione completa del sistema DOID Suite</p>
+                  <p className="text-indigo-100 mt-1">Gestione completa del sistema doID Suite</p>
                 </div>
               </div>
             </div>

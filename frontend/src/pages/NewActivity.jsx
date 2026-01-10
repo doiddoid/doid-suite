@@ -60,7 +60,7 @@ export default function NewActivity() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Nuova Attività</h1>
           <p className="text-gray-500 mt-2">
-            Crea una nuova attività per gestire i tuoi servizi DOID
+            Crea una nuova attività per gestire i tuoi servizi doID
           </p>
         </div>
 

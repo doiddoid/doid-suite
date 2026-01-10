@@ -64,7 +64,7 @@ export default function ChangePassword() {
             <Sparkles className="w-7 h-7 text-white" />
           </div>
           <div className="flex items-baseline justify-center gap-1">
-            <span className="text-2xl text-gray-400 font-normal">DOID</span>
+            <span className="text-2xl text-gray-400 font-normal">doID</span>
             <span className="text-2xl text-gray-900 font-bold">Suite</span>
           </div>
           <p className="text-gray-500 mt-3">Aggiorna la tua password</p>
@@ -206,7 +206,7 @@ export default function ChangePassword() {
 
         {/* Footer */}
         <p className="mt-8 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} DOID. Tutti i diritti riservati.
+          © {new Date().getFullYear()} doID. Tutti i diritti riservati.
         </p>
       </div>
     </div>

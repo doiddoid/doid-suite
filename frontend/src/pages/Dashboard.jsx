@@ -122,7 +122,7 @@ export default function Dashboard() {
           </h2>
           <p className="text-gray-500 mb-6">
             {activities.length === 0
-              ? 'Crea la tua prima attività per iniziare ad utilizzare i servizi DOID.'
+              ? 'Crea la tua prima attività per iniziare ad utilizzare i servizi doID.'
               : 'Seleziona un\'attività dal menu per visualizzare i servizi.'}
           </p>
           {activities.length === 0 && (
@@ -189,7 +189,7 @@ export default function Dashboard() {
           {currentActivity?.name || 'Dashboard'}
         </h1>
         <p className="text-gray-500 mt-1">
-          Gestisci i tuoi servizi DOID da un'unica dashboard
+          Gestisci i tuoi servizi doID da un'unica dashboard
         </p>
       </div>
 
