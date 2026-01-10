@@ -55,6 +55,12 @@ class WebhookService {
       // ===== PASSWORD =====
       'password.reset_requested': process.env.GHL_WEBHOOK_PASSWORD_RESET,
 
+      // ===== MIGRAZIONE =====
+      'migration.password_changed': process.env.GHL_WEBHOOK_MIGRATION_PASSWORD_CHANGED,
+
+      // ===== NOTIFICHE ADMIN =====
+      'admin.new_registration': process.env.GHL_WEBHOOK_ADMIN_NEW_REGISTRATION,
+
       // ===== AGENCY (opzionali) =====
       'organization.upgraded': process.env.GHL_WEBHOOK_ORG_UPGRADED,
       'activity.created': process.env.GHL_WEBHOOK_ACTIVITY_CREATED,
@@ -1228,6 +1234,67 @@ class WebhookService {
 
     console.log(`[GHL_API] Notifying migration confirmed for ${email}`);
     return this.addTagByEmail(email, tags);
+  }
+
+  /**
+   * Notifica admin che un utente migrato ha completato il cambio password
+   * Invia webhook a GHL per notifica email a info.doid@gmail.com
+   * @param {object} userData - Dati utente
+   * @param {string} userData.email - Email utente
+   * @param {string} userData.userId - ID utente
+   * @param {string} userData.migratedFrom - Servizio di provenienza
+   * @param {Date} userData.firstLoginAt - Data primo login
+   * @returns {Promise<boolean>}
+   */
+  async notifyMigrationPasswordChanged(userData) {
+    const { email, userId, migratedFrom, firstLoginAt } = userData;
+
+    console.log(`[WEBHOOK] Notifying migration password changed for ${email}`);
+
+    return this.send('migration.password_changed', {
+      event_type: 'migration_password_changed',
+      admin_email: 'info.doid@gmail.com',
+      user_email: email,
+      user_id: userId,
+      migrated_from: migratedFrom || 'unknown',
+      migrated_from_label: this.serviceLabels[migratedFrom] || migratedFrom || 'Servizio sconosciuto',
+      first_login_at: firstLoginAt ? new Date(firstLoginAt).toISOString() : null,
+      password_changed_at: new Date().toISOString(),
+      action_required: 'Aggiungi tag "migrazione-confermata" in GHL per questo contatto',
+      dashboard_url: 'https://suite.doid.it/admin',
+      supabase_url: 'https://supabase.com/dashboard/project/opmzzqfhxlrpjuzbwwep/editor'
+    });
+  }
+
+  /**
+   * Notifica admin di una nuova registrazione utente
+   * Invia webhook a GHL per notifica email a info.doid@gmail.com
+   * @param {object} userData - Dati utente
+   * @param {string} userData.email - Email utente
+   * @param {string} userData.userId - ID utente
+   * @param {string} userData.firstName - Nome
+   * @param {string} userData.lastName - Cognome
+   * @param {string} userData.organizationName - Nome organizzazione
+   * @returns {Promise<boolean>}
+   */
+  async notifyNewRegistration(userData) {
+    const { email, userId, firstName, lastName, organizationName } = userData;
+
+    console.log(`[WEBHOOK] Notifying new registration for ${email}`);
+
+    return this.send('admin.new_registration', {
+      event_type: 'new_registration',
+      admin_email: 'info.doid@gmail.com',
+      user_email: email,
+      user_id: userId,
+      first_name: firstName || '',
+      last_name: lastName || '',
+      full_name: [firstName, lastName].filter(Boolean).join(' ') || email,
+      organization_name: organizationName || '',
+      registered_at: new Date().toISOString(),
+      dashboard_url: 'https://suite.doid.it/admin',
+      supabase_url: 'https://supabase.com/dashboard/project/opmzzqfhxlrpjuzbwwep/editor'
+    });
   }
 }
 

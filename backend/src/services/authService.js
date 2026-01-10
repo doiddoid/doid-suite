@@ -96,6 +96,15 @@ class AuthService {
       } catch (webhookError) {
         console.error(`[AUTH] Webhook user.registered fallito per ${email}:`, webhookError.message);
       }
+
+      // Invia notifica admin nuova registrazione
+      webhookService.notifyNewRegistration({
+        email,
+        userId: user.id,
+        firstName: fullName?.split(' ')[0] || '',
+        lastName: fullName?.split(' ').slice(1).join(' ') || '',
+        organizationName: activityName
+      }).catch(err => console.error('[AUTH] Admin notification failed:', err));
     }
 
     return {
@@ -578,6 +587,13 @@ class AuthService {
 
     // Se userId fornito, aggiorna password_changed nel profilo (per utenti migrati)
     if (userId) {
+      // Prima recupera info profilo per la notifica
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('migrated_from, first_login_after_migration, migration_status')
+        .eq('id', userId)
+        .single();
+
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .update({
@@ -590,6 +606,20 @@ class AuthService {
         console.error(`[MIGRATION] Errore aggiornamento password_changed per user ${userId}:`, profileError);
       } else {
         console.log(`[MIGRATION] Password cambiata per user ${userId}`);
+
+        // Se era un utente migrato, invia notifica admin
+        if (profile && profile.migration_status === 'confirmed') {
+          // Recupera email utente
+          const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+          if (userData?.user?.email) {
+            webhookService.notifyMigrationPasswordChanged({
+              email: userData.user.email,
+              userId,
+              migratedFrom: profile.migrated_from,
+              firstLoginAt: profile.first_login_after_migration
+            }).catch(err => console.error('[MIGRATION] Webhook notification failed:', err));
+          }
+        }
       }
     }
 
