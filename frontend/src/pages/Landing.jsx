@@ -121,7 +121,7 @@ const DOIDLogo = ({ service = 'Suite', size = 'md', showIcon = true }) => {
         </div>
       )}
       <div className="flex items-baseline gap-0.5">
-        <span className={`${s.text} text-gray-400 font-normal`}>DOID</span>
+        <span className={`${s.text} text-gray-400 font-normal`}>doID</span>
         <span className={`${s.text} text-teal-600 font-bold`}>{service}</span>
       </div>
     </div>
@@ -201,7 +201,7 @@ export default function Landing() {
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-            DOID Suite riunisce recensioni, biglietti da visita digitali, menu e display in un'unica dashboard.
+            doID Suite riunisce recensioni, biglietti da visita digitali, menu e display in un'unica dashboard.
             Attivi solo cio che ti serve, quando ti serve.
           </p>
 
@@ -236,7 +236,7 @@ export default function Landing() {
                 Recensioni qui, biglietti da visita la, menu da un'altra parte...
               </p>
               <p className="text-gray-600 leading-relaxed">
-                Con DOID Suite hai <strong className="text-gray-900">un'unica dashboard</strong> per tutto.
+                Con doID Suite hai <strong className="text-gray-900">un'unica dashboard</strong> per tutto.
                 Un solo login, una sola fattura, un solo interlocutore per il supporto.
               </p>
 
@@ -326,7 +326,7 @@ export default function Landing() {
 
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm text-gray-400 font-normal">DOID</span>
+                      <span className="text-sm text-gray-400 font-normal">doID</span>
                       <span className={`text-sm font-bold ${service.textColor}`}>{service.name.replace('Smart ', '').replace('Menu ', '').replace(' Suite', '')}</span>
                     </div>
                     <p className={`text-lg font-semibold text-gray-900 mb-2`}>{service.tagline}</p>
@@ -375,7 +375,7 @@ export default function Landing() {
               La nostra visione
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              DOID Suite nasce da un'idea semplice: le PMI italiane meritano strumenti digitali
+              doID Suite nasce da un'idea semplice: le PMI italiane meritano strumenti digitali
               <strong className="text-gray-900"> accessibili, semplici e che crescono con loro</strong>.
             </p>
           </div>
@@ -446,7 +446,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Per chi e DOID Suite?
+              Per chi e doID Suite?
             </h2>
           </div>
 
@@ -525,7 +525,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Perche scegliere DOID Suite
+              Perche scegliere doID Suite
             </h2>
           </div>
 
@@ -624,7 +624,7 @@ export default function Landing() {
           </h2>
           <p className="text-gray-600 mb-8 max-w-xl mx-auto">
             Prenota una call conoscitiva di 15 minuti. Nessun impegno,
-            solo una chiacchierata per capire se DOID Suite fa per te.
+            solo una chiacchierata per capire se doID Suite fa per te.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
@@ -657,7 +657,7 @@ export default function Landing() {
             Pronto a semplificare la gestione della tua attivita?
           </h2>
           <p className="text-teal-100 mb-8 max-w-xl mx-auto">
-            Unisciti a centinaia di attivita italiane che usano DOID Suite ogni giorno.
+            Unisciti a centinaia di attivita italiane che usano doID Suite ogni giorno.
           </p>
 
           <Link
@@ -696,20 +696,20 @@ export default function Landing() {
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div className="flex items-baseline gap-0.5">
-                <span className="text-lg text-gray-500 font-normal">DOID</span>
+                <span className="text-lg text-gray-500 font-normal">doID</span>
                 <span className="text-lg text-white font-bold">Suite</span>
               </div>
             </div>
 
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400">
-              <a href="https://doid.it" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">DOID.it</a>
+              <a href="https://doid.it" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">doID.it</a>
               <a href="https://doid.it/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Privacy Policy</a>
               <a href="https://doid.it/termini" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Termini di Servizio</a>
               <a href="mailto:info@doid.it" className="hover:text-white transition-colors">Contatti</a>
             </nav>
 
             <p className="text-sm text-gray-500">
-              © {new Date().getFullYear()} DOID. Tutti i diritti riservati.
+              © {new Date().getFullYear()} doID. Tutti i diritti riservati.
             </p>
           </div>
         </div>
