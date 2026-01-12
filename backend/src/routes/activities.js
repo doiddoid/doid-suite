@@ -431,9 +431,9 @@ router.post('/:activityId/generate-token',
       role: req.activityRole
     });
 
-    // URL di redirect con token (trailing slash per evitare 301 redirect)
+    // URL di redirect con token
     const appUrl = SERVICES[serviceCode].appUrl;
-    const redirectUrl = `${appUrl}/auth/sso/?token=${token}`;
+    const redirectUrl = `${appUrl}/auth/sso.php?token=${token}`;
 
     res.json({
       success: true,
