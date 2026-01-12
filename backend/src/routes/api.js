@@ -251,17 +251,25 @@ router.post('/sso/authenticate',
         }
       }
 
-      // 5. Ottieni organizzazione
-      const { data: organization, error: orgError } = await supabaseAdmin
-        .from('organizations')
-        .select('id, name, slug, email, status, account_type')
-        .eq('id', decoded.organizationId)
-        .single();
+      // 5. Ottieni organizzazione (opzionale - alcune attività non hanno organizzazione)
+      let organization = null;
+      if (decoded.organizationId) {
+        const { data: orgData, error: orgError } = await supabaseAdmin
+          .from('organizations')
+          .select('id, name, slug, email, status, account_type')
+          .eq('id', decoded.organizationId)
+          .single();
 
-      if (orgError || !organization || organization.status !== 'active') {
+        if (!orgError && orgData && orgData.status === 'active') {
+          organization = orgData;
+        }
+      }
+
+      // Se non c'è organizzazione ma c'è un'attività, usa i dati dell'attività
+      if (!organization && !activity) {
         return res.status(401).json({
           success: false,
-          error: 'Organizzazione non valida o non attiva'
+          error: 'Nessuna attività o organizzazione valida'
         });
       }
 
@@ -318,8 +326,8 @@ router.post('/sso/authenticate',
         }
       }
 
-      // 7. Se non ha abbonamento diretto, verifica pacchetto organizzazione
-      if (!subscription && activity) {
+      // 7. Se non ha abbonamento diretto, verifica pacchetto organizzazione (solo se ha org)
+      if (!subscription && activity && organization) {
         const { data: orgPackages } = await supabaseAdmin
           .from('organization_packages')
           .select(`
@@ -377,7 +385,7 @@ router.post('/sso/authenticate',
       // 8. Genera token sidebar per l'app esterna (lunga durata)
       const sidebarToken = authService.generateSidebarToken({
         userId: user.id,
-        organizationId: organization.id,
+        organizationId: organization?.id || null,
         activityId: activity?.id,
         service: requestedService,
         role: decoded.role
@@ -448,13 +456,13 @@ router.post('/sso/authenticate',
             emailVerified: user.email_confirmed_at !== null,
             createdAt: user.created_at
           },
-          // Dati organizzazione
-          organization: {
+          // Dati organizzazione (può essere null per attività standalone)
+          organization: organization ? {
             id: organization.id,
             name: organization.name,
             slug: organization.slug,
             accountType: organization.account_type
-          },
+          } : null,
           // Dati attività (se presente)
           activity: activity ? {
             id: activity.id,
