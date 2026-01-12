@@ -72,8 +72,7 @@ const services = [
     bgLight: 'bg-emerald-50',
     textColor: 'text-emerald-600',
     borderColor: 'border-t-emerald-500',
-    url: null,
-    comingSoon: true,
+    url: 'https://menu.doid.it',
     features: ['Aggiornamenti real-time', 'Multi-lingua', 'Allergeni integrati', 'Design responsive']
   },
   {

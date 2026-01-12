@@ -3,13 +3,13 @@ import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, 
 import StatusBadge from './StatusBadge';
 
 // Servizi attualmente non disponibili (presto disponibili)
-const UNAVAILABLE_SERVICES = ['menu_digitale', 'display_suite'];
+const UNAVAILABLE_SERVICES = ['display_suite'];
 
 // URL delle landing page per i servizi
 const SERVICE_LANDING_URLS = {
   smart_review: 'https://review.doid.it',
   smart_page: 'https://page.doid.it',
-  menu_digitale: null,
+  menu_digitale: 'https://menu.doid.it',
   display_suite: null,
 };
 
