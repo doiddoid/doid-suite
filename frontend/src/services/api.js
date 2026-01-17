@@ -62,7 +62,9 @@ class ApiService {
           }
         }
 
-        throw new Error(data.error || 'Errore nella richiesta');
+        // Return the error response data instead of throwing
+        // This allows callers to access details like validation errors
+        return data;
       }
 
       return data;
