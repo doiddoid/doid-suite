@@ -430,7 +430,12 @@ export default function Admin() {
     }
 
     if (mode === 'edit' || mode === 'view') {
-      setFormData({ ...item });
+      // Assicura che features sia sempre un array per i piani
+      const itemData = { ...item };
+      if (type === 'plan' && !Array.isArray(itemData.features)) {
+        itemData.features = itemData.features ? [itemData.features] : [];
+      }
+      setFormData(itemData);
     } else {
       if (type === 'user') {
         setFormData({ email: '', password: '', fullName: '', emailConfirm: true });
@@ -575,9 +580,17 @@ export default function Admin() {
         if (response.success) fetchPackages();
       } else if (type === 'plan') {
         response = await api.request(`/admin/plans/${id}`, { method: 'DELETE' });
-        if (response.success) fetchPlans();
+        if (response.success) {
+          fetchPlans();
+          setSuccessMessage('Piano disattivato con successo');
+        }
       }
-      setSuccessMessage('Eliminato con successo');
+      if (!response?.success) {
+        throw new Error(response?.error || 'Errore durante l\'eliminazione');
+      }
+      if (type !== 'plan') {
+        setSuccessMessage('Eliminato con successo');
+      }
       setDeleteConfirm(null);
     } catch (err) {
       setError(err.message);
@@ -1947,7 +1960,7 @@ export default function Admin() {
                   </div>
                   <FormField label="Features" hint="Una per riga">
                     <textarea
-                      value={(formData.features || []).join('\n')}
+                      value={Array.isArray(formData.features) ? formData.features.join('\n') : ''}
                       onChange={(e) => setFormData({ ...formData, features: e.target.value.split('\n').filter(f => f.trim()) })}
                       className="input-field resize-none"
                       rows={4}
