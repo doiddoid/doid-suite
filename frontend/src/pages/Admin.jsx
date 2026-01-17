@@ -552,7 +552,12 @@ export default function Admin() {
         }
       }
 
-      closeModal();
+      // Chiudi modal solo se operazione riuscita
+      if (response?.success) {
+        closeModal();
+      } else if (response?.error) {
+        setError(response.error);
+      }
     } catch (err) {
       setError(err.message);
     }
