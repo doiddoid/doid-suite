@@ -968,6 +968,10 @@ router.put('/plans/:id',
 
 // DELETE /api/admin/plans/:id (soft delete - disattiva)
 router.delete('/plans/:id',
+  (req, res, next) => {
+    console.log('DELETE /plans/:id called with params:', req.params);
+    next();
+  },
   [
     param('id').isUUID().withMessage('ID piano non valido')
   ],
