@@ -14,6 +14,7 @@ import api from '../services/api';
 import ServiceStatusManager from '../components/Admin/ServiceStatusManager';
 import BillingSummary from '../components/Admin/BillingSummary';
 import CommunicationLogs from '../components/Admin/CommunicationLogs';
+import PlansSummaryTable from '../components/Admin/PlansSummaryTable';
 
 // Mappa icone servizi
 const SERVICE_ICONS = {
@@ -604,6 +605,7 @@ export default function Admin() {
   const tabs = [
     { id: 'stats', name: 'Statistiche', icon: Activity },
     { id: 'clienti', name: 'Clienti', icon: Users },
+    { id: 'riepilogo-piani', name: 'Riepilogo Piani', icon: CreditCard },
     { id: 'plans', name: 'Piani Servizi', icon: Layers },
     { id: 'packages', name: 'Pacchetti Agency', icon: Package },
     { id: 'comunicazioni', name: 'Comunicazioni', icon: MessageSquare },
@@ -1516,6 +1518,20 @@ export default function Admin() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Riepilogo Piani Tab - Tabella riassuntiva piani attivi per cliente */}
+            {activeTab === 'riepilogo-piani' && (
+              <PlansSummaryTable
+                onSelectActivity={(activity) => {
+                  if (activity?.id) {
+                    setActiveTab('clienti');
+                    setTimeout(() => {
+                      handleSelectItem({ ...activity, type: 'activity' }, 'activity');
+                    }, 100);
+                  }
+                }}
+              />
             )}
 
             {/* Plans Tab - Piani per Servizio Singolo */}

@@ -324,6 +324,38 @@ router.delete('/organizations/:id',
   })
 );
 
+// ==================== PLANS SUMMARY ====================
+
+// GET /api/admin/plans-summary
+// Riepilogo piani attivi per cliente
+router.get('/plans-summary',
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('Pagina non valida'),
+    query('limit').optional().isInt({ min: 1, max: 200 }).withMessage('Limit deve essere tra 1 e 200'),
+    query('status').optional().isIn(['trial', 'active', 'active_or_trial', 'expired', 'cancelled']).withMessage('Status non valido'),
+    query('serviceCode').optional().trim(),
+    query('search').optional().trim()
+  ],
+  validate,
+  logAdminAction('view_plans_summary'),
+  asyncHandler(async (req, res) => {
+    const { page = 1, limit = 50, status, serviceCode, search = '' } = req.query;
+
+    const result = await adminService.getPlansSummary({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      status: status || 'active_or_trial',
+      serviceCode,
+      search
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
+);
+
 // ==================== SUBSCRIPTIONS ====================
 
 // GET /api/admin/subscriptions

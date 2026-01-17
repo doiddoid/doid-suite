@@ -2115,6 +2115,184 @@ class AdminService {
     return { success: true };
   }
 
+  // ==================== PLANS SUMMARY ====================
+
+  // Ottieni riepilogo piani attivi per cliente
+  async getPlansSummary({ page = 1, limit = 50, status = null, serviceCode = null, search = '' }) {
+    const offset = (page - 1) * limit;
+
+    // Query base: tutte le subscriptions con attività, organizzazione, piano e servizio
+    let query = supabaseAdmin
+      .from('subscriptions')
+      .select(`
+        id,
+        status,
+        billing_cycle,
+        trial_ends_at,
+        current_period_start,
+        current_period_end,
+        created_at,
+        updated_at,
+        activity:activities (
+          id,
+          name,
+          slug,
+          email,
+          phone,
+          organization:organizations (
+            id,
+            name,
+            slug,
+            account_type,
+            email
+          )
+        ),
+        plan:plans (
+          id,
+          code,
+          name,
+          price_monthly,
+          price_yearly,
+          service:services (
+            id,
+            code,
+            name,
+            icon,
+            color
+          )
+        )
+      `, { count: 'exact' });
+
+    // Filtri
+    if (status) {
+      if (status === 'active_or_trial') {
+        query = query.in('status', ['active', 'trial']);
+      } else {
+        query = query.eq('status', status);
+      }
+    }
+
+    // Ordina per organizzazione, poi attività
+    query = query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    const { data: subscriptions, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching plans summary:', error);
+      throw Errors.Internal('Errore nel recupero del riepilogo piani');
+    }
+
+    const now = new Date();
+
+    // Formatta i risultati
+    let results = (subscriptions || []).map(sub => {
+      // Calcola giorni rimanenti
+      let daysRemaining = null;
+      let endDate = null;
+
+      if (sub.status === 'trial' && sub.trial_ends_at) {
+        endDate = new Date(sub.trial_ends_at);
+        daysRemaining = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+      } else if ((sub.status === 'active') && sub.current_period_end) {
+        endDate = new Date(sub.current_period_end);
+        daysRemaining = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+      }
+
+      // Calcola prezzo effettivo
+      const price = sub.billing_cycle === 'yearly'
+        ? parseFloat(sub.plan?.price_yearly || 0)
+        : parseFloat(sub.plan?.price_monthly || 0);
+
+      return {
+        id: sub.id,
+        // Organizzazione
+        organization: sub.activity?.organization ? {
+          id: sub.activity.organization.id,
+          name: sub.activity.organization.name,
+          slug: sub.activity.organization.slug,
+          accountType: sub.activity.organization.account_type,
+          email: sub.activity.organization.email
+        } : null,
+        // Attività
+        activity: sub.activity ? {
+          id: sub.activity.id,
+          name: sub.activity.name,
+          slug: sub.activity.slug,
+          email: sub.activity.email,
+          phone: sub.activity.phone
+        } : null,
+        // Servizio
+        service: sub.plan?.service ? {
+          id: sub.plan.service.id,
+          code: sub.plan.service.code,
+          name: sub.plan.service.name,
+          icon: sub.plan.service.icon,
+          color: sub.plan.service.color
+        } : null,
+        // Piano
+        plan: sub.plan ? {
+          id: sub.plan.id,
+          code: sub.plan.code,
+          name: sub.plan.name
+        } : null,
+        // Subscription details
+        status: sub.status,
+        billingCycle: sub.billing_cycle,
+        price,
+        currency: 'EUR',
+        // Date
+        trialEndsAt: sub.trial_ends_at,
+        currentPeriodStart: sub.current_period_start,
+        currentPeriodEnd: sub.current_period_end,
+        endDate: endDate?.toISOString() || null,
+        daysRemaining,
+        createdAt: sub.created_at,
+        updatedAt: sub.updated_at
+      };
+    });
+
+    // Filtro per serviceCode (post-query perché nested)
+    if (serviceCode) {
+      results = results.filter(r => r.service?.code === serviceCode);
+    }
+
+    // Filtro per ricerca (organizzazione o attività)
+    if (search) {
+      const searchLower = search.toLowerCase();
+      results = results.filter(r =>
+        r.organization?.name?.toLowerCase().includes(searchLower) ||
+        r.activity?.name?.toLowerCase().includes(searchLower) ||
+        r.activity?.email?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Calcola statistiche aggregate
+    const statsActive = results.filter(r => r.status === 'active').length;
+    const statsTrial = results.filter(r => r.status === 'trial').length;
+    const statsExpiring = results.filter(r => r.daysRemaining !== null && r.daysRemaining <= 7 && r.daysRemaining > 0).length;
+    const totalMonthlyRevenue = results
+      .filter(r => r.status === 'active')
+      .reduce((sum, r) => sum + (r.billingCycle === 'yearly' ? r.price / 12 : r.price), 0);
+
+    return {
+      subscriptions: results,
+      stats: {
+        active: statsActive,
+        trial: statsTrial,
+        expiringSoon: statsExpiring,
+        monthlyRevenue: Math.round(totalMonthlyRevenue * 100) / 100
+      },
+      pagination: {
+        page,
+        limit,
+        total: count,
+        totalPages: Math.ceil((count || 0) / limit)
+      }
+    };
+  }
+
   // ==================== USER DETAILS WITH ACTIVITIES ====================
 
   // Ottieni dettagli completi utente con tutte le attività e servizi
