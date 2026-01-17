@@ -430,10 +430,20 @@ export default function Admin() {
     }
 
     if (mode === 'edit' || mode === 'view') {
-      // Assicura che features sia sempre un array per i piani
+      // Assicura che features sia gestito correttamente per i piani
       const itemData = { ...item };
-      if (type === 'plan' && !Array.isArray(itemData.features)) {
-        itemData.features = itemData.features ? [itemData.features] : [];
+      if (type === 'plan') {
+        // Se features è un oggetto, convertilo in JSON string per editing
+        // Se è un array di stringhe, uniscile con newline
+        // Se è null/undefined, usa array vuoto
+        if (itemData.features && typeof itemData.features === 'object' && !Array.isArray(itemData.features)) {
+          // È un oggetto JSON - lo convertiamo in stringa JSON per editarlo
+          itemData.featuresIsObject = true;
+          itemData.featuresOriginal = itemData.features;
+          itemData.features = [JSON.stringify(itemData.features, null, 2)];
+        } else if (!Array.isArray(itemData.features)) {
+          itemData.features = [];
+        }
       }
       setFormData(itemData);
     } else {
@@ -535,15 +545,29 @@ export default function Admin() {
           setSuccessMessage(modalMode === 'create' ? 'Pacchetto creato' : 'Pacchetto aggiornato');
         }
       } else if (modalType === 'plan') {
+        // Prepara i dati del piano
+        const planData = { ...formData };
+        // Se features era un oggetto JSON, riconvertilo
+        if (planData.featuresIsObject && planData.features?.length === 1) {
+          try {
+            planData.features = JSON.parse(planData.features[0]);
+          } catch {
+            // Lascia come array se il parse fallisce
+          }
+        }
+        // Rimuovi campi temporanei
+        delete planData.featuresIsObject;
+        delete planData.featuresOriginal;
+
         if (modalMode === 'create') {
           response = await api.request('/admin/plans', {
             method: 'POST',
-            body: JSON.stringify(formData)
+            body: JSON.stringify(planData)
           });
         } else if (modalMode === 'edit') {
           response = await api.request(`/admin/plans/${editingItem.id}`, {
             method: 'PUT',
-            body: JSON.stringify(formData)
+            body: JSON.stringify(planData)
           });
         }
         if (response.success) {
@@ -1963,12 +1987,25 @@ export default function Admin() {
                       </div>
                     </FormField>
                   </div>
-                  <FormField label="Features" hint="Una per riga">
+                  <FormField label="Features" hint={formData.featuresIsObject ? "JSON object (modifica con attenzione)" : "Una per riga"}>
                     <textarea
                       value={Array.isArray(formData.features) ? formData.features.join('\n') : ''}
-                      onChange={(e) => setFormData({ ...formData, features: e.target.value.split('\n').filter(f => f.trim()) })}
-                      className="input-field resize-none"
-                      rows={4}
+                      onChange={(e) => {
+                        const newFeatures = e.target.value.split('\n').filter(f => f.trim());
+                        // Se era un oggetto JSON, prova a parsarlo di nuovo
+                        if (formData.featuresIsObject && newFeatures.length === 1) {
+                          try {
+                            const parsed = JSON.parse(newFeatures[0]);
+                            setFormData({ ...formData, features: newFeatures, featuresOriginal: parsed });
+                          } catch {
+                            setFormData({ ...formData, features: newFeatures });
+                          }
+                        } else {
+                          setFormData({ ...formData, features: newFeatures, featuresIsObject: false });
+                        }
+                      }}
+                      className={`input-field resize-none ${formData.featuresIsObject ? 'font-mono text-xs' : ''}`}
+                      rows={formData.featuresIsObject ? 8 : 4}
                       placeholder="Feature 1&#10;Feature 2&#10;Feature 3"
                     />
                   </FormField>
@@ -2070,6 +2107,21 @@ function PlanCard({ plan, service, compact, onEdit, onDelete }) {
   const isFree = plan.priceMonthly === 0 && plan.priceYearly === 0;
   const IconComponent = SERVICE_ICONS[service?.icon] || Star;
 
+  // Gestisce features sia come array di stringhe che come oggetto
+  const getDisplayFeatures = () => {
+    if (!plan.features) return [];
+    if (Array.isArray(plan.features)) {
+      // Filtra solo stringhe valide
+      return plan.features.filter(f => typeof f === 'string');
+    }
+    if (typeof plan.features === 'object') {
+      // Converte oggetto in array di chiavi per visualizzazione
+      return Object.keys(plan.features).map(key => `${key}: ${JSON.stringify(plan.features[key])}`);
+    }
+    return [];
+  };
+  const displayFeatures = getDisplayFeatures();
+
   return (
     <div className={`bg-white rounded-xl border-2 transition-all hover:shadow-md overflow-hidden ${!plan.isActive ? 'border-red-200 opacity-60' : isFree ? 'border-green-200' : 'border-gray-200'}`}>
       <div className={`p-3 flex items-center justify-between ${isFree ? 'bg-green-50' : ''}`} style={!isFree && service?.color ? { borderBottom: `3px solid ${service.color}` } : {}}>
@@ -2094,16 +2146,16 @@ function PlanCard({ plan, service, compact, onEdit, onDelete }) {
             €{plan.priceYearly}/anno
           </div>
         </div>
-        {plan.features && plan.features.length > 0 && (
+        {displayFeatures.length > 0 && (
           <ul className="text-sm text-gray-600 space-y-1 mt-3 pt-3 border-t">
-            {plan.features.slice(0, compact ? 3 : 6).map((f, i) => (
+            {displayFeatures.slice(0, compact ? 3 : 6).map((f, i) => (
               <li key={i} className="flex items-start gap-1.5">
                 <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                <span>{f}</span>
+                <span>{String(f)}</span>
               </li>
             ))}
-            {plan.features.length > (compact ? 3 : 6) && (
-              <li className="text-gray-400 text-xs">+{plan.features.length - (compact ? 3 : 6)} altre...</li>
+            {displayFeatures.length > (compact ? 3 : 6) && (
+              <li className="text-gray-400 text-xs">+{displayFeatures.length - (compact ? 3 : 6)} altre...</li>
             )}
           </ul>
         )}
