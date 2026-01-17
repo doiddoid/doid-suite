@@ -618,7 +618,10 @@ export default function Admin() {
         }
       }
       if (!response?.success) {
-        const errorDetails = response?.details ? `: ${response.details.map(d => d.msg).join(', ')}` : '';
+        console.error('Delete response:', response);
+        const errorDetails = response?.details
+          ? `: ${response.details.map(d => `${d.path || d.param}: ${d.msg}`).join(', ')}`
+          : '';
         throw new Error((response?.error || 'Errore durante l\'eliminazione') + errorDetails);
       }
       if (type !== 'plan') {

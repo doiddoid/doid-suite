@@ -13,6 +13,12 @@ const router = express.Router();
 const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.error('Validation errors:', {
+      method: req.method,
+      url: req.originalUrl,
+      params: req.params,
+      errors: errors.array()
+    });
     return res.status(400).json({
       success: false,
       error: 'Errore di validazione',
