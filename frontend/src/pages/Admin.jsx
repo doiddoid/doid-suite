@@ -608,6 +608,9 @@ export default function Admin() {
         response = await api.request(`/admin/packages/${id}`, { method: 'DELETE' });
         if (response.success) fetchPackages();
       } else if (type === 'plan') {
+        if (!id) {
+          throw new Error('ID piano mancante');
+        }
         response = await api.request(`/admin/plans/${id}`, { method: 'DELETE' });
         if (response.success) {
           fetchPlans();
@@ -615,7 +618,8 @@ export default function Admin() {
         }
       }
       if (!response?.success) {
-        throw new Error(response?.error || 'Errore durante l\'eliminazione');
+        const errorDetails = response?.details ? `: ${response.details.map(d => d.msg).join(', ')}` : '';
+        throw new Error((response?.error || 'Errore durante l\'eliminazione') + errorDetails);
       }
       if (type !== 'plan') {
         setSuccessMessage('Eliminato con successo');
