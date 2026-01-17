@@ -1,0 +1,13 @@
+{
+  "name": "doid-suite-migrations",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Script di migrazione per DOID Suite",
+  "scripts": {
+    "migrate-choice": "node migrate-choice-users.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "csv-parse": "^5.5.3"
+  }
+}

@@ -13,12 +13,6 @@ const router = express.Router();
 const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.error('Validation errors:', {
-      method: req.method,
-      url: req.originalUrl,
-      params: req.params,
-      errors: errors.array()
-    });
     return res.status(400).json({
       success: false,
       error: 'Errore di validazione',
@@ -864,7 +858,13 @@ router.post('/plans',
     body('name').trim().notEmpty().withMessage('Nome piano richiesto'),
     body('priceMonthly').isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
     body('priceYearly').isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
-    body('features').optional().isArray().withMessage('Features deve essere un array'),
+    body('features').optional().custom((value) => {
+      // Accetta sia array che oggetto (per limiti/configurazioni servizi)
+      if (value === null || value === undefined) return true;
+      if (Array.isArray(value)) return true;
+      if (typeof value === 'object') return true;
+      throw new Error('Features deve essere un array o un oggetto');
+    }),
     body('sortOrder').optional().isInt({ min: 0 })
   ],
   validate,
@@ -929,7 +929,13 @@ router.put('/plans/:id',
     body('name').optional().trim().notEmpty().withMessage('Nome non può essere vuoto'),
     body('priceMonthly').optional().isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
     body('priceYearly').optional().isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
-    body('features').optional().isArray().withMessage('Features deve essere un array'),
+    body('features').optional().custom((value) => {
+      // Accetta sia array che oggetto (per limiti/configurazioni servizi)
+      if (value === null || value === undefined) return true;
+      if (Array.isArray(value)) return true;
+      if (typeof value === 'object') return true;
+      throw new Error('Features deve essere un array o un oggetto');
+    }),
     body('isActive').optional().isBoolean(),
     body('sortOrder').optional().isInt({ min: 0 })
   ],
@@ -968,10 +974,6 @@ router.put('/plans/:id',
 
 // DELETE /api/admin/plans/:id (soft delete - disattiva)
 router.delete('/plans/:id',
-  (req, res, next) => {
-    console.log('DELETE /plans/:id called with params:', req.params);
-    next();
-  },
   [
     param('id').isUUID().withMessage('ID piano non valido')
   ],
