@@ -611,6 +611,7 @@ export default function Admin() {
         if (!id) {
           throw new Error('ID piano mancante');
         }
+        console.log('Deleting plan with ID:', id, 'type:', typeof id);
         response = await api.request(`/admin/plans/${id}`, { method: 'DELETE' });
         if (response.success) {
           fetchPlans();
