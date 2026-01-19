@@ -1391,7 +1391,8 @@ router.put('/activities/:activityId/services/:serviceCode',
     body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido'),
     body('trialDays').optional().isInt({ min: 1, max: 90 }).withMessage('Giorni trial deve essere tra 1 e 90'),
     body('periodEndDate').optional().isISO8601().withMessage('Data fine periodo non valida'),
-    body('cancelAtPeriodEnd').optional().isBoolean().withMessage('cancelAtPeriodEnd deve essere boolean')
+    body('cancelAtPeriodEnd').optional().isBoolean().withMessage('cancelAtPeriodEnd deve essere boolean'),
+    body('isFreePromo').optional().isBoolean().withMessage('isFreePromo deve essere boolean')
   ],
   validate,
   logAdminAction('update_activity_service'),

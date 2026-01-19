@@ -33,6 +33,7 @@ export default function ServiceStatusManager({
   const [newStatus, setNewStatus] = useState(effectiveStatus || 'inactive');
   const [billingCycle, setBillingCycle] = useState(subscription?.billingCycle || 'yearly');
   const [trialDays, setTrialDays] = useState(service.trialDays || 30);
+  const [isFreePromo, setIsFreePromo] = useState(subscription?.isFreePromo || false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -48,7 +49,8 @@ export default function ServiceStatusManager({
       await onUpdate(activityId, service.code, {
         status: newStatus,
         billingCycle,
-        trialDays
+        trialDays,
+        isFreePromo: newStatus === 'pro' ? isFreePromo : false
       });
       onClose();
     } catch (err) {
@@ -224,42 +226,75 @@ export default function ServiceStatusManager({
 
           {/* Billing Cycle */}
           {newStatus === 'pro' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ciclo Fatturazione
-              </label>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-4">
+              {/* Free Promo Toggle */}
+              <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div>
+                  <label className="text-sm font-medium text-amber-800">
+                    PRO Gratuito (Promo/Partner)
+                  </label>
+                  <p className="text-xs text-amber-600">Attiva PRO senza costi per questo cliente</p>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setBillingCycle('monthly')}
-                  className={`p-4 rounded-lg border text-center transition-colors ${
-                    billingCycle === 'monthly'
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                  onClick={() => setIsFreePromo(!isFreePromo)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    isFreePromo ? 'bg-amber-500' : 'bg-gray-300'
                   }`}
                 >
-                  <div className="font-semibold text-gray-900">
-                    €{service.priceMonthly}/mese
-                  </div>
-                  <div className="text-sm text-gray-500">Mensile</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle('yearly')}
-                  className={`p-4 rounded-lg border text-center transition-colors ${
-                    billingCycle === 'yearly'
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="font-semibold text-gray-900">
-                    €{service.priceYearly}/anno
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Annuale <span className="text-green-600">(-17%)</span>
-                  </div>
+                  <span
+                    className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                      isFreePromo ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
                 </button>
               </div>
+
+              {!isFreePromo && (
+                <>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Ciclo Fatturazione
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle('monthly')}
+                      className={`p-4 rounded-lg border text-center transition-colors ${
+                        billingCycle === 'monthly'
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-semibold text-gray-900">
+                        €{service.priceMonthly}/mese
+                      </div>
+                      <div className="text-sm text-gray-500">Mensile</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle('yearly')}
+                      className={`p-4 rounded-lg border text-center transition-colors ${
+                        billingCycle === 'yearly'
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-semibold text-gray-900">
+                        €{service.priceYearly}/anno
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Annuale <span className="text-green-600">(-17%)</span>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {isFreePromo && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                  <span className="text-green-700 font-medium">€0 - PRO Gratuito Illimitato</span>
+                </div>
+              )}
             </div>
           )}
 

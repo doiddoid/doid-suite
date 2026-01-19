@@ -1649,6 +1649,7 @@ class AdminService {
           currentPeriodStart: sub.current_period_start,
           currentPeriodEnd: sub.current_period_end,
           cancelAtPeriodEnd: sub.cancel_at_period_end,
+          isFreePromo: sub.is_free_promo || false,
           createdAt: sub.created_at
         } : null,
         effectiveStatus,
@@ -1660,7 +1661,7 @@ class AdminService {
 
   // Aggiorna stato servizio per un'attività (admin)
   async updateActivityServiceStatus(activityId, serviceCode, updates) {
-    const { status, billingCycle, trialDays, periodEndDate, cancelAtPeriodEnd } = updates;
+    const { status, billingCycle, trialDays, periodEndDate, cancelAtPeriodEnd, isFreePromo } = updates;
 
     // Trova servizio
     const { data: service, error: serviceError } = await supabaseAdmin
@@ -1700,9 +1701,18 @@ class AdminService {
       updateData.current_period_start = now.toISOString();
       updateData.upgraded_at = now.toISOString();
 
-      if (periodEndDate) {
+      // Gestisci PRO gratuito (promo/partner)
+      if (isFreePromo) {
+        updateData.is_free_promo = true;
+        // Per PRO gratuito, imposta scadenza molto lontana (10 anni)
+        const endDate = new Date();
+        endDate.setFullYear(endDate.getFullYear() + 10);
+        updateData.current_period_end = endDate.toISOString();
+      } else if (periodEndDate) {
+        updateData.is_free_promo = false;
         updateData.current_period_end = new Date(periodEndDate).toISOString();
       } else {
+        updateData.is_free_promo = false;
         const endDate = new Date();
         if (billingCycle === 'yearly') {
           endDate.setFullYear(endDate.getFullYear() + 1);
