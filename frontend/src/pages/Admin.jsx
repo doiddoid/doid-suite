@@ -1455,15 +1455,15 @@ export default function Admin() {
                               return (
                                 <div className="space-y-2">
                                   {cachedServices.map((svc) => {
-                                    const ServiceIcon = SERVICE_ICONS[svc.icon] || Star;
-                                    const serviceColor = svc.color || '#6366f1';
+                                    const ServiceIcon = SERVICE_ICONS[svc.service?.icon] || Star;
+                                    const serviceColor = svc.service?.color || '#6366f1';
                                     return (
                                       <button
-                                        key={svc.code}
+                                        key={svc.service?.code}
                                         onClick={() => openServiceStatusModal(
                                           selectedItem.id,
                                           selectedItem.name,
-                                          svc,
+                                          svc.service,
                                           svc.subscription,
                                           svc.effectiveStatus,
                                           svc.isActive,
@@ -1476,7 +1476,7 @@ export default function Admin() {
                                             <ServiceIcon className="w-5 h-5" style={{ color: serviceColor }} />
                                           </div>
                                           <div className="flex-1">
-                                            <p className="font-medium text-sm">{svc.name}</p>
+                                            <p className="font-medium text-sm">{svc.service?.name}</p>
                                             {svc.daysRemaining !== null && svc.effectiveStatus === 'trial' && (
                                               <p className="text-xs text-gray-500">{svc.daysRemaining} giorni rimanenti</p>
                                             )}
