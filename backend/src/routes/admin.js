@@ -1062,8 +1062,8 @@ router.post('/access-service',
       adminEmail: req.user.email
     });
 
-    // URL di redirect con token
-    const redirectUrl = `${service.app_url}/auth/sso.php?token=${token}`;
+    // URL di redirect con token (senza .php - gestito da .htaccess dei servizi)
+    const redirectUrl = `${service.app_url}/auth/sso?token=${token}`;
 
     res.json({
       success: true,
