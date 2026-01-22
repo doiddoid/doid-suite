@@ -1582,6 +1582,17 @@ class AdminService {
       throw Errors.Internal('Errore nel recupero dei servizi');
     }
 
+    // Ottieni i piani PRO per ogni servizio (per i prezzi)
+    const { data: proPlans } = await supabaseAdmin
+      .from('plans')
+      .select('id, service_id, code, price_monthly, price_yearly')
+      .eq('code', 'pro')
+      .eq('is_active', true);
+
+    // Mappa piani PRO per service_id
+    const proPlanMap = new Map();
+    proPlans?.forEach(plan => proPlanMap.set(plan.service_id, plan));
+
     // Ottieni le subscription per questa attività
     const { data: subscriptions } = await supabaseAdmin
       .from('subscriptions')
@@ -1599,6 +1610,7 @@ class AdminService {
 
     return services.map(service => {
       const sub = subMap.get(service.id);
+      const proPlan = proPlanMap.get(service.id);
 
       let effectiveStatus = 'inactive';
       let isActive = false;
@@ -1626,6 +1638,10 @@ class AdminService {
         daysRemaining = Math.ceil((new Date(sub.current_period_end) - now) / (1000 * 60 * 60 * 24));
       }
 
+      // Usa i prezzi del piano PRO se disponibile, altrimenti fallback ai prezzi del servizio
+      const priceMonthly = proPlan ? parseFloat(proPlan.price_monthly || 0) : parseFloat(service.price_pro_monthly || 0);
+      const priceYearly = proPlan ? parseFloat(proPlan.price_yearly || 0) : parseFloat(service.price_pro_yearly || 0);
+
       return {
         service: {
           id: service.id,
@@ -1635,8 +1651,8 @@ class AdminService {
           icon: service.icon,
           color: service.color,
           hasFree: service.has_free_tier,
-          priceMonthly: parseFloat(service.price_pro_monthly || 0),
-          priceYearly: parseFloat(service.price_pro_yearly || 0),
+          priceMonthly,
+          priceYearly,
           trialDays: service.trial_days || 30
         },
         subscription: sub ? {
