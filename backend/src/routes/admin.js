@@ -1063,7 +1063,7 @@ router.post('/access-service',
     });
 
     // URL di redirect con token
-    const redirectUrl = `${service.app_url}/auth/sso?token=${token}`;
+    const redirectUrl = `${service.app_url}/auth/sso.php?token=${token}`;
 
     res.json({
       success: true,
