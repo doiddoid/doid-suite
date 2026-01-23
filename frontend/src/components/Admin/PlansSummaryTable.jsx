@@ -178,10 +178,11 @@ export default function PlansSummaryTable({ onSelectActivity }) {
 
   // Export to CSV
   const exportToCSV = () => {
-    const headers = ['Organizzazione', 'Attività', 'Servizio', 'Piano', 'Status', 'Ciclo', 'Prezzo', 'Scadenza', 'Giorni Rimanenti'];
+    const headers = ['Organizzazione', 'Attività', 'Email', 'Servizio', 'Piano', 'Status', 'Ciclo', 'Prezzo', 'Scadenza', 'Giorni Rimanenti'];
     const rows = sortedSubscriptions.map(sub => [
       sub.organization?.name || '-',
       sub.activity?.name || '-',
+      sub.activity?.email || '-',
       sub.service?.name || '-',
       sub.plan?.name || '-',
       sub.status,
