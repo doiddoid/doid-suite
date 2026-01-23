@@ -414,8 +414,9 @@ router.post('/:activityId/generate-token',
       });
     }
 
-    // Verifica che l'attività abbia accesso al servizio (abbonamento diretto o ereditato)
-    if (!service.canAccess) {
+    // Verifica che l'attività abbia un abbonamento attivo per il servizio
+    // Permette accesso sia se canAccess=true, sia se isActive=true (per configurare account non collegato)
+    if (!service.canAccess && !service.isActive) {
       return res.status(403).json({
         success: false,
         error: 'Nessun abbonamento attivo per questo servizio'
