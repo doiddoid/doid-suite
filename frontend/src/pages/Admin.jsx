@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import ServiceStatusManager from '../components/Admin/ServiceStatusManager';
+import ServiceAssignmentModal from '../components/Admin/ServiceAssignmentModal';
 import BillingSummary from '../components/Admin/BillingSummary';
 import CommunicationLogs from '../components/Admin/CommunicationLogs';
 import PlansSummaryTable from '../components/Admin/PlansSummaryTable';
@@ -68,6 +69,7 @@ export default function Admin() {
   const [logsPagination, setLogsPagination] = useState(null);
   const [serviceStatusModal, setServiceStatusModal] = useState(null); // { activityId, activityName, service, subscription, effectiveStatus, isActive, daysRemaining }
   const [activityServices, setActivityServices] = useState({}); // Cache dei servizi per attività
+  const [showServiceAssignment, setShowServiceAssignment] = useState(false); // Modal assegnazione servizi
 
   // Fetch stats on mount
   useEffect(() => {
@@ -910,6 +912,13 @@ export default function Admin() {
                           className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         />
                       </div>
+                      <button
+                        onClick={() => setShowServiceAssignment(true)}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                      >
+                        <Zap className="w-4 h-4" />
+                        Assegna Servizio
+                      </button>
                       <button onClick={() => openModal('organization', 'create')} className="btn-primary flex items-center gap-2">
                         <Plus className="w-4 h-4" />
                         Nuovo Cliente
@@ -1748,6 +1757,22 @@ export default function Admin() {
           daysRemaining={serviceStatusModal.daysRemaining}
           onUpdate={handleUpdateServiceStatus}
           onClose={() => setServiceStatusModal(null)}
+        />
+      )}
+
+      {/* Service Assignment Modal */}
+      {showServiceAssignment && (
+        <ServiceAssignmentModal
+          isOpen={showServiceAssignment}
+          onClose={() => setShowServiceAssignment(false)}
+          onSuccess={(data, message) => {
+            setShowServiceAssignment(false);
+            fetchActivities();
+            fetchOrganizations();
+            setSuccessMessage(message || 'Servizio assegnato con successo');
+          }}
+          activities={activities}
+          services={services}
         />
       )}
 

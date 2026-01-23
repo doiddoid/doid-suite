@@ -1408,6 +1408,112 @@ router.put('/activities/:activityId/services/:serviceCode',
   })
 );
 
+// ==================== SERVICE ASSIGNMENT ====================
+
+// POST /api/admin/service-assignment
+// Assegna un servizio a un'attività (supporta due modalità)
+router.post('/service-assignment',
+  [
+    body('mode').isIn(['by-activity', 'by-external']).withMessage('Mode deve essere by-activity o by-external'),
+    body('activityId').optional().isUUID().withMessage('ID attività non valido'),
+    body('serviceCode').isString().trim().notEmpty().withMessage('Codice servizio richiesto'),
+    body('externalAccountId').optional().isString().trim(),
+    body('status').optional().isIn(['trial', 'active', 'free']).withMessage('Status non valido'),
+    body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido'),
+    body('createActivityIfNotFound').optional().isBoolean().withMessage('createActivityIfNotFound deve essere boolean'),
+    body('newActivityName').optional().trim()
+  ],
+  validate,
+  logAdminAction('assign_service'),
+  asyncHandler(async (req, res) => {
+    const {
+      mode,
+      activityId,
+      serviceCode,
+      externalAccountId,
+      status = 'active',
+      billingCycle = 'yearly',
+      createActivityIfNotFound = false,
+      newActivityName
+    } = req.body;
+
+    // Validazioni specifiche per modalità
+    if (mode === 'by-activity' && !activityId) {
+      return res.status(400).json({
+        success: false,
+        error: 'activityId è richiesto per la modalità by-activity'
+      });
+    }
+
+    if (mode === 'by-external' && !externalAccountId) {
+      return res.status(400).json({
+        success: false,
+        error: 'externalAccountId è richiesto per la modalità by-external'
+      });
+    }
+
+    const result = await adminService.assignService({
+      mode,
+      activityId,
+      serviceCode,
+      externalAccountId,
+      status,
+      billingCycle,
+      createActivityIfNotFound,
+      newActivityName,
+      adminId: req.user.id
+    });
+
+    res.status(201).json({
+      success: true,
+      data: result,
+      message: result.activity.wasCreated
+        ? `Servizio ${serviceCode} assegnato. Nuova attività "${result.activity.name}" creata.`
+        : `Servizio ${serviceCode} assegnato all'attività "${result.activity.name}"`
+    });
+  })
+);
+
+// GET /api/admin/activities/:activityId/external-accounts
+// Ottieni i mapping esterni per un'attività
+router.get('/activities/:activityId/external-accounts',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido')
+  ],
+  validate,
+  logAdminAction('view_activity_external_accounts'),
+  asyncHandler(async (req, res) => {
+    const externalAccounts = await adminService.getActivityExternalAccounts(req.params.activityId);
+
+    res.json({
+      success: true,
+      data: { externalAccounts }
+    });
+  })
+);
+
+// GET /api/admin/external-account/:serviceCode/:externalAccountId
+// Cerca attività collegata a un account esterno
+router.get('/external-account/:serviceCode/:externalAccountId',
+  [
+    param('serviceCode').isString().trim().notEmpty().withMessage('Codice servizio richiesto'),
+    param('externalAccountId').isString().trim().notEmpty().withMessage('ID account esterno richiesto')
+  ],
+  validate,
+  logAdminAction('lookup_external_account'),
+  asyncHandler(async (req, res) => {
+    const { serviceCode, externalAccountId } = req.params;
+
+    const result = await adminService.findActivityByExternalAccount(serviceCode, externalAccountId);
+
+    res.json({
+      success: true,
+      data: result,
+      found: result !== null
+    });
+  })
+);
+
 // ==================== USER BILLING ====================
 
 // GET /api/admin/users/:userId/billing

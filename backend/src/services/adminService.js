@@ -2362,6 +2362,295 @@ class AdminService {
       billing
     };
   }
+
+  // ==================== SERVICE ASSIGNMENT ====================
+
+  /**
+   * Collega un account esterno di un servizio a un'attività Suite
+   * @param {string} activityId - ID attività Suite
+   * @param {string} serviceCode - Codice servizio (smart_review, smart_page, menu_digitale, display_suite)
+   * @param {string} externalAccountId - ID account nel servizio esterno
+   * @param {string} adminId - ID admin che effettua il collegamento
+   * @param {string} notes - Note opzionali
+   */
+  async linkExternalServiceAccount(activityId, serviceCode, externalAccountId, adminId = null, notes = null) {
+    // Verifica che l'attività esista
+    const { data: activity, error: activityError } = await supabaseAdmin
+      .from('activities')
+      .select('id, name')
+      .eq('id', activityId)
+      .single();
+
+    if (activityError || !activity) {
+      throw Errors.NotFound('Attività non trovata');
+    }
+
+    // Verifica che il service code sia valido
+    const validServices = ['smart_review', 'smart_page', 'menu_digitale', 'display_suite'];
+    if (!validServices.includes(serviceCode)) {
+      throw Errors.BadRequest(`Codice servizio non valido. Valori ammessi: ${validServices.join(', ')}`);
+    }
+
+    // Crea o aggiorna il mapping
+    const { data, error } = await supabaseAdmin
+      .from('activity_service_accounts')
+      .upsert({
+        activity_id: activityId,
+        service_code: serviceCode,
+        external_account_id: externalAccountId,
+        linked_by_admin_id: adminId,
+        notes: notes,
+        linked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'activity_id,service_code'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      // Errore di constraint unique su external_account_id
+      if (error.code === '23505' && error.message.includes('external_account_id')) {
+        throw Errors.Conflict(`L'account esterno ${externalAccountId} è già collegato a un'altra attività per ${serviceCode}`);
+      }
+      throw Errors.Internal('Errore nel collegamento dell\'account esterno: ' + error.message);
+    }
+
+    return {
+      id: data.id,
+      activityId: data.activity_id,
+      activityName: activity.name,
+      serviceCode: data.service_code,
+      externalAccountId: data.external_account_id,
+      linkedAt: data.linked_at,
+      notes: data.notes
+    };
+  }
+
+  /**
+   * Cerca un'attività Suite collegata a un account esterno
+   * @param {string} serviceCode - Codice servizio
+   * @param {string} externalAccountId - ID account nel servizio esterno
+   * @returns {Object|null} Attività trovata o null
+   */
+  async findActivityByExternalAccount(serviceCode, externalAccountId) {
+    const { data, error } = await supabaseAdmin
+      .from('activity_service_accounts')
+      .select(`
+        id,
+        activity_id,
+        service_code,
+        external_account_id,
+        linked_at,
+        notes,
+        activity:activities (
+          id,
+          name,
+          slug,
+          email,
+          phone,
+          status,
+          organization_id,
+          organization:organizations (
+            id,
+            name,
+            slug
+          )
+        )
+      `)
+      .eq('service_code', serviceCode)
+      .eq('external_account_id', externalAccountId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return {
+      linkId: data.id,
+      activityId: data.activity_id,
+      serviceCode: data.service_code,
+      externalAccountId: data.external_account_id,
+      linkedAt: data.linked_at,
+      notes: data.notes,
+      activity: data.activity ? {
+        id: data.activity.id,
+        name: data.activity.name,
+        slug: data.activity.slug,
+        email: data.activity.email,
+        phone: data.activity.phone,
+        status: data.activity.status,
+        organization: data.activity.organization ? {
+          id: data.activity.organization.id,
+          name: data.activity.organization.name,
+          slug: data.activity.organization.slug
+        } : null
+      } : null
+    };
+  }
+
+  /**
+   * Ottieni tutti i mapping esterni per un'attività
+   * @param {string} activityId - ID attività Suite
+   */
+  async getActivityExternalAccounts(activityId) {
+    const { data, error } = await supabaseAdmin
+      .from('activity_service_accounts')
+      .select('*')
+      .eq('activity_id', activityId)
+      .order('service_code');
+
+    if (error) {
+      throw Errors.Internal('Errore nel recupero degli account esterni');
+    }
+
+    return (data || []).map(item => ({
+      id: item.id,
+      serviceCode: item.service_code,
+      externalAccountId: item.external_account_id,
+      linkedAt: item.linked_at,
+      notes: item.notes
+    }));
+  }
+
+  /**
+   * Assegna un servizio a un'attività (flusso completo)
+   * Supporta due modalità:
+   * 1. by-activity: assegna a un'attività esistente
+   * 2. by-external: cerca/crea attività da account esterno
+   */
+  async assignService({
+    mode,
+    activityId,
+    serviceCode,
+    externalAccountId,
+    status = 'active',
+    billingCycle = 'yearly',
+    createActivityIfNotFound = false,
+    newActivityName = null,
+    adminId = null
+  }) {
+    let targetActivityId = activityId;
+    let activity = null;
+    let wasCreated = false;
+
+    // Modalità by-external: cerca o crea attività
+    if (mode === 'by-external') {
+      if (!externalAccountId) {
+        throw Errors.BadRequest('externalAccountId è richiesto per la modalità by-external');
+      }
+
+      // Cerca attività già collegata
+      const existingLink = await this.findActivityByExternalAccount(serviceCode, externalAccountId);
+
+      if (existingLink) {
+        // Attività già collegata, usa quella
+        targetActivityId = existingLink.activityId;
+        activity = existingLink.activity;
+      } else if (createActivityIfNotFound) {
+        // Crea nuova organizzazione e attività
+        if (!newActivityName) {
+          throw Errors.BadRequest('newActivityName è richiesto quando createActivityIfNotFound=true');
+        }
+
+        // Crea organizzazione
+        const orgSlug = await ensureUniqueSlug(
+          generateSlug(newActivityName),
+          'organizations',
+          supabaseAdmin
+        );
+
+        const { data: newOrg, error: orgError } = await supabaseAdmin
+          .from('organizations')
+          .insert({
+            name: newActivityName,
+            slug: orgSlug,
+            account_type: 'single',
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (orgError) {
+          throw Errors.Internal('Errore nella creazione dell\'organizzazione: ' + orgError.message);
+        }
+
+        // Crea attività
+        const actSlug = await ensureUniqueSlug(
+          generateSlug(newActivityName),
+          'activities',
+          supabaseAdmin
+        );
+
+        const { data: newActivity, error: actError } = await supabaseAdmin
+          .from('activities')
+          .insert({
+            name: newActivityName,
+            slug: actSlug,
+            organization_id: newOrg.id,
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (actError) {
+          throw Errors.Internal('Errore nella creazione dell\'attività: ' + actError.message);
+        }
+
+        targetActivityId = newActivity.id;
+        activity = newActivity;
+        wasCreated = true;
+      } else {
+        throw Errors.NotFound(`Nessuna attività trovata collegata all'account esterno ${externalAccountId}. Imposta createActivityIfNotFound=true per crearne una nuova.`);
+      }
+    } else {
+      // Modalità by-activity: verifica che l'attività esista
+      if (!targetActivityId) {
+        throw Errors.BadRequest('activityId è richiesto per la modalità by-activity');
+      }
+
+      const { data: activityData, error: activityError } = await supabaseAdmin
+        .from('activities')
+        .select('*, organization:organizations(id, name, slug)')
+        .eq('id', targetActivityId)
+        .single();
+
+      if (activityError || !activityData) {
+        throw Errors.NotFound('Attività non trovata');
+      }
+
+      activity = activityData;
+    }
+
+    // Attiva il servizio sull'attività
+    const subscription = await this.updateActivityServiceStatus(targetActivityId, serviceCode, {
+      status: status === 'active' ? 'pro' : status,
+      billingCycle
+    });
+
+    // Se abbiamo un externalAccountId, crea il mapping
+    let externalLink = null;
+    if (externalAccountId) {
+      externalLink = await this.linkExternalServiceAccount(
+        targetActivityId,
+        serviceCode,
+        externalAccountId,
+        adminId
+      );
+    }
+
+    return {
+      success: true,
+      activity: {
+        id: activity.id,
+        name: activity.name,
+        slug: activity.slug,
+        wasCreated
+      },
+      subscription,
+      externalLink
+    };
+  }
 }
 
 export default new AdminService();
