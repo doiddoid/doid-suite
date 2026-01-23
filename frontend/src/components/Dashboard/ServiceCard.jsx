@@ -65,7 +65,9 @@ export default function ServiceCard({
   };
 
   const trialDaysLeft = getTrialDaysLeft();
-  const isTrialExpiring = trialDaysLeft !== null && trialDaysLeft <= 3;
+  const isTrialExpiring = trialDaysLeft !== null && trialDaysLeft <= 3 && trialDaysLeft > 0;
+  // Trial scaduto: status è 'trial' ma isActive è false (data scaduta)
+  const isTrialExpired = subscription?.status === 'trial' && !isActive;
 
   // Gestisce click sul pulsante principale
   const handleAction = async () => {
@@ -78,7 +80,8 @@ export default function ServiceCard({
         await onConfigure();
       } else if (!subscription && onActivateTrial) {
         await onActivateTrial();
-      } else if (subscription?.status === 'expired' && onChoosePlan) {
+      } else if ((subscription?.status === 'expired' || subscription?.status === 'canceled' || isTrialExpired) && onChoosePlan) {
+        // Trial scaduto, abbonamento scaduto o cancellato - scegli piano
         await onChoosePlan();
       } else if (isTrialExpiring && onChoosePlan) {
         await onChoosePlan();
@@ -148,7 +151,17 @@ export default function ServiceCard({
       };
     }
 
-    if (subscription.status === 'expired') {
+    // Trial scaduto - mostra Attiva Piano
+    if (isTrialExpired) {
+      return {
+        label: 'Attiva Piano',
+        icon: CreditCard,
+        className: 'bg-amber-500 text-white hover:bg-amber-600'
+      };
+    }
+
+    // Abbonamento scaduto o cancellato - mostra Rinnova
+    if (subscription.status === 'expired' || subscription.status === 'canceled') {
       return {
         label: 'Rinnova',
         icon: RefreshCw,
@@ -156,6 +169,7 @@ export default function ServiceCard({
       };
     }
 
+    // Trial in scadenza - mostra Scegli Piano
     if (isTrialExpiring) {
       return {
         label: 'Scegli Piano',
@@ -192,7 +206,7 @@ export default function ServiceCard({
         </div>
         {subscription && (
           <StatusBadge
-            status={subscription.status}
+            status={isTrialExpired ? 'expired' : subscription.status}
             trialDaysLeft={trialDaysLeft}
           />
         )}
@@ -212,11 +226,14 @@ export default function ServiceCard({
           <div className="mb-4">
             <p className="text-xs text-gray-400">
               Piano: <span className="font-medium">{subscription.plan.name}</span>
-              {subscription.status === 'trial' && (
+              {subscription.status === 'trial' && !isTrialExpired && (
                 <span className="ml-1 text-emerald-600 font-medium">- Trial</span>
               )}
+              {isTrialExpired && (
+                <span className="ml-1 text-red-600 font-medium">- Trial scaduto</span>
+              )}
             </p>
-            {subscription.status === 'trial' && trialDaysLeft !== null && (
+            {subscription.status === 'trial' && trialDaysLeft !== null && !isTrialExpired && (
               <p className={`text-xs mt-1 ${trialDaysLeft <= 7 ? 'text-amber-600' : 'text-emerald-600'}`}>
                 {trialDaysLeft > 1 ? (
                   <>{trialDaysLeft} giorni rimanenti</>
@@ -225,6 +242,11 @@ export default function ServiceCard({
                 ) : (
                   <>Scade oggi</>
                 )}
+              </p>
+            )}
+            {isTrialExpired && (
+              <p className="text-xs mt-1 text-red-600">
+                Il periodo di prova è terminato. Attiva un piano per continuare.
               </p>
             )}
           </div>
