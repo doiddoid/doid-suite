@@ -574,15 +574,28 @@ class SubscriptionService {
     // Ottieni abbonamenti da pacchetti organizzazione
     const packageSubscriptions = await this.getActivityPackageSubscriptions(activityId);
 
+    // Ottieni account servizi collegati per questa attività
+    const { data: serviceAccounts } = await supabaseAdmin
+      .from('activity_service_accounts')
+      .select('service_code, external_account_id, linked_at')
+      .eq('activity_id', activityId);
+
+    const serviceAccountMap = new Map();
+    (serviceAccounts || []).forEach(account => {
+      serviceAccountMap.set(account.service_code, account);
+    });
+
     const now = new Date();
 
     return services.map(service => {
       const sub = subscriptionMap.get(service.id);
       const packageSub = packageSubscriptions.get(service.code);
+      const linkedAccount = serviceAccountMap.get(service.code);
       let subscription = null;
       let isActive = false;
       let canAccess = false;
       let inherited = false;
+      let hasLinkedAccount = !!linkedAccount;
 
       // Prima verifica abbonamento diretto
       if (sub) {
@@ -591,17 +604,19 @@ class SubscriptionService {
         if (sub.status === 'trial') {
           const trialEnd = new Date(sub.trial_ends_at);
           isActive = now <= trialEnd;
-          canAccess = isActive;
         } else if (sub.status === 'active') {
           const periodEnd = new Date(sub.current_period_end);
           isActive = now <= periodEnd;
-          canAccess = isActive;
         }
 
         if (plan?.code === 'free') {
           isActive = true;
-          canAccess = true;
         }
+
+        // canAccess richiede abbonamento attivo E account collegato (se il servizio lo richiede)
+        // Per ora, i servizi smart_review, smart_page, menu_digitale richiedono account collegato
+        const requiresLinkedAccount = ['smart_review', 'smart_page', 'menu_digitale'].includes(service.code);
+        canAccess = isActive && (!requiresLinkedAccount || hasLinkedAccount);
 
         subscription = {
           id: sub.id,
@@ -623,8 +638,11 @@ class SubscriptionService {
       // Se non ha abbonamento diretto, verifica pacchetto
       else if (packageSub) {
         isActive = true;
-        canAccess = true;
         inherited = true;
+
+        // canAccess richiede anche account collegato
+        const requiresLinkedAccount = ['smart_review', 'smart_page', 'menu_digitale'].includes(service.code);
+        canAccess = !requiresLinkedAccount || hasLinkedAccount;
 
         subscription = {
           id: packageSub.id,
@@ -652,7 +670,12 @@ class SubscriptionService {
         subscription,
         isActive,
         canAccess,
-        inherited
+        inherited,
+        hasLinkedAccount,
+        linkedAccount: linkedAccount ? {
+          externalAccountId: linkedAccount.external_account_id,
+          linkedAt: linkedAccount.linked_at
+        } : null
       };
     });
   }

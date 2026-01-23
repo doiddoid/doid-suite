@@ -88,6 +88,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleConfigureService = async (serviceCode) => {
+    // Per configurare/riconfigurare un servizio, usa lo stesso flusso di accesso
+    // che genererà il token SSO e permetterà di creare/collegare l'account
+    const result = await accessService(serviceCode);
+    if (!result.success) {
+      alert(result.error || 'Errore nell\'accesso al servizio per la configurazione');
+    }
+  };
+
   const handleSubscribe = async (planCode, billingCycle) => {
     if (!selectedService) return;
 
@@ -204,6 +213,7 @@ export default function Dashboard() {
           onAccessService={handleAccessService}
           onActivateTrialService={handleActivateTrial}
           onChoosePlanService={handleChoosePlan}
+          onConfigureService={handleConfigureService}
           loading={loading}
         />
       </div>

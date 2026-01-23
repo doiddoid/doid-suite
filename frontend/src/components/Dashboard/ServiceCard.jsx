@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard, Clock, Info } from 'lucide-react';
+import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard, Clock, Info, Settings } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
 // Servizi attualmente non disponibili (presto disponibili)
@@ -33,18 +33,22 @@ const iconMap = {
  * - subscription: { status, plan, trialEndsAt, currentPeriodEnd } | null
  * - isActive: boolean
  * - canAccess: boolean
+ * - hasLinkedAccount: boolean - se esiste un account collegato nel servizio esterno
  * - onAccess: () => void
  * - onActivateTrial: () => void
  * - onChoosePlan: () => void
+ * - onConfigure: () => void - per configurare/collegare account servizio
  */
 export default function ServiceCard({
   service,
   subscription,
   isActive,
   canAccess,
+  hasLinkedAccount = true,
   onAccess,
   onActivateTrial,
-  onChoosePlan
+  onChoosePlan,
+  onConfigure
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -69,6 +73,9 @@ export default function ServiceCard({
     try {
       if (canAccess && onAccess) {
         await onAccess();
+      } else if (isActive && !hasLinkedAccount && onConfigure) {
+        // Abbonamento attivo ma nessun account collegato - configura
+        await onConfigure();
       } else if (!subscription && onActivateTrial) {
         await onActivateTrial();
       } else if (subscription?.status === 'expired' && onChoosePlan) {
@@ -115,6 +122,15 @@ export default function ServiceCard({
         icon: ExternalLink,
         className: 'hover:opacity-80 font-semibold',
         style: getAccessButtonStyle()
+      };
+    }
+
+    // Abbonamento attivo ma nessun account collegato - mostra Configura
+    if (isActive && !hasLinkedAccount) {
+      return {
+        label: 'Configura',
+        icon: Settings,
+        className: 'bg-primary-600 text-white hover:bg-primary-700'
       };
     }
 

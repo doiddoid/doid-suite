@@ -502,4 +502,56 @@ router.post('/sso/authenticate',
   })
 );
 
+// POST /api/external/service-account/unlink
+// Rimuove il collegamento tra un account servizio esterno e un'attività Suite
+// Chiamato dai servizi esterni quando un account viene eliminato
+router.post('/service-account/unlink',
+  [
+    body('service_code').notEmpty().withMessage('Codice servizio richiesto'),
+    body('external_account_id').notEmpty().withMessage('ID account esterno richiesto')
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { service_code, activity_id, external_account_id } = req.body;
+
+    try {
+      // Costruisci la query base
+      let query = supabaseAdmin
+        .from('activity_service_accounts')
+        .delete()
+        .eq('service_code', service_code)
+        .eq('external_account_id', external_account_id);
+
+      // Se è fornito anche l'activity_id, aggiungilo al filtro
+      if (activity_id) {
+        query = query.eq('activity_id', activity_id);
+      }
+
+      const { error } = await query;
+
+      if (error) {
+        console.error('Error unlinking service account:', error);
+        return res.status(500).json({
+          success: false,
+          error: 'Errore durante la rimozione del collegamento'
+        });
+      }
+
+      console.log(`Service account unlinked: ${service_code} - ${external_account_id}`);
+
+      res.json({
+        success: true,
+        message: 'Collegamento rimosso con successo'
+      });
+
+    } catch (error) {
+      console.error('Service account unlink error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Errore durante la rimozione del collegamento'
+      });
+    }
+  })
+);
+
 export default router;

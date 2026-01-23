@@ -5,10 +5,11 @@ import ServiceCard from './ServiceCard';
  * ServicesGrid - Griglia di ServiceCard
  *
  * Props:
- * - services: array da API dashboard (ogni item ha: service, subscription, isActive, canAccess)
+ * - services: array da API dashboard (ogni item ha: service, subscription, isActive, canAccess, hasLinkedAccount)
  * - onAccessService: (serviceCode) => void
  * - onActivateTrialService: (serviceCode) => void
  * - onChoosePlanService: (serviceCode) => void
+ * - onConfigureService: (serviceCode) => void
  * - loading: boolean
  */
 export default function ServicesGrid({
@@ -16,6 +17,7 @@ export default function ServicesGrid({
   onAccessService,
   onActivateTrialService,
   onChoosePlanService,
+  onConfigureService,
   loading = false
 }) {
   // Loading skeleton
@@ -65,9 +67,11 @@ export default function ServicesGrid({
           subscription={item.subscription}
           isActive={item.isActive}
           canAccess={item.canAccess}
+          hasLinkedAccount={item.hasLinkedAccount !== false}
           onAccess={() => onAccessService?.(item.service.code)}
           onActivateTrial={() => onActivateTrialService?.(item.service.code)}
           onChoosePlan={() => onChoosePlanService?.(item.service.code)}
+          onConfigure={() => onConfigureService?.(item.service.code)}
         />
       ))}
     </div>
