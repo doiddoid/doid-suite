@@ -304,7 +304,7 @@ router.post('/sso/authenticate',
           `)
           .eq('activity_id', activity.id)
           .eq('service.code', requestedService)
-          .in('status', ['active', 'trial', 'suspended'])
+          .in('status', ['active', 'trial', 'suspended', 'past_due'])
           .single();
 
         if (sub) {
@@ -316,8 +316,8 @@ router.post('/sso/authenticate',
           // Super admin bypass: accesso sempre valido
           if (isAdminAccess) {
             licenseValid = true;
-          } else if (sub.status === 'suspended') {
-            // Suspended: dati mantenuti ma licenza non valida per utenti normali
+          } else if (sub.status === 'suspended' || sub.status === 'past_due') {
+            // Suspended/past_due: dati mantenuti ma licenza non valida per utenti normali
             licenseValid = false;
           } else {
             licenseValid = expiresAt > now;

@@ -676,7 +676,7 @@ class AuthService {
   }
 
   // Genera token per app esterne
-  generateExternalToken({ userId, organizationId, activityId, service, role }) {
+  generateExternalToken({ userId, organizationId, activityId, service, role, adminAccess, adminEmail }) {
     const payload = {
       userId,
       organizationId,
@@ -688,6 +688,14 @@ class AuthService {
     // Aggiungi activityId se presente (nuovo modello basato su attività)
     if (activityId) {
       payload.activityId = activityId;
+    }
+
+    // Aggiungi flag admin access per super admin
+    if (adminAccess) {
+      payload.adminAccess = true;
+      if (adminEmail) {
+        payload.adminEmail = adminEmail;
+      }
     }
 
     return jwt.sign(payload, process.env.JWT_SECRET, {
