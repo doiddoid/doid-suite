@@ -1533,7 +1533,7 @@ export default function Admin() {
                                         </div>
                                         {getStatusBadge(sub.status)}
                                       </div>
-                                      {['active', 'trial'].includes(sub.status) && sub.plan?.service?.code && (
+                                      {['active', 'trial', 'past_due', 'suspended'].includes(sub.status) && sub.plan?.service?.code && (
                                         <button
                                           onClick={() => {
                                             const owner = (itemDetails?.members || []).find(m => m.role === 'owner');
