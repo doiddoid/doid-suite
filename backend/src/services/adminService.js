@@ -2204,7 +2204,8 @@ class AdminService {
             name,
             slug,
             account_type,
-            email
+            email,
+            status
           )
         ),
         plan:plans (
@@ -2313,9 +2314,15 @@ class AdminService {
       };
     });
 
-    // Filtro per escludere attività cancellate (soft-deleted)
+    // Filtro per escludere attività e organizzazioni cancellate (soft-deleted)
     // Questo è necessario perché Supabase non supporta facilmente filtri su relazioni nested
-    results = results.filter(r => r.activity && r.activity.status !== 'cancelled');
+    results = results.filter(r => {
+      // Escludi se l'attività è cancellata o non esiste
+      if (!r.activity || r.activity.status === 'cancelled') return false;
+      // Escludi se l'organizzazione è cancellata
+      if (r.organization && r.organization.status === 'cancelled') return false;
+      return true;
+    });
 
     // Filtro per serviceCode (post-query perché nested)
     if (serviceCode) {
