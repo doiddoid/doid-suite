@@ -42,7 +42,8 @@ export const authenticate = async (req, res, next) => {
           }
         };
         req.token = token;
-        req.user.isSuperAdmin = isSuperAdmin(decoded.email);
+        // Per impersonation, il superadmin è chi sta impersonando, non l'utente impersonato
+        req.user.isSuperAdmin = isSuperAdmin(decoded.impersonatedByEmail);
 
         // Per impersonation, creiamo un client admin (l'utente impersonato potrebbe non avere una sessione attiva)
         req.supabase = supabaseAdmin;
