@@ -416,10 +416,22 @@ router.post('/:activityId/generate-token',
 
     // Verifica che l'attività abbia un abbonamento attivo per il servizio
     // Permette accesso sia se canAccess=true, sia se isActive=true (per configurare account non collegato)
-    if (!service.canAccess && !service.isActive) {
+    // Super admin bypass: può accedere anche senza abbonamento attivo
+    const isSuperAdminUser = req.user.isSuperAdmin;
+    const hasSubscription = service.subscription !== null;
+
+    if (!service.canAccess && !service.isActive && !isSuperAdminUser) {
       return res.status(403).json({
         success: false,
         error: 'Nessun abbonamento attivo per questo servizio'
+      });
+    }
+
+    // Per super admin senza subscription attiva, verifica almeno che esista una subscription
+    if (isSuperAdminUser && !service.canAccess && !service.isActive && !hasSubscription) {
+      return res.status(403).json({
+        success: false,
+        error: 'Nessuna subscription trovata per questo servizio'
       });
     }
 
@@ -429,7 +441,9 @@ router.post('/:activityId/generate-token',
       organizationId: req.activity.organization_id,
       activityId: activityId,
       service: serviceCode,
-      role: req.activityRole
+      role: req.activityRole,
+      adminAccess: isSuperAdminUser,
+      adminEmail: isSuperAdminUser ? req.user.email : undefined
     });
 
     // URL di redirect con token
