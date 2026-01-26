@@ -452,7 +452,7 @@ class AdminService {
   }
 
   // Ottieni tutte le organizzazioni
-  async getAllOrganizations({ page = 1, limit = 20, search = '', status = null, accountType = null }) {
+  async getAllOrganizations({ page = 1, limit = 20, search = '', status = null, accountType = null, includeCancelled = false }) {
     const offset = (page - 1) * limit;
 
     let query = supabaseAdmin
@@ -465,6 +465,9 @@ class AdminService {
 
     if (status) {
       query = query.eq('status', status);
+    } else if (!includeCancelled) {
+      // Di default escludi le organizzazioni cancellate
+      query = query.neq('status', 'cancelled');
     }
 
     if (accountType) {
@@ -695,7 +698,7 @@ class AdminService {
   // ==================== ACTIVITIES (Admin) ====================
 
   // Ottieni tutte le attività
-  async getAllActivities({ page = 1, limit = 20, search = '', status = null, organizationId = null }) {
+  async getAllActivities({ page = 1, limit = 20, search = '', status = null, organizationId = null, includeCancelled = false }) {
     const offset = (page - 1) * limit;
 
     let query = supabaseAdmin
@@ -708,6 +711,9 @@ class AdminService {
 
     if (status) {
       query = query.eq('status', status);
+    } else if (!includeCancelled) {
+      // Di default escludi le attività cancellate
+      query = query.neq('status', 'cancelled');
     }
 
     if (organizationId) {
@@ -981,24 +987,44 @@ class AdminService {
     return data;
   }
 
-  // Elimina organizzazione (hard delete)
+  // Elimina organizzazione (soft delete)
   async deleteOrganization(organizationId) {
-    // Elimina abbonamenti
+    // Ottieni tutte le attività dell'organizzazione
+    const { data: activities } = await supabaseAdmin
+      .from('activities')
+      .select('id')
+      .eq('organization_id', organizationId);
+
+    const activityIds = (activities || []).map(a => a.id);
+
+    // Cancella le subscriptions delle attività (soft delete)
+    if (activityIds.length > 0) {
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({ status: 'cancelled' })
+        .in('activity_id', activityIds)
+        .in('status', ['active', 'trial', 'pending']);
+    }
+
+    // Cancella le subscriptions dell'organizzazione (soft delete)
     await supabaseAdmin
       .from('subscriptions')
-      .delete()
-      .eq('organization_id', organizationId);
+      .update({ status: 'cancelled' })
+      .eq('organization_id', organizationId)
+      .in('status', ['active', 'trial', 'pending']);
 
-    // Elimina membri
-    await supabaseAdmin
-      .from('organization_users')
-      .delete()
-      .eq('organization_id', organizationId);
+    // Cancella le attività (soft delete)
+    if (activityIds.length > 0) {
+      await supabaseAdmin
+        .from('activities')
+        .update({ status: 'cancelled' })
+        .in('id', activityIds);
+    }
 
-    // Elimina organizzazione
+    // Cancella l'organizzazione (soft delete)
     const { error } = await supabaseAdmin
       .from('organizations')
-      .delete()
+      .update({ status: 'cancelled' })
       .eq('id', organizationId);
 
     if (error) {
@@ -2874,6 +2900,266 @@ class AdminService {
     }
 
     return restoredActivity;
+  }
+
+  // ==================== DELETED ORGANIZATIONS ====================
+
+  /**
+   * Ottieni tutte le organizzazioni cancellate (soft deleted)
+   */
+  async getDeletedOrganizations({ page = 1, limit = 20, search = '' }) {
+    const offset = (page - 1) * limit;
+
+    let query = supabaseAdmin
+      .from('organizations')
+      .select('*', { count: 'exact' })
+      .eq('status', 'cancelled');
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,slug.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+
+    const { data: organizations, error, count } = await query
+      .order('updated_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw Errors.Internal('Errore nel recupero delle organizzazioni eliminate');
+    }
+
+    // Aggiungi conteggio attività cancellate per ogni organizzazione
+    const organizationsWithInfo = await Promise.all(
+      (organizations || []).map(async (org) => {
+        const { count: activitiesCount } = await supabaseAdmin
+          .from('activities')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', org.id);
+
+        return {
+          id: org.id,
+          name: org.name,
+          slug: org.slug,
+          email: org.email,
+          phone: org.phone,
+          accountType: org.account_type,
+          status: org.status,
+          activitiesCount: activitiesCount || 0,
+          createdAt: org.created_at,
+          deletedAt: org.updated_at
+        };
+      })
+    );
+
+    return {
+      organizations: organizationsWithInfo,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit)
+      }
+    };
+  }
+
+  /**
+   * Elimina definitivamente un'organizzazione (hard delete)
+   */
+  async permanentDeleteOrganization(organizationId) {
+    // Verifica che l'organizzazione sia cancellata
+    const { data: organization, error: fetchError } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name, status')
+      .eq('id', organizationId)
+      .single();
+
+    if (fetchError || !organization) {
+      throw Errors.NotFound('Organizzazione non trovata');
+    }
+
+    if (organization.status !== 'cancelled') {
+      throw Errors.BadRequest('Solo le organizzazioni cancellate possono essere eliminate definitivamente.');
+    }
+
+    // Ottieni le attività associate
+    const { data: activities } = await supabaseAdmin
+      .from('activities')
+      .select('id')
+      .eq('organization_id', organizationId);
+
+    const activityIds = (activities || []).map(a => a.id);
+
+    // Elimina subscriptions delle attività
+    if (activityIds.length > 0) {
+      await supabaseAdmin
+        .from('subscriptions')
+        .delete()
+        .in('activity_id', activityIds);
+
+      // Elimina activity_users
+      await supabaseAdmin
+        .from('activity_users')
+        .delete()
+        .in('activity_id', activityIds);
+
+      // Elimina external_service_accounts
+      await supabaseAdmin
+        .from('external_service_accounts')
+        .delete()
+        .in('activity_id', activityIds);
+
+      // Elimina le attività
+      await supabaseAdmin
+        .from('activities')
+        .delete()
+        .in('id', activityIds);
+    }
+
+    // Elimina subscriptions dell'organizzazione
+    await supabaseAdmin
+      .from('subscriptions')
+      .delete()
+      .eq('organization_id', organizationId);
+
+    // Elimina organization_users
+    await supabaseAdmin
+      .from('organization_users')
+      .delete()
+      .eq('organization_id', organizationId);
+
+    // Elimina l'organizzazione
+    const { error } = await supabaseAdmin
+      .from('organizations')
+      .delete()
+      .eq('id', organizationId);
+
+    if (error) {
+      console.error('Error permanently deleting organization:', error);
+      throw Errors.Internal('Errore nell\'eliminazione definitiva dell\'organizzazione');
+    }
+
+    return { success: true, organizationId, organizationName: organization.name };
+  }
+
+  /**
+   * Elimina definitivamente tutte le organizzazioni cancellate
+   */
+  async permanentDeleteAllCancelledOrganizations() {
+    // Ottieni tutte le organizzazioni cancellate
+    const { data: cancelledOrgs, error: fetchError } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name')
+      .eq('status', 'cancelled');
+
+    if (fetchError) {
+      throw Errors.Internal('Errore nel recupero delle organizzazioni cancellate');
+    }
+
+    if (!cancelledOrgs || cancelledOrgs.length === 0) {
+      return { deletedCount: 0, deletedOrganizations: [] };
+    }
+
+    const orgIds = cancelledOrgs.map(o => o.id);
+
+    // Ottieni tutte le attività delle organizzazioni cancellate
+    const { data: activities } = await supabaseAdmin
+      .from('activities')
+      .select('id')
+      .in('organization_id', orgIds);
+
+    const activityIds = (activities || []).map(a => a.id);
+
+    // Elimina subscriptions delle attività
+    if (activityIds.length > 0) {
+      await supabaseAdmin
+        .from('subscriptions')
+        .delete()
+        .in('activity_id', activityIds);
+
+      await supabaseAdmin
+        .from('activity_users')
+        .delete()
+        .in('activity_id', activityIds);
+
+      await supabaseAdmin
+        .from('external_service_accounts')
+        .delete()
+        .in('activity_id', activityIds);
+
+      await supabaseAdmin
+        .from('activities')
+        .delete()
+        .in('id', activityIds);
+    }
+
+    // Elimina subscriptions delle organizzazioni
+    await supabaseAdmin
+      .from('subscriptions')
+      .delete()
+      .in('organization_id', orgIds);
+
+    // Elimina organization_users
+    await supabaseAdmin
+      .from('organization_users')
+      .delete()
+      .in('organization_id', orgIds);
+
+    // Elimina le organizzazioni
+    const { error } = await supabaseAdmin
+      .from('organizations')
+      .delete()
+      .in('id', orgIds);
+
+    if (error) {
+      console.error('Error permanently deleting all cancelled organizations:', error);
+      throw Errors.Internal('Errore nell\'eliminazione delle organizzazioni cancellate');
+    }
+
+    return {
+      deletedCount: cancelledOrgs.length,
+      deletedOrganizations: cancelledOrgs.map(o => ({ id: o.id, name: o.name }))
+    };
+  }
+
+  /**
+   * Ripristina un'organizzazione cancellata (e le sue attività)
+   */
+  async restoreOrganization(organizationId) {
+    // Verifica che l'organizzazione sia cancellata
+    const { data: organization, error: fetchError } = await supabaseAdmin
+      .from('organizations')
+      .select('*')
+      .eq('id', organizationId)
+      .single();
+
+    if (fetchError || !organization) {
+      throw Errors.NotFound('Organizzazione non trovata');
+    }
+
+    if (organization.status !== 'cancelled') {
+      throw Errors.BadRequest('L\'organizzazione non è cancellata');
+    }
+
+    // Ripristina le attività dell'organizzazione
+    await supabaseAdmin
+      .from('activities')
+      .update({ status: 'active' })
+      .eq('organization_id', organizationId)
+      .eq('status', 'cancelled');
+
+    // Ripristina l'organizzazione
+    const { data: restoredOrg, error } = await supabaseAdmin
+      .from('organizations')
+      .update({ status: 'active' })
+      .eq('id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error restoring organization:', error);
+      throw Errors.Internal('Errore nel ripristino dell\'organizzazione');
+    }
+
+    return restoredOrg;
   }
 }
 

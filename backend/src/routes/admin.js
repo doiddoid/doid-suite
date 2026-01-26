@@ -2078,4 +2078,84 @@ router.post('/activities/:id/restore',
   })
 );
 
+// ==================== DELETED ORGANIZATIONS ====================
+
+// GET /api/admin/organizations-deleted
+// Ottieni tutte le organizzazioni cancellate (soft deleted)
+router.get('/organizations-deleted',
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('Pagina non valida'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100'),
+    query('search').optional().trim()
+  ],
+  validate,
+  logAdminAction('list_deleted_organizations'),
+  asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20, search = '' } = req.query;
+
+    const result = await adminService.getDeletedOrganizations({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      search
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
+);
+
+// DELETE /api/admin/organizations/:id/permanent
+// Elimina definitivamente un'organizzazione (hard delete)
+router.delete('/organizations/:id/permanent',
+  [
+    param('id').isUUID().withMessage('ID organizzazione non valido')
+  ],
+  validate,
+  logAdminAction('permanent_delete_organization'),
+  asyncHandler(async (req, res) => {
+    await adminService.permanentDeleteOrganization(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Organizzazione eliminata definitivamente'
+    });
+  })
+);
+
+// DELETE /api/admin/organizations-deleted/all
+// Elimina definitivamente tutte le organizzazioni cancellate
+router.delete('/organizations-deleted/all',
+  logAdminAction('permanent_delete_all_organizations'),
+  asyncHandler(async (req, res) => {
+    const result = await adminService.permanentDeleteAllCancelledOrganizations();
+
+    res.json({
+      success: true,
+      data: result,
+      message: `${result.deletedCount} organizzazioni eliminate definitivamente`
+    });
+  })
+);
+
+// POST /api/admin/organizations/:id/restore
+// Ripristina un'organizzazione cancellata
+router.post('/organizations/:id/restore',
+  [
+    param('id').isUUID().withMessage('ID organizzazione non valido')
+  ],
+  validate,
+  logAdminAction('restore_organization'),
+  asyncHandler(async (req, res) => {
+    const organization = await adminService.restoreOrganization(req.params.id);
+
+    res.json({
+      success: true,
+      data: organization,
+      message: 'Organizzazione ripristinata con successo'
+    });
+  })
+);
+
 export default router;
