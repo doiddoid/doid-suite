@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Star, FileText, UtensilsCrossed, Monitor, Key, Check, X, Clock, Ban, Zap, AlertCircle, Pause } from 'lucide-react';
+import { Star, FileText, UtensilsCrossed, Monitor, Key, Check, X, Clock, Ban, Zap, AlertCircle, Pause, ExternalLink, Loader2, CreditCard } from 'lucide-react';
+import api from '../../services/api';
 
 const SERVICE_ICONS = {
   star: Star,
@@ -15,6 +16,7 @@ const STATUS_CONFIG = {
   trial: { label: 'TRIAL', bgColor: 'bg-blue-100', textColor: 'text-blue-700', icon: Clock },
   pro: { label: 'PRO', bgColor: 'bg-purple-100', textColor: 'text-purple-700', icon: Zap },
   active: { label: 'PRO', bgColor: 'bg-purple-100', textColor: 'text-purple-700', icon: Zap },
+  past_due: { label: 'IN ATTESA', bgColor: 'bg-orange-100', textColor: 'text-orange-700', icon: CreditCard },
   expired: { label: 'SCADUTO', bgColor: 'bg-orange-100', textColor: 'text-orange-700', icon: AlertCircle },
   cancelled: { label: 'CANCELLATO', bgColor: 'bg-red-100', textColor: 'text-red-700', icon: X },
   suspended: { label: 'SOSPESO', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', icon: Pause }
@@ -29,14 +31,48 @@ export default function ServiceStatusManager({
   isActive,
   daysRemaining,
   onUpdate,
-  onClose
+  onClose,
+  ownerId // ID del proprietario dell'attività per accesso admin
 }) {
   const [newStatus, setNewStatus] = useState(effectiveStatus || 'inactive');
   const [billingCycle, setBillingCycle] = useState(subscription?.billingCycle || 'yearly');
   const [trialDays, setTrialDays] = useState(service.trialDays || 30);
   const [isFreePromo, setIsFreePromo] = useState(subscription?.isFreePromo || false);
   const [loading, setLoading] = useState(false);
+  const [accessingService, setAccessingService] = useState(false);
   const [error, setError] = useState(null);
+
+  // Gestione accesso admin al servizio
+  const handleAdminAccess = async () => {
+    if (!ownerId) {
+      setError('Impossibile trovare il proprietario dell\'attività');
+      return;
+    }
+
+    setAccessingService(true);
+    setError(null);
+
+    try {
+      const response = await api.request('/admin/access-service', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: ownerId,
+          activityId: activityId,
+          serviceCode: service.code
+        })
+      });
+
+      if (response.success) {
+        window.open(response.data.redirectUrl, '_blank');
+      } else {
+        setError(response.error || 'Errore nell\'accesso al servizio');
+      }
+    } catch (err) {
+      setError(err.message || 'Errore nell\'accesso al servizio');
+    } finally {
+      setAccessingService(false);
+    }
+  };
 
   const ServiceIcon = SERVICE_ICONS[service.icon] || Star;
   const statusConfig = STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.inactive;
@@ -129,6 +165,26 @@ export default function ServiceStatusManager({
               )}
             </div>
           )}
+
+          {/* Pulsante Accedi al Servizio (Admin) */}
+          {ownerId && effectiveStatus !== 'inactive' && (
+            <button
+              onClick={handleAdminAccess}
+              disabled={accessingService}
+              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              style={{
+                backgroundColor: `${service.color}15`,
+                color: service.color
+              }}
+            >
+              {accessingService ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ExternalLink className="w-4 h-4" />
+              )}
+              Accedi al Servizio
+            </button>
+          )}
         </div>
 
         {/* Update Form */}
@@ -195,6 +251,19 @@ export default function ServiceStatusManager({
 
               <button
                 type="button"
+                onClick={() => setNewStatus('past_due')}
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                  newStatus === 'past_due'
+                    ? 'border-orange-500 bg-orange-50 text-orange-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <CreditCard className="w-4 h-4 mx-auto mb-1" />
+                In attesa
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setNewStatus('suspended')}
                 className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
                   newStatus === 'suspended'
@@ -220,6 +289,16 @@ export default function ServiceStatusManager({
               </button>
             </div>
           </div>
+
+          {/* Past Due Info */}
+          {newStatus === 'past_due' && (
+            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-sm text-orange-800">
+                <strong>In attesa di pagamento:</strong> Il cliente non ha ancora pagato ma intende continuare.
+                L'accesso è bloccato fino al pagamento. Il superadmin può comunque accedere.
+              </p>
+            </div>
+          )}
 
           {/* Suspended Info */}
           {newStatus === 'suspended' && (
