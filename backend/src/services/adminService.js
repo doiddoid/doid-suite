@@ -1751,6 +1751,10 @@ class AdminService {
       }
     } else if (status === 'inactive' || status === 'expired') {
       updateData.trial_ends_at = null;
+    } else if (status === 'suspended') {
+      // Sospeso: mantiene i dati ma blocca l'accesso
+      // Non modifichiamo date - il cliente può riattivare in seguito
+      updateData.cancelled_at = null; // Rimuovi eventuale cancellazione
     }
 
     let result;

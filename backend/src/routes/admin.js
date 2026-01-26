@@ -363,7 +363,7 @@ router.get('/subscriptions',
   [
     query('page').optional().isInt({ min: 1 }).withMessage('Pagina non valida'),
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100'),
-    query('status').optional().isIn(['trial', 'active', 'past_due', 'cancelled', 'expired']).withMessage('Status non valido'),
+    query('status').optional().isIn(['trial', 'active', 'past_due', 'cancelled', 'expired', 'suspended']).withMessage('Status non valido'),
     query('serviceCode').optional().trim()
   ],
   validate,
@@ -420,7 +420,7 @@ router.post('/subscriptions',
 router.put('/subscriptions/:id',
   [
     param('id').isUUID().withMessage('ID abbonamento non valido'),
-    body('status').optional().isIn(['trial', 'active', 'past_due', 'cancelled', 'expired']).withMessage('Status non valido'),
+    body('status').optional().isIn(['trial', 'active', 'past_due', 'cancelled', 'expired', 'suspended']).withMessage('Status non valido'),
     body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido'),
     body('planId').optional().isUUID().withMessage('ID piano non valido')
   ],
@@ -1387,7 +1387,7 @@ router.put('/activities/:activityId/services/:serviceCode',
   [
     param('activityId').isUUID().withMessage('ID attività non valido'),
     param('serviceCode').isString().trim().notEmpty().withMessage('Codice servizio richiesto'),
-    body('status').isIn(['inactive', 'free', 'trial', 'pro', 'active', 'expired', 'cancelled']).withMessage('Status non valido'),
+    body('status').isIn(['inactive', 'free', 'trial', 'pro', 'active', 'expired', 'cancelled', 'suspended']).withMessage('Status non valido'),
     body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido'),
     body('trialDays').optional().isInt({ min: 1, max: 90 }).withMessage('Giorni trial deve essere tra 1 e 90'),
     body('periodEndDate').optional().isISO8601().withMessage('Data fine periodo non valida'),

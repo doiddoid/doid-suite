@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, FileText, UtensilsCrossed, Monitor, Key, Check, X, Clock, Ban, Zap, AlertCircle } from 'lucide-react';
+import { Star, FileText, UtensilsCrossed, Monitor, Key, Check, X, Clock, Ban, Zap, AlertCircle, Pause } from 'lucide-react';
 
 const SERVICE_ICONS = {
   star: Star,
@@ -16,7 +16,8 @@ const STATUS_CONFIG = {
   pro: { label: 'PRO', bgColor: 'bg-purple-100', textColor: 'text-purple-700', icon: Zap },
   active: { label: 'PRO', bgColor: 'bg-purple-100', textColor: 'text-purple-700', icon: Zap },
   expired: { label: 'SCADUTO', bgColor: 'bg-orange-100', textColor: 'text-orange-700', icon: AlertCircle },
-  cancelled: { label: 'CANCELLATO', bgColor: 'bg-red-100', textColor: 'text-red-700', icon: X }
+  cancelled: { label: 'CANCELLATO', bgColor: 'bg-red-100', textColor: 'text-red-700', icon: X },
+  suspended: { label: 'SOSPESO', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', icon: Pause }
 };
 
 export default function ServiceStatusManager({
@@ -194,6 +195,19 @@ export default function ServiceStatusManager({
 
               <button
                 type="button"
+                onClick={() => setNewStatus('suspended')}
+                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                  newStatus === 'suspended'
+                    ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <Pause className="w-4 h-4 mx-auto mb-1" />
+                Sospendi
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setNewStatus('cancelled')}
                 className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
                   newStatus === 'cancelled'
@@ -206,6 +220,16 @@ export default function ServiceStatusManager({
               </button>
             </div>
           </div>
+
+          {/* Suspended Info */}
+          {newStatus === 'suspended' && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Sospensione:</strong> Il servizio rimarrà bloccato ma i dati saranno mantenuti.
+                Il cliente potrà riattivarlo pagando o contattando il supporto.
+              </p>
+            </div>
+          )}
 
           {/* Trial Days */}
           {newStatus === 'trial' && (

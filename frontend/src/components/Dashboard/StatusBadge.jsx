@@ -7,6 +7,7 @@
  * - active/pro: Abbonamento PRO attivo (viola)
  * - expired: Scaduto (arancione)
  * - cancelled: Cancellato (rosso)
+ * - suspended: Sospeso (giallo) - dati mantenuti, accesso bloccato
  */
 
 export default function StatusBadge({ status, trialDaysLeft, className = '' }) {
@@ -17,7 +18,8 @@ export default function StatusBadge({ status, trialDaysLeft, className = '' }) {
     active: 'bg-purple-100 text-purple-700',
     pro: 'bg-purple-100 text-purple-700',
     expired: 'bg-orange-100 text-orange-700',
-    cancelled: 'bg-red-100 text-red-700'
+    cancelled: 'bg-red-100 text-red-700',
+    suspended: 'bg-yellow-100 text-yellow-700'
   };
 
   const getLabel = () => {
@@ -35,6 +37,8 @@ export default function StatusBadge({ status, trialDaysLeft, className = '' }) {
         return 'SCADUTO';
       case 'cancelled':
         return 'CANCELLATO';
+      case 'suspended':
+        return 'SOSPESO';
       default:
         return 'Non attivo';
     }

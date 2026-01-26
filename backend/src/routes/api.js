@@ -280,8 +280,11 @@ router.post('/sso/authenticate',
       let planCode = null;
       let planFeatures = {};
 
+      // Super admin bypass: se il token ha adminAccess, la licenza è sempre valida
+      const isAdminAccess = decoded.adminAccess === true;
+
       if (activity) {
-        // Cerca abbonamento per attività
+        // Cerca abbonamento per attività (includi suspended per mostrare stato corretto)
         const { data: sub } = await supabaseAdmin
           .from('subscriptions')
           .select(`
@@ -301,7 +304,7 @@ router.post('/sso/authenticate',
           `)
           .eq('activity_id', activity.id)
           .eq('service.code', requestedService)
-          .in('status', ['active', 'trial'])
+          .in('status', ['active', 'trial', 'suspended'])
           .single();
 
         if (sub) {
@@ -310,7 +313,16 @@ router.post('/sso/authenticate',
             ? new Date(sub.trial_ends_at)
             : new Date(sub.current_period_end);
 
-          licenseValid = expiresAt > now;
+          // Super admin bypass: accesso sempre valido
+          if (isAdminAccess) {
+            licenseValid = true;
+          } else if (sub.status === 'suspended') {
+            // Suspended: dati mantenuti ma licenza non valida per utenti normali
+            licenseValid = false;
+          } else {
+            licenseValid = expiresAt > now;
+          }
+
           licenseExpiration = expiresAt.toISOString();
           planCode = sub.plan?.code;
           planFeatures = sub.plan?.features || {};
@@ -324,6 +336,13 @@ router.post('/sso/authenticate',
             expiresAt: licenseExpiration
           };
         }
+      }
+
+      // Se non c'è subscription ma è admin access, crea una licenza fittizia valida
+      if (!subscription && isAdminAccess) {
+        licenseValid = true;
+        planCode = 'admin_access';
+        planFeatures = { unlimited: true };
       }
 
       // 7. Se non ha abbonamento diretto, verifica pacchetto organizzazione (solo se ha org)
@@ -487,6 +506,11 @@ router.post('/sso/authenticate',
           service: requestedService,
           // Token sidebar per l'app esterna (24h)
           sidebarToken: sidebarToken,
+          // Accesso admin (super admin bypass)
+          adminAccess: isAdminAccess ? {
+            enabled: true,
+            adminEmail: decoded.adminEmail || null
+          } : null,
           // Timestamp per audit
           authenticatedAt: new Date().toISOString()
         }

@@ -527,10 +527,15 @@ class SubscriptionService {
         isActive = true;
         canAccess = true;
       }
+    } else if (subscription.status === 'suspended') {
+      // Suspended: dati mantenuti, accesso bloccato
+      // Non cambiamo lo stato automaticamente
+      isActive = false;
+      canAccess = false;
     }
 
-    // Piano free è sempre attivo
-    if (subscription.plan?.code === 'free') {
+    // Piano free è sempre attivo (anche se sospeso rimane bloccato se esplicitamente sospeso)
+    if (subscription.plan?.code === 'free' && subscription.status !== 'suspended') {
       isActive = true;
       canAccess = true;
     }
@@ -1026,6 +1031,127 @@ class SubscriptionService {
 
     console.log(`[SUBSCRIPTION] Renewed: ${activityId}/${serviceCode} until ${newPeriodEnd.toISOString()}`);
     return { success: true, newPeriodEnd: newPeriodEnd.toISOString() };
+  }
+
+  /**
+   * Sospende abbonamento (mantiene dati, blocca accesso)
+   * @param {string} activityId - ID attività
+   * @param {string} serviceCode - Codice servizio
+   * @param {string} userId - ID utente (opzionale, per webhook)
+   */
+  async suspendSubscription(activityId, serviceCode, userId = null) {
+    const existingSub = await this.getSubscription(activityId, serviceCode);
+    if (!existingSub) {
+      throw Errors.NotFound('Abbonamento non trovato');
+    }
+
+    // Solo alcuni stati possono essere sospesi
+    const suspendableStatuses = ['active', 'trial', 'expired', 'past_due'];
+    if (!suspendableStatuses.includes(existingSub.status)) {
+      throw Errors.BadRequest(`Impossibile sospendere abbonamento con stato: ${existingSub.status}`);
+    }
+
+    // Ottieni dati attività per webhook
+    const { data: activity } = await supabaseAdmin
+      .from('activities')
+      .select('id, name, organization_id')
+      .eq('id', activityId)
+      .single();
+
+    const now = new Date();
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .update({
+        status: 'suspended',
+        updated_at: now.toISOString()
+      })
+      .eq('id', existingSub.id);
+
+    if (error) {
+      console.error('Error suspending subscription:', error);
+      throw Errors.Internal('Errore nella sospensione dell\'abbonamento');
+    }
+
+    // Invia webhook license sync verso app DOID
+    this.sendLicenseSyncWebhook({
+      serviceCode,
+      action: 'suspended',
+      userId,
+      activity,
+      subscription: {
+        status: 'suspended',
+        planCode: existingSub.plan?.code,
+        currentPeriodEnd: existingSub.currentPeriodEnd
+      }
+    });
+
+    console.log(`[SUBSCRIPTION] Suspended: ${activityId}/${serviceCode}`);
+    return { success: true, message: 'Abbonamento sospeso' };
+  }
+
+  /**
+   * Riattiva abbonamento sospeso
+   * @param {string} activityId - ID attività
+   * @param {string} serviceCode - Codice servizio
+   * @param {string} billingCycle - Ciclo fatturazione (monthly/yearly)
+   * @param {string} userId - ID utente (opzionale, per webhook)
+   */
+  async reactivateSubscription(activityId, serviceCode, billingCycle = 'monthly', userId = null) {
+    const existingSub = await this.getSubscription(activityId, serviceCode);
+    if (!existingSub) {
+      throw Errors.NotFound('Abbonamento non trovato');
+    }
+
+    if (existingSub.status !== 'suspended') {
+      throw Errors.BadRequest(`L'abbonamento non è sospeso (stato attuale: ${existingSub.status})`);
+    }
+
+    // Ottieni dati attività per webhook
+    const { data: activity } = await supabaseAdmin
+      .from('activities')
+      .select('id, name, organization_id')
+      .eq('id', activityId)
+      .single();
+
+    const now = new Date();
+    const periodEnd = billingCycle === 'yearly'
+      ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
+      : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .update({
+        status: 'active',
+        billing_cycle: billingCycle,
+        current_period_start: now.toISOString(),
+        current_period_end: periodEnd.toISOString(),
+        trial_ends_at: null,
+        cancelled_at: null,
+        updated_at: now.toISOString()
+      })
+      .eq('id', existingSub.id);
+
+    if (error) {
+      console.error('Error reactivating subscription:', error);
+      throw Errors.Internal('Errore nella riattivazione dell\'abbonamento');
+    }
+
+    // Invia webhook license sync verso app DOID
+    this.sendLicenseSyncWebhook({
+      serviceCode,
+      action: 'reactivated',
+      userId,
+      activity,
+      subscription: {
+        status: 'active',
+        planCode: existingSub.plan?.code,
+        billingCycle,
+        currentPeriodEnd: periodEnd.toISOString()
+      }
+    });
+
+    console.log(`[SUBSCRIPTION] Reactivated: ${activityId}/${serviceCode} until ${periodEnd.toISOString()}`);
+    return { success: true, newPeriodEnd: periodEnd.toISOString() };
   }
 
   /**

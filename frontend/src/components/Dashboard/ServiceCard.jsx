@@ -80,8 +80,8 @@ export default function ServiceCard({
         await onConfigure();
       } else if (!subscription && onActivateTrial) {
         await onActivateTrial();
-      } else if ((subscription?.status === 'expired' || subscription?.status === 'canceled' || isTrialExpired) && onChoosePlan) {
-        // Trial scaduto, abbonamento scaduto o cancellato - scegli piano
+      } else if ((subscription?.status === 'expired' || subscription?.status === 'canceled' || subscription?.status === 'suspended' || isTrialExpired) && onChoosePlan) {
+        // Trial scaduto, abbonamento scaduto, cancellato o sospeso - scegli piano per riattivare
         await onChoosePlan();
       } else if (isTrialExpiring && onChoosePlan) {
         await onChoosePlan();
@@ -166,6 +166,15 @@ export default function ServiceCard({
         label: 'Rinnova',
         icon: RefreshCw,
         className: 'bg-amber-500 text-white hover:bg-amber-600'
+      };
+    }
+
+    // Abbonamento sospeso - mostra Riattiva
+    if (subscription.status === 'suspended') {
+      return {
+        label: 'Riattiva',
+        icon: RefreshCw,
+        className: 'bg-yellow-500 text-white hover:bg-yellow-600'
       };
     }
 
