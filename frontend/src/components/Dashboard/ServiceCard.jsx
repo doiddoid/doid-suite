@@ -85,6 +85,12 @@ export default function ServiceCard({
         await onChoosePlan();
       } else if (isTrialExpiring && onChoosePlan) {
         await onChoosePlan();
+      } else if (subscription?.status === 'past_due' && onAccess) {
+        // past_due: tenta accesso (superadmin può accedere via bypass backend)
+        await onAccess();
+      } else if (subscription && hasLinkedAccount && onAccess) {
+        // Fallback: se c'è subscription e account collegato, tenta accesso
+        await onAccess();
       }
     } finally {
       setLoading(false);
