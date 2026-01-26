@@ -407,7 +407,7 @@ class ActivityService {
   }
 
   /**
-   * Elimina (disattiva) un'attività
+   * Elimina (disattiva) un'attività e le sue subscriptions associate
    */
   async deleteActivity(activityId, userId) {
     // Solo owner può eliminare
@@ -416,6 +416,19 @@ class ActivityService {
       throw Errors.Forbidden('Solo il proprietario può eliminare l\'attività');
     }
 
+    // Cancella le subscriptions associate (soft delete)
+    const { error: subError } = await supabaseAdmin
+      .from('subscriptions')
+      .update({ status: 'cancelled' })
+      .eq('activity_id', activityId)
+      .in('status', ['active', 'trial', 'pending']);
+
+    if (subError) {
+      console.error('Error cancelling subscriptions:', subError);
+      // Continua comunque con l'eliminazione dell'attività
+    }
+
+    // Cancella l'attività (soft delete)
     const { error } = await supabaseAdmin
       .from('activities')
       .update({ status: 'cancelled' })

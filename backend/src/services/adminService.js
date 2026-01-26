@@ -1391,7 +1391,7 @@ class AdminService {
       .select(`
         id,
         trial_ends_at,
-        activity:activities (id, name, email),
+        activity:activities (id, name, email, status),
         service:services (id, code, name)
       `)
       .eq('status', 'trial')
@@ -1406,7 +1406,10 @@ class AdminService {
     const notifications = [];
 
     // Crea log comunicazioni e webhook per ogni trial in scadenza
-    for (const trial of expiringTrials || []) {
+    // Filtra le attività cancellate per evitare notifiche a clienti eliminati
+    const activeTrials = (expiringTrials || []).filter(t => t.activity && t.activity.status !== 'cancelled');
+
+    for (const trial of activeTrials) {
       const daysLeft = Math.ceil((new Date(trial.trial_ends_at) - now) / (1000 * 60 * 60 * 24));
 
       // Log comunicazione
@@ -1448,7 +1451,7 @@ class AdminService {
     }
 
     return {
-      expiringCount: expiringTrials?.length || 0,
+      expiringCount: activeTrials.length,
       notifications
     };
   }
@@ -2169,6 +2172,7 @@ class AdminService {
           slug,
           email,
           phone,
+          status,
           organization:organizations (
             id,
             name,
@@ -2282,6 +2286,10 @@ class AdminService {
         updatedAt: sub.updated_at
       };
     });
+
+    // Filtro per escludere attività cancellate (soft-deleted)
+    // Questo è necessario perché Supabase non supporta facilmente filtri su relazioni nested
+    results = results.filter(r => r.activity && r.activity.status !== 'cancelled');
 
     // Filtro per serviceCode (post-query perché nested)
     if (serviceCode) {
@@ -2654,6 +2662,218 @@ class AdminService {
       subscription,
       externalLink
     };
+  }
+
+  // ==================== DELETED ACTIVITIES ====================
+
+  /**
+   * Ottieni tutte le attività cancellate (soft deleted)
+   */
+  async getDeletedActivities({ page = 1, limit = 20, search = '' }) {
+    const offset = (page - 1) * limit;
+
+    let query = supabaseAdmin
+      .from('activities')
+      .select('*', { count: 'exact' })
+      .eq('status', 'cancelled');
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,slug.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+
+    const { data: activities, error, count } = await query
+      .order('updated_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw Errors.Internal('Errore nel recupero delle attività eliminate');
+    }
+
+    // Aggiungi info organizzazione e conteggi subscriptions
+    const activitiesWithInfo = await Promise.all(
+      (activities || []).map(async (activity) => {
+        let organization = null;
+        if (activity.organization_id) {
+          const { data: org } = await supabaseAdmin
+            .from('organizations')
+            .select('id, name, slug')
+            .eq('id', activity.organization_id)
+            .single();
+          organization = org;
+        }
+
+        // Conta subscriptions (tutte, incluse cancelled)
+        const { count: subsCount } = await supabaseAdmin
+          .from('subscriptions')
+          .select('*', { count: 'exact', head: true })
+          .eq('activity_id', activity.id);
+
+        return {
+          id: activity.id,
+          name: activity.name,
+          slug: activity.slug,
+          email: activity.email,
+          phone: activity.phone,
+          status: activity.status,
+          organization,
+          subscriptionsCount: subsCount || 0,
+          createdAt: activity.created_at,
+          deletedAt: activity.updated_at
+        };
+      })
+    );
+
+    return {
+      activities: activitiesWithInfo,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit)
+      }
+    };
+  }
+
+  /**
+   * Elimina definitivamente un'attività (hard delete)
+   * Rimuove anche tutti i dati correlati
+   */
+  async permanentDeleteActivity(activityId) {
+    // Verifica che l'attività sia cancellata (soft deleted)
+    const { data: activity, error: fetchError } = await supabaseAdmin
+      .from('activities')
+      .select('id, name, status')
+      .eq('id', activityId)
+      .single();
+
+    if (fetchError || !activity) {
+      throw Errors.NotFound('Attività non trovata');
+    }
+
+    if (activity.status !== 'cancelled') {
+      throw Errors.BadRequest('Solo le attività cancellate possono essere eliminate definitivamente. Prima cancella l\'attività.');
+    }
+
+    // Elimina subscriptions associate
+    await supabaseAdmin
+      .from('subscriptions')
+      .delete()
+      .eq('activity_id', activityId);
+
+    // Elimina activity_users
+    await supabaseAdmin
+      .from('activity_users')
+      .delete()
+      .eq('activity_id', activityId);
+
+    // Elimina external_service_accounts se esiste
+    await supabaseAdmin
+      .from('external_service_accounts')
+      .delete()
+      .eq('activity_id', activityId);
+
+    // Elimina l'attività
+    const { error } = await supabaseAdmin
+      .from('activities')
+      .delete()
+      .eq('id', activityId);
+
+    if (error) {
+      console.error('Error permanently deleting activity:', error);
+      throw Errors.Internal('Errore nell\'eliminazione definitiva dell\'attività');
+    }
+
+    return { success: true, activityId, activityName: activity.name };
+  }
+
+  /**
+   * Elimina definitivamente tutte le attività cancellate
+   */
+  async permanentDeleteAllCancelledActivities() {
+    // Ottieni tutte le attività cancellate
+    const { data: cancelledActivities, error: fetchError } = await supabaseAdmin
+      .from('activities')
+      .select('id, name')
+      .eq('status', 'cancelled');
+
+    if (fetchError) {
+      throw Errors.Internal('Errore nel recupero delle attività cancellate');
+    }
+
+    if (!cancelledActivities || cancelledActivities.length === 0) {
+      return { deletedCount: 0, deletedActivities: [] };
+    }
+
+    const activityIds = cancelledActivities.map(a => a.id);
+
+    // Elimina subscriptions associate
+    await supabaseAdmin
+      .from('subscriptions')
+      .delete()
+      .in('activity_id', activityIds);
+
+    // Elimina activity_users
+    await supabaseAdmin
+      .from('activity_users')
+      .delete()
+      .in('activity_id', activityIds);
+
+    // Elimina external_service_accounts
+    await supabaseAdmin
+      .from('external_service_accounts')
+      .delete()
+      .in('activity_id', activityIds);
+
+    // Elimina le attività
+    const { error } = await supabaseAdmin
+      .from('activities')
+      .delete()
+      .in('id', activityIds);
+
+    if (error) {
+      console.error('Error permanently deleting all cancelled activities:', error);
+      throw Errors.Internal('Errore nell\'eliminazione delle attività cancellate');
+    }
+
+    return {
+      deletedCount: cancelledActivities.length,
+      deletedActivities: cancelledActivities.map(a => ({ id: a.id, name: a.name }))
+    };
+  }
+
+  /**
+   * Ripristina un'attività cancellata
+   */
+  async restoreActivity(activityId) {
+    // Verifica che l'attività sia cancellata
+    const { data: activity, error: fetchError } = await supabaseAdmin
+      .from('activities')
+      .select('*')
+      .eq('id', activityId)
+      .single();
+
+    if (fetchError || !activity) {
+      throw Errors.NotFound('Attività non trovata');
+    }
+
+    if (activity.status !== 'cancelled') {
+      throw Errors.BadRequest('L\'attività non è cancellata');
+    }
+
+    // Ripristina l'attività
+    const { data: restoredActivity, error } = await supabaseAdmin
+      .from('activities')
+      .update({ status: 'active' })
+      .eq('id', activityId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error restoring activity:', error);
+      throw Errors.Internal('Errore nel ripristino dell\'attività');
+    }
+
+    return restoredActivity;
   }
 }
 

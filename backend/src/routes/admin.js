@@ -1998,4 +1998,84 @@ router.get('/webhook/health',
   })
 );
 
+// ==================== DELETED ACTIVITIES ====================
+
+// GET /api/admin/activities/deleted
+// Ottieni tutte le attività cancellate (soft deleted)
+router.get('/activities-deleted',
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('Pagina non valida'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit deve essere tra 1 e 100'),
+    query('search').optional().trim()
+  ],
+  validate,
+  logAdminAction('list_deleted_activities'),
+  asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20, search = '' } = req.query;
+
+    const result = await adminService.getDeletedActivities({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      search
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
+);
+
+// DELETE /api/admin/activities/:id/permanent
+// Elimina definitivamente un'attività (hard delete)
+router.delete('/activities/:id/permanent',
+  [
+    param('id').isUUID().withMessage('ID attività non valido')
+  ],
+  validate,
+  logAdminAction('permanent_delete_activity'),
+  asyncHandler(async (req, res) => {
+    await adminService.permanentDeleteActivity(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Attività eliminata definitivamente'
+    });
+  })
+);
+
+// DELETE /api/admin/activities-deleted/all
+// Elimina definitivamente tutte le attività cancellate
+router.delete('/activities-deleted/all',
+  logAdminAction('permanent_delete_all_activities'),
+  asyncHandler(async (req, res) => {
+    const result = await adminService.permanentDeleteAllCancelledActivities();
+
+    res.json({
+      success: true,
+      data: result,
+      message: `${result.deletedCount} attività eliminate definitivamente`
+    });
+  })
+);
+
+// POST /api/admin/activities/:id/restore
+// Ripristina un'attività cancellata
+router.post('/activities/:id/restore',
+  [
+    param('id').isUUID().withMessage('ID attività non valido')
+  ],
+  validate,
+  logAdminAction('restore_activity'),
+  asyncHandler(async (req, res) => {
+    const activity = await adminService.restoreActivity(req.params.id);
+
+    res.json({
+      success: true,
+      data: activity,
+      message: 'Attività ripristinata con successo'
+    });
+  })
+);
+
 export default router;

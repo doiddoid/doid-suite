@@ -16,6 +16,7 @@ import ServiceAssignmentModal from '../components/Admin/ServiceAssignmentModal';
 import BillingSummary from '../components/Admin/BillingSummary';
 import CommunicationLogs from '../components/Admin/CommunicationLogs';
 import PlansSummaryTable from '../components/Admin/PlansSummaryTable';
+import DeletedActivitiesTable from '../components/Admin/DeletedActivitiesTable';
 
 // Mappa icone servizi
 const SERVICE_ICONS = {
@@ -656,6 +657,7 @@ export default function Admin() {
     { id: 'stats', name: 'Statistiche', icon: Activity },
     { id: 'clienti', name: 'Clienti', icon: Users },
     { id: 'riepilogo-piani', name: 'Riepilogo Piani', icon: CreditCard },
+    { id: 'eliminati', name: 'Eliminati', icon: Trash2 },
     { id: 'plans', name: 'Piani Servizi', icon: Layers },
     { id: 'packages', name: 'Pacchetti Agency', icon: Package },
     { id: 'comunicazioni', name: 'Comunicazioni', icon: MessageSquare },
@@ -1590,6 +1592,11 @@ export default function Admin() {
                   }
                 }}
               />
+            )}
+
+            {/* Deleted Activities Tab */}
+            {activeTab === 'eliminati' && (
+              <DeletedActivitiesTable />
             )}
 
             {/* Plans Tab - Piani per Servizio Singolo */}
