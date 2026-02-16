@@ -19,7 +19,6 @@ export default function DashboardStats({ stats }) {
     {
       title: 'Servizi Attivi',
       value: stats.activeServices || 0,
-      total: stats.totalServices,
       icon: Zap,
       iconColor: '#22c55e',
       bgColor: 'bg-green-50',
@@ -63,11 +62,6 @@ export default function DashboardStats({ stats }) {
               <p className="text-sm text-gray-500 mb-1">{card.title}</p>
               <p className="text-2xl font-bold text-gray-900">
                 {card.value}
-                {card.total !== undefined && (
-                  <span className="text-sm font-normal text-gray-400">
-                    {' '}/ {card.total}
-                  </span>
-                )}
               </p>
             </div>
             <div className={`w-12 h-12 ${card.bgColor} rounded-xl flex items-center justify-center`}>
