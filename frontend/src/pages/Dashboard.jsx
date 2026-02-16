@@ -128,6 +128,16 @@ export default function Dashboard() {
 
   // Combina servizi API con servizi contact_required
   const allServices = useMemo(() => {
+    // Ordine desiderato: attivabili prima, poi contact_required
+    const SERVICE_ORDER = [
+      'smart_review',
+      'smart_page',
+      'menu_digitale',
+      'display_suite',
+      'smart_agent_ai',
+      'smart_connect'
+    ];
+
     // Servizi dall'API
     const apiServiceCodes = services.map(s => s.service.code);
 
@@ -142,7 +152,14 @@ export default function Dashboard() {
         hasLinkedAccount: false
       }));
 
-    return [...services, ...contactRequiredItems];
+    const combined = [...services, ...contactRequiredItems];
+
+    // Ordina secondo l'ordine definito
+    return combined.sort((a, b) => {
+      const indexA = SERVICE_ORDER.indexOf(a.service.code);
+      const indexB = SERVICE_ORDER.indexOf(b.service.code);
+      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+    });
   }, [services]);
 
   // Calcola se mostrare welcome banner
