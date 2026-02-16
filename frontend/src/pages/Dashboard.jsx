@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Building2, Plus, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useActivities } from '../hooks/useActivities';
-import { DashboardStats, ServicesGrid, WelcomeBanner } from '../components/Dashboard';
+import { DashboardStats, ServicesGrid, WelcomeBanner, ContactModal } from '../components/Dashboard';
 import { PlanModal } from '../components/Services';
+import { CONTACT_REQUIRED_SERVICES } from '../config/services';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+  const [contactService, setContactService] = useState(null);
 
   // Carica servizi e statistiche
   const loadDashboardData = useCallback(async () => {
@@ -97,6 +99,16 @@ export default function Dashboard() {
     }
   };
 
+  const handleRequestInfo = (serviceCode) => {
+    // Cerca prima nei servizi API, poi nei contact_required statici
+    const apiService = services.find(s => s.service.code === serviceCode);
+    if (apiService) {
+      setContactService(apiService.service);
+    } else if (CONTACT_REQUIRED_SERVICES[serviceCode]) {
+      setContactService(CONTACT_REQUIRED_SERVICES[serviceCode]);
+    }
+  };
+
   const handleSubscribe = async (planCode, billingCycle) => {
     if (!selectedService) return;
 
@@ -113,6 +125,25 @@ export default function Dashboard() {
       alert(result.error || 'Errore nell\'attivazione dell\'abbonamento');
     }
   };
+
+  // Combina servizi API con servizi contact_required
+  const allServices = useMemo(() => {
+    // Servizi dall'API
+    const apiServiceCodes = services.map(s => s.service.code);
+
+    // Aggiungi servizi contact_required che non sono già presenti
+    const contactRequiredItems = Object.values(CONTACT_REQUIRED_SERVICES)
+      .filter(s => !apiServiceCodes.includes(s.code))
+      .map(service => ({
+        service,
+        subscription: null,
+        isActive: false,
+        canAccess: false,
+        hasLinkedAccount: false
+      }));
+
+    return [...services, ...contactRequiredItems];
+  }, [services]);
 
   // Calcola se mostrare welcome banner
   const hasActiveServices = services.some(s => s.isActive);
@@ -209,11 +240,12 @@ export default function Dashboard() {
       <div id="services-section" className="mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">I tuoi servizi</h2>
         <ServicesGrid
-          services={services}
+          services={allServices}
           onAccessService={handleAccessService}
           onActivateTrialService={handleActivateTrial}
           onChoosePlanService={handleChoosePlan}
           onConfigureService={handleConfigureService}
+          onRequestInfoService={handleRequestInfo}
           loading={loading}
         />
       </div>
@@ -224,6 +256,14 @@ export default function Dashboard() {
           service={selectedService.service}
           onClose={() => setSelectedService(null)}
           onActivate={handleSubscribe}
+        />
+      )}
+
+      {/* Contact Modal */}
+      {contactService && (
+        <ContactModal
+          service={contactService}
+          onClose={() => setContactService(null)}
         />
       )}
     </div>

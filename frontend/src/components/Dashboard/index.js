@@ -4,3 +4,4 @@ export { default as StatusBadge } from './StatusBadge';
 export { default as ServicesGrid } from './ServicesGrid';
 export { default as DashboardStats } from './DashboardStats';
 export { default as WelcomeBanner } from './WelcomeBanner';
+export { default as ContactModal } from './ContactModal';

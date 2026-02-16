@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard, Clock, Info, Settings } from 'lucide-react';
+import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard, Info, Settings, Bot, Users, MessageSquare, Check } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-
-// Servizi attualmente non disponibili (presto disponibili)
-const UNAVAILABLE_SERVICES = ['display_suite'];
+import { CONTACT_REQUIRED_SERVICE_CODES } from '../../config/services';
 
 // URL delle landing page per i servizi
 const SERVICE_LANDING_URLS = {
@@ -11,6 +9,8 @@ const SERVICE_LANDING_URLS = {
   smart_page: 'https://page.doid.it',
   menu_digitale: 'https://menu.doid.it',
   display_suite: null,
+  smart_agent_ai: null,
+  smart_connect: null,
 };
 
 // Mappa icone per i servizi
@@ -19,17 +19,21 @@ const iconMap = {
   FileText,
   UtensilsCrossed,
   Monitor,
+  Bot,
+  Users,
   smart_review: Star,
   smart_page: FileText,
   menu_digitale: UtensilsCrossed,
   display_suite: Monitor,
+  smart_agent_ai: Bot,
+  smart_connect: Users,
 };
 
 /**
  * ServiceCard - Card per singolo servizio DOID
  *
  * Props:
- * - service: { code, name, description, icon, color }
+ * - service: { code, name, description, tagline, benefits, icon, color, type }
  * - subscription: { status, plan, trialEndsAt, currentPeriodEnd } | null
  * - isActive: boolean
  * - canAccess: boolean
@@ -38,6 +42,7 @@ const iconMap = {
  * - onActivateTrial: () => void
  * - onChoosePlan: () => void
  * - onConfigure: () => void - per configurare/collegare account servizio
+ * - onRequestInfo: () => void - per servizi contact_required
  */
 export default function ServiceCard({
   service,
@@ -48,7 +53,8 @@ export default function ServiceCard({
   onAccess,
   onActivateTrial,
   onChoosePlan,
-  onConfigure
+  onConfigure,
+  onRequestInfo
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -71,6 +77,12 @@ export default function ServiceCard({
 
   // Gestisce click sul pulsante principale
   const handleAction = async () => {
+    // Servizi contact_required - apri modal contatto
+    if (isContactRequired && onRequestInfo) {
+      onRequestInfo();
+      return;
+    }
+
     setLoading(true);
     try {
       if (canAccess && onAccess) {
@@ -108,19 +120,20 @@ export default function ServiceCard({
     };
   };
 
-  // Verifica se il servizio è disponibile
-  const isServiceUnavailable = UNAVAILABLE_SERVICES.includes(service.code);
+  // Verifica se il servizio richiede contatto
+  const isContactRequired = CONTACT_REQUIRED_SERVICE_CODES.includes(service.code) || service.type === 'contact_required';
   const landingUrl = SERVICE_LANDING_URLS[service.code];
 
   // Determina label e stile del pulsante
   const getButtonConfig = () => {
-    // Servizi non disponibili (Menu Digitale, Display Suite)
-    if (isServiceUnavailable) {
+    // Servizi che richiedono contatto (Display Suite, Smart Agent AI, Smart Connect)
+    if (isContactRequired) {
       return {
-        label: 'Presto disponibile',
-        icon: Clock,
-        className: 'bg-gray-100 text-gray-500 cursor-not-allowed',
-        disabled: true
+        label: 'Richiedi Info',
+        icon: MessageSquare,
+        className: 'hover:opacity-90 font-semibold',
+        style: getAccessButtonStyle(),
+        isContactAction: true
       };
     }
 
@@ -229,12 +242,29 @@ export default function ServiceCard({
 
       {/* Content */}
       <div className="flex-1">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">
           {service.name}
         </h3>
-        <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+        {service.tagline && (
+          <p className="text-xs font-medium mb-2" style={{ color: service.color }}>
+            {service.tagline}
+          </p>
+        )}
+        <p className="text-sm text-gray-600 mb-3">
           {service.description}
         </p>
+
+        {/* Benefits per servizi contact_required */}
+        {isContactRequired && service.benefits && service.benefits.length > 0 && (
+          <ul className="space-y-1 mb-3">
+            {service.benefits.slice(0, 3).map((benefit, index) => (
+              <li key={index} className="flex items-start text-xs text-gray-500">
+                <Check className="w-3 h-3 mr-1.5 mt-0.5 flex-shrink-0" style={{ color: service.color }} />
+                {benefit}
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* Piano info */}
         {subscription?.plan && (

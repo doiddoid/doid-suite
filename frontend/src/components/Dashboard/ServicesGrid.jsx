@@ -10,6 +10,7 @@ import ServiceCard from './ServiceCard';
  * - onActivateTrialService: (serviceCode) => void
  * - onChoosePlanService: (serviceCode) => void
  * - onConfigureService: (serviceCode) => void
+ * - onRequestInfoService: (serviceCode) => void - per servizi contact_required
  * - loading: boolean
  */
 export default function ServicesGrid({
@@ -18,6 +19,7 @@ export default function ServicesGrid({
   onActivateTrialService,
   onChoosePlanService,
   onConfigureService,
+  onRequestInfoService,
   loading = false
 }) {
   // Loading skeleton
@@ -72,6 +74,7 @@ export default function ServicesGrid({
           onActivateTrial={() => onActivateTrialService?.(item.service.code)}
           onChoosePlan={() => onChoosePlanService?.(item.service.code)}
           onConfigure={() => onConfigureService?.(item.service.code)}
+          onRequestInfo={() => onRequestInfoService?.(item.service.code)}
         />
       ))}
     </div>
