@@ -22,11 +22,16 @@ export default function ServicesGrid({
   onRequestInfoService,
   loading = false
 }) {
+  // Calcola numero servizi attivabili già attivi (per sconti)
+  const activeActivatableCount = services.filter(
+    s => s.isActive && s.service.type !== 'contact_required'
+  ).length;
+
   // Loading skeleton
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map((i) => (
           <div key={i} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-pulse">
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 bg-gray-200 rounded-lg" />
@@ -60,8 +65,17 @@ export default function ServicesGrid({
     );
   }
 
+  // Calcola sconto per servizio non attivo
+  const getDiscount = (service, isActive) => {
+    // Solo servizi attivabili (non contact_required) e non ancora attivi
+    if (isActive || service.type === 'contact_required') return 0;
+    if (activeActivatableCount >= 2) return 20;
+    if (activeActivatableCount === 1) return 10;
+    return 0;
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {services.map((item) => (
         <ServiceCard
           key={item.service.id || item.service.code}
@@ -70,6 +84,7 @@ export default function ServicesGrid({
           isActive={item.isActive}
           canAccess={item.canAccess}
           hasLinkedAccount={item.hasLinkedAccount !== false}
+          discount={getDiscount(item.service, item.isActive)}
           onAccess={() => onAccessService?.(item.service.code)}
           onActivateTrial={() => onActivateTrialService?.(item.service.code)}
           onChoosePlan={() => onChoosePlanService?.(item.service.code)}

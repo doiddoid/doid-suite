@@ -43,6 +43,7 @@ const iconMap = {
  * - onChoosePlan: () => void
  * - onConfigure: () => void - per configurare/collegare account servizio
  * - onRequestInfo: () => void - per servizi contact_required
+ * - discount: number - percentuale sconto (0, 10, 20)
  */
 export default function ServiceCard({
   service,
@@ -50,6 +51,7 @@ export default function ServiceCard({
   isActive,
   canAccess,
   hasLinkedAccount = true,
+  discount = 0,
   onAccess,
   onActivateTrial,
   onChoosePlan,
@@ -232,12 +234,21 @@ export default function ServiceCard({
             style={{ color: service.color || '#6366f1' }}
           />
         </div>
-        {subscription && (
-          <StatusBadge
-            status={isTrialExpired ? 'expired' : subscription.status}
-            trialDaysLeft={trialDaysLeft}
-          />
-        )}
+        <div className="flex flex-col items-end gap-1">
+          {/* Badge sconto */}
+          {discount > 0 && !isActive && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+              -{discount}%
+            </span>
+          )}
+          {/* Status badge */}
+          {subscription && (
+            <StatusBadge
+              status={isTrialExpired ? 'expired' : subscription.status}
+              trialDaysLeft={trialDaysLeft}
+            />
+          )}
+        </div>
       </div>
 
       {/* Content */}
