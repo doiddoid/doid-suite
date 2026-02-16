@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../config/supabase.js';
 import { Errors } from '../middleware/errorHandler.js';
+import { SERVICES } from '../config/services.js';
 
 class ServiceService {
   // Ottieni tutti i servizi attivi
@@ -107,14 +108,22 @@ class ServiceService {
 
   // Formatta servizio per risposta
   formatService(service) {
+    // Ottieni campi extra dalla config (tagline, benefits, bgLight, borderColor, type)
+    const configService = SERVICES[service.code] || {};
+
     return {
       id: service.id,
       code: service.code,
       name: service.name,
-      description: service.description,
+      description: configService.description || service.description,
+      tagline: configService.tagline || null,
+      benefits: configService.benefits || [],
       appUrl: service.app_url,
       icon: service.icon,
       color: service.color,
+      bgLight: configService.bgLight || null,
+      borderColor: configService.borderColor || null,
+      type: configService.type || 'activatable',
       sortOrder: service.sort_order
     };
   }
