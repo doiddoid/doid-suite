@@ -265,8 +265,8 @@ export default function ServiceCard({
           {service.description}
         </p>
 
-        {/* Benefits per servizi contact_required */}
-        {isContactRequired && service.benefits && service.benefits.length > 0 && (
+        {/* Benefits per tutti i servizi */}
+        {service.benefits && service.benefits.length > 0 && (
           <ul className="space-y-1 mb-3">
             {service.benefits.slice(0, 3).map((benefit, index) => (
               <li key={index} className="flex items-start text-xs text-gray-500">

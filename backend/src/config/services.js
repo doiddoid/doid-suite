@@ -6,8 +6,8 @@ export const SERVICES = {
     description: 'Trasforma ogni recensione in un cliente fedele',
     tagline: 'Più recensioni positive, più clienti',
     benefits: [
-      'Aumenta le recensioni a 5 stelle del 300%',
-      'Rispondi in automatico con l\'AI',
+      'Aumenta le recensioni a 5 stelle',
+      'Gestisci più piattaforme in un unico luogo',
       'Blocca le recensioni negative prima che vadano online'
     ],
     appUrl: process.env.SMART_REVIEW_URL || 'https://review.doid.it',
@@ -23,8 +23,8 @@ export const SERVICES = {
     description: 'Il tuo biglietto da visita digitale che converte',
     tagline: 'Fatti trovare. Fatti scegliere.',
     benefits: [
-      'Pagina web professionale in 5 minuti',
-      'QR Code per condivisione istantanea',
+      'Online in 5 minuti, zero competenze',
+      'QR Code pronto per biglietti e vetrine',
       'Analytics per capire chi ti cerca'
     ],
     appUrl: process.env.SMART_PAGE_URL || 'https://page.doid.it',
@@ -41,8 +41,8 @@ export const SERVICES = {
     tagline: 'Addio carta. Benvenuto fatturato.',
     benefits: [
       'Aggiornamenti in tempo reale',
-      'Foto che fanno venire l\'acquolina',
-      'Niente più ristampe costose'
+      'Niente più ristampe costose',
+      'Foto e descrizioni che aumentano gli ordini'
     ],
     appUrl: process.env.MENU_DIGITALE_URL || 'https://menu.doid.it',
     icon: 'UtensilsCrossed',
