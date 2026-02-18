@@ -708,6 +708,10 @@ router.get('/services',
           code: s.code,
           name: s.name,
           description: s.description,
+          tagline: s.tagline,
+          headline: s.headline,
+          benefits: s.benefits || [],
+          contactRequired: s.contact_required || false,
           appUrl: s.app_url,
           icon: s.icon,
           color: s.color_primary || s.color,
@@ -735,6 +739,10 @@ router.post('/services',
       .matches(/^[a-z_]+$/).withMessage('Codice deve contenere solo lettere minuscole e underscore'),
     body('name').trim().notEmpty().withMessage('Nome servizio richiesto'),
     body('description').optional().trim(),
+    body('tagline').optional().trim(),
+    body('headline').optional().trim(),
+    body('benefits').optional().isArray().withMessage('Benefits deve essere un array'),
+    body('contactRequired').optional().isBoolean(),
     body('appUrl').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('URL non valido'),
     body('icon').optional().trim(),
     body('colorPrimary').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore primario deve essere esadecimale'),
@@ -751,8 +759,8 @@ router.post('/services',
   logAdminAction('create_service'),
   asyncHandler(async (req, res) => {
     const {
-      code, name, description, appUrl, icon,
-      colorPrimary, colorDark, colorLight,
+      code, name, description, tagline, headline, benefits, contactRequired,
+      appUrl, icon, colorPrimary, colorDark, colorLight,
       priceProMonthly, priceProYearly, priceAddonMonthly,
       hasFreeTier, trialDays, sortOrder
     } = req.body;
@@ -763,6 +771,10 @@ router.post('/services',
         code,
         name,
         description: description || null,
+        tagline: tagline || null,
+        headline: headline || null,
+        benefits: benefits || [],
+        contact_required: contactRequired || false,
         app_url: appUrl || null,
         icon: icon || null,
         color_primary: colorPrimary || null,
@@ -803,6 +815,10 @@ router.put('/services/:id',
     param('id').isUUID().withMessage('ID servizio non valido'),
     body('name').optional().trim().notEmpty().withMessage('Nome non può essere vuoto'),
     body('description').optional().trim(),
+    body('tagline').optional().trim(),
+    body('headline').optional().trim(),
+    body('benefits').optional().isArray().withMessage('Benefits deve essere un array'),
+    body('contactRequired').optional().isBoolean(),
     body('appUrl').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('URL non valido'),
     body('icon').optional().trim(),
     body('color').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore deve essere esadecimale'),
@@ -821,8 +837,8 @@ router.put('/services/:id',
   logAdminAction('update_service'),
   asyncHandler(async (req, res) => {
     const {
-      name, description, appUrl, icon, color,
-      colorPrimary, colorDark, colorLight,
+      name, description, tagline, headline, benefits, contactRequired,
+      appUrl, icon, color, colorPrimary, colorDark, colorLight,
       priceProMonthly, priceProYearly, priceAddonMonthly,
       hasFreeTier, trialDays, isActive, sortOrder
     } = req.body;
@@ -830,6 +846,10 @@ router.put('/services/:id',
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
+    if (tagline !== undefined) updateData.tagline = tagline;
+    if (headline !== undefined) updateData.headline = headline;
+    if (benefits !== undefined) updateData.benefits = benefits;
+    if (contactRequired !== undefined) updateData.contact_required = contactRequired;
     if (appUrl !== undefined) updateData.app_url = appUrl;
     if (icon !== undefined) updateData.icon = icon;
     if (color !== undefined) updateData.color = color;

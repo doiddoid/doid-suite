@@ -18,7 +18,7 @@ import CommunicationLogs from '../components/Admin/CommunicationLogs';
 import PlansSummaryTable from '../components/Admin/PlansSummaryTable';
 import DeletedActivitiesTable from '../components/Admin/DeletedActivitiesTable';
 
-// Mappa icone servizi
+// Mappa icone servizi - estesa
 const SERVICE_ICONS = {
   Star: Star,
   star: Star,
@@ -26,11 +26,52 @@ const SERVICE_ICONS = {
   'file-text': FileText,
   UtensilsCrossed: UtensilsCrossed,
   utensils: UtensilsCrossed,
+  'utensils-crossed': UtensilsCrossed,
   Monitor: Monitor,
   monitor: Monitor,
   Key: Key,
-  key: Key
+  key: Key,
+  'key-round': Key,
+  Users: Users,
+  users: Users,
+  Building2: Building2,
+  building: Building2,
+  Store: Store,
+  store: Store,
+  Package: Package,
+  package: Package,
+  Mail: Mail,
+  mail: Mail,
+  CreditCard: CreditCard,
+  'credit-card': CreditCard,
+  Shield: Shield,
+  shield: Shield,
+  Zap: Zap,
+  zap: Zap,
+  Activity: Activity,
+  activity: Activity,
+  Layers: Layers,
+  layers: Layers
 };
+
+// Lista icone disponibili per il selettore
+const AVAILABLE_ICONS = [
+  { value: 'star', label: 'Stella', icon: Star },
+  { value: 'file-text', label: 'Documento', icon: FileText },
+  { value: 'utensils-crossed', label: 'Posate', icon: UtensilsCrossed },
+  { value: 'monitor', label: 'Monitor', icon: Monitor },
+  { value: 'key', label: 'Chiave', icon: Key },
+  { value: 'users', label: 'Utenti', icon: Users },
+  { value: 'building', label: 'Edificio', icon: Building2 },
+  { value: 'store', label: 'Negozio', icon: Store },
+  { value: 'package', label: 'Pacchetto', icon: Package },
+  { value: 'mail', label: 'Email', icon: Mail },
+  { value: 'credit-card', label: 'Carta', icon: CreditCard },
+  { value: 'shield', label: 'Sicurezza', icon: Shield },
+  { value: 'zap', label: 'Energia', icon: Zap },
+  { value: 'activity', label: 'Attività', icon: Activity },
+  { value: 'layers', label: 'Livelli', icon: Layers }
+];
 
 export default function Admin() {
   const { user } = useAuth();
@@ -1669,167 +1710,106 @@ export default function Admin() {
 
                   {/* New Service Form - Inline */}
                   {addingNewService && (
-                    <div className="p-4 bg-green-50 border-b-2 border-green-200">
-                      <div className="flex items-center gap-2 mb-4">
+                    <div className="p-6 bg-green-50 border-b-2 border-green-200">
+                      <div className="flex items-center gap-2 mb-6">
                         <Plus className="w-5 h-5 text-green-600" />
                         <h4 className="font-semibold text-green-900">Nuovo Servizio</h4>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+
+                      {/* Info Base */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Codice *</label>
-                          <input
-                            type="text"
-                            value={newServiceData.code || ''}
-                            onChange={(e) => setNewServiceData({ ...newServiceData, code: e.target.value.toLowerCase().replace(/[^a-z_]/g, '') })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm font-mono"
-                            placeholder="review"
-                          />
+                          <input type="text" value={newServiceData.code || ''} onChange={(e) => setNewServiceData({ ...newServiceData, code: e.target.value.toLowerCase().replace(/[^a-z_]/g, '') })} className="w-full px-3 py-2 border rounded-lg text-sm font-mono" placeholder="review" />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
-                          <input
-                            type="text"
-                            value={newServiceData.name || ''}
-                            onChange={(e) => setNewServiceData({ ...newServiceData, name: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            placeholder="Smart Review"
-                          />
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Nome Servizio *</label>
+                          <input type="text" value={newServiceData.name || ''} onChange={(e) => setNewServiceData({ ...newServiceData, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Smart Review" />
                         </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Titolo (headline)</label>
+                          <input type="text" value={newServiceData.headline || ''} onChange={(e) => setNewServiceData({ ...newServiceData, headline: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="I tuoi schermi che vendono per te" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Claim (tagline)</label>
+                          <input type="text" value={newServiceData.tagline || ''} onChange={(e) => setNewServiceData({ ...newServiceData, tagline: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Digital signage che attira clienti" />
+                        </div>
+                      </div>
+
+                      {/* Vantaggi */}
+                      <div className="mb-6">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Vantaggi (uno per riga)</label>
+                        <textarea value={(newServiceData.benefits || []).join('\n')} onChange={(e) => setNewServiceData({ ...newServiceData, benefits: e.target.value.split('\n').filter(b => b.trim()) })} className="w-full px-3 py-2 border rounded-lg text-sm" rows={3} placeholder="Palinsesti automatici e dinamici&#10;Gestione multi-schermo da remoto&#10;Contenuti che catturano l'attenzione" />
+                      </div>
+
+                      {/* Prezzi e Aspetto */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Pro/mese *</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={newServiceData.priceProMonthly ?? ''}
-                            onChange={(e) => setNewServiceData({ ...newServiceData, priceProMonthly: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            placeholder="14.90"
-                          />
+                          <input type="number" step="0.01" value={newServiceData.priceProMonthly ?? ''} onChange={(e) => setNewServiceData({ ...newServiceData, priceProMonthly: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="14.90" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Pro/anno *</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={newServiceData.priceProYearly ?? ''}
-                            onChange={(e) => setNewServiceData({ ...newServiceData, priceProYearly: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            placeholder="149.00"
-                          />
+                          <input type="number" step="0.01" value={newServiceData.priceProYearly ?? ''} onChange={(e) => setNewServiceData({ ...newServiceData, priceProYearly: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="149.00" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Addon/mese</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={newServiceData.priceAddonMonthly ?? ''}
-                            onChange={(e) => setNewServiceData({ ...newServiceData, priceAddonMonthly: e.target.value ? parseFloat(e.target.value) : null })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            placeholder="12.90"
-                          />
+                          <input type="number" step="0.01" value={newServiceData.priceAddonMonthly ?? ''} onChange={(e) => setNewServiceData({ ...newServiceData, priceAddonMonthly: e.target.value ? parseFloat(e.target.value) : null })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="12.90" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Trial (gg)</label>
-                          <input
-                            type="number"
-                            value={newServiceData.trialDays ?? 30}
-                            onChange={(e) => setNewServiceData({ ...newServiceData, trialDays: parseInt(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                          />
+                          <input type="number" value={newServiceData.trialDays ?? 30} onChange={(e) => setNewServiceData({ ...newServiceData, trialDays: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
+                          <select value={newServiceData.icon || 'star'} onChange={(e) => setNewServiceData({ ...newServiceData, icon: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                            {AVAILABLE_ICONS.map(ic => {
+                              const IconComp = ic.icon;
+                              return <option key={ic.value} value={ic.value}>{ic.label}</option>;
+                            })}
+                          </select>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
                           <div className="flex gap-1">
-                            <input
-                              type="color"
-                              value={newServiceData.colorPrimary || '#3B82F6'}
-                              onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })}
-                              className="w-10 h-9 rounded border cursor-pointer"
-                            />
-                            <input
-                              type="text"
-                              value={newServiceData.colorPrimary || ''}
-                              onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })}
-                              className="flex-1 px-2 py-2 border rounded-lg text-xs font-mono"
-                            />
+                            <input type="color" value={newServiceData.colorPrimary || '#3B82F6'} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="w-10 h-9 rounded border cursor-pointer" />
+                            <input type="text" value={newServiceData.colorPrimary || ''} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="flex-1 px-2 py-2 border rounded-lg text-xs font-mono" placeholder="#3B82F6" />
                           </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
-                          <input
-                            type="text"
-                            value={newServiceData.icon || ''}
-                            onChange={(e) => setNewServiceData({ ...newServiceData, icon: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            placeholder="star"
-                          />
                         </div>
                         <div className="col-span-2">
                           <label className="block text-xs font-medium text-gray-600 mb-1">URL App</label>
-                          <input
-                            type="url"
-                            value={newServiceData.appUrl || ''}
-                            onChange={(e) => setNewServiceData({ ...newServiceData, appUrl: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm"
-                            placeholder="https://review.doid.it"
-                          />
-                        </div>
-                        <div className="flex items-end gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={newServiceData.hasFreeTier || false}
-                              onChange={(e) => setNewServiceData({ ...newServiceData, hasFreeTier: e.target.checked })}
-                              className="w-4 h-4 rounded"
-                            />
-                            <span className="text-sm">Free tier</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={newServiceData.isActive !== false}
-                              onChange={(e) => setNewServiceData({ ...newServiceData, isActive: e.target.checked })}
-                              className="w-4 h-4 rounded"
-                            />
-                            <span className="text-sm">Attivo</span>
-                          </label>
+                          <input type="url" value={newServiceData.appUrl || ''} onChange={(e) => setNewServiceData({ ...newServiceData, appUrl: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="https://review.doid.it" />
                         </div>
                       </div>
-                      <div className="flex justify-end gap-2 mt-4">
-                        <button
-                          onClick={() => { setAddingNewService(false); setNewServiceData({}); }}
-                          className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-                        >
-                          Annulla
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (!newServiceData.code || !newServiceData.name) {
-                              setError('Codice e nome sono obbligatori');
-                              return;
-                            }
-                            setSavingService(true);
-                            try {
-                              const response = await api.request('/admin/services', {
-                                method: 'POST',
-                                body: JSON.stringify(newServiceData)
-                              });
-                              if (response.success) {
-                                fetchServices();
-                                setAddingNewService(false);
-                                setNewServiceData({});
-                                setSuccessMessage('Servizio creato con successo');
-                              } else {
-                                setError(response.error || 'Errore nella creazione');
-                              }
-                            } catch (err) {
-                              setError(err.message);
-                            }
-                            setSavingService(false);
-                          }}
-                          disabled={savingService}
-                          className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
-                        >
+
+                      {/* Flags */}
+                      <div className="flex flex-wrap gap-6 mb-6">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={newServiceData.contactRequired || false} onChange={(e) => setNewServiceData({ ...newServiceData, contactRequired: e.target.checked })} className="w-4 h-4 rounded" />
+                          <span className="text-sm">Richiedi Info (no prezzi)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={newServiceData.hasFreeTier || false} onChange={(e) => setNewServiceData({ ...newServiceData, hasFreeTier: e.target.checked })} className="w-4 h-4 rounded" />
+                          <span className="text-sm">Ha piano Free</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={newServiceData.isActive !== false} onChange={(e) => setNewServiceData({ ...newServiceData, isActive: e.target.checked })} className="w-4 h-4 rounded" />
+                          <span className="text-sm">Attivo</span>
+                        </label>
+                      </div>
+
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => { setAddingNewService(false); setNewServiceData({}); }} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Annulla</button>
+                        <button onClick={async () => {
+                          if (!newServiceData.code || !newServiceData.name) { setError('Codice e nome sono obbligatori'); return; }
+                          setSavingService(true);
+                          try {
+                            const response = await api.request('/admin/services', { method: 'POST', body: JSON.stringify(newServiceData) });
+                            if (response.success) { fetchServices(); setAddingNewService(false); setNewServiceData({}); setSuccessMessage('Servizio creato con successo'); }
+                            else { setError(response.error || 'Errore nella creazione'); }
+                          } catch (err) { setError(err.message); }
+                          setSavingService(false);
+                        }} disabled={savingService} className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2">
                           {savingService && <Loader2 className="w-4 h-4 animate-spin" />}
                           Crea Servizio
                         </button>
@@ -1900,12 +1880,14 @@ export default function Admin() {
                             </div>
                           ) : (
                             /* Edit Mode */
-                            <div className="p-4 bg-indigo-50 border-l-4 border-indigo-500">
-                              <div className="flex items-center gap-2 mb-4">
+                            <div className="p-6 bg-indigo-50 border-l-4 border-indigo-500">
+                              <div className="flex items-center gap-2 mb-6">
                                 <Edit2 className="w-5 h-5 text-indigo-600" />
                                 <h4 className="font-semibold text-indigo-900">Modifica: {service.name}</h4>
                               </div>
-                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+
+                              {/* Info Base */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                                 <div>
                                   <label className="block text-xs font-medium text-gray-600 mb-1">Codice</label>
                                   <input
@@ -1916,7 +1898,7 @@ export default function Admin() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">Nome</label>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Nome Servizio *</label>
                                   <input
                                     type="text"
                                     value={editingServiceData.name || ''}
@@ -1925,7 +1907,43 @@ export default function Admin() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">Pro/mese</label>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Titolo (headline)</label>
+                                  <input
+                                    type="text"
+                                    value={editingServiceData.headline || ''}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, headline: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                    placeholder="I tuoi schermi che vendono per te"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Claim (tagline)</label>
+                                  <input
+                                    type="text"
+                                    value={editingServiceData.tagline || ''}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, tagline: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                    placeholder="Digital signage che attira clienti"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Vantaggi */}
+                              <div className="mb-6">
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Vantaggi (uno per riga)</label>
+                                <textarea
+                                  value={(editingServiceData.benefits || []).join('\n')}
+                                  onChange={(e) => setEditingServiceData({ ...editingServiceData, benefits: e.target.value.split('\n').filter(b => b.trim()) })}
+                                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  rows={3}
+                                  placeholder="Palinsesti automatici e dinamici&#10;Gestione multi-schermo da remoto&#10;Contenuti che catturano l'attenzione"
+                                />
+                              </div>
+
+                              {/* Prezzi e Aspetto */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Pro/mese *</label>
                                   <input
                                     type="number"
                                     step="0.01"
@@ -1935,7 +1953,7 @@ export default function Admin() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">Pro/anno</label>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Pro/anno *</label>
                                   <input
                                     type="number"
                                     step="0.01"
@@ -1964,6 +1982,18 @@ export default function Admin() {
                                   />
                                 </div>
                                 <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
+                                  <select
+                                    value={editingServiceData.icon || 'star'}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, icon: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  >
+                                    {AVAILABLE_ICONS.map(ic => (
+                                      <option key={ic.value} value={ic.value}>{ic.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
                                   <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
                                   <div className="flex gap-1">
                                     <input
@@ -1980,15 +2010,6 @@ export default function Admin() {
                                     />
                                   </div>
                                 </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
-                                  <input
-                                    type="text"
-                                    value={editingServiceData.icon || ''}
-                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, icon: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg text-sm"
-                                  />
-                                </div>
                                 <div className="col-span-2">
                                   <label className="block text-xs font-medium text-gray-600 mb-1">URL App</label>
                                   <input
@@ -1998,28 +2019,41 @@ export default function Admin() {
                                     className="w-full px-3 py-2 border rounded-lg text-sm"
                                   />
                                 </div>
-                                <div className="flex items-end gap-4">
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={editingServiceData.hasFreeTier || false}
-                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, hasFreeTier: e.target.checked })}
-                                      className="w-4 h-4 rounded"
-                                    />
-                                    <span className="text-sm">Free tier</span>
-                                  </label>
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={editingServiceData.isActive !== false}
-                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, isActive: e.target.checked })}
-                                      className="w-4 h-4 rounded"
-                                    />
-                                    <span className="text-sm">Attivo</span>
-                                  </label>
-                                </div>
                               </div>
-                              <div className="col-span-full mt-3">
+
+                              {/* Flags */}
+                              <div className="flex flex-wrap gap-6 mb-6">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={editingServiceData.contactRequired || false}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, contactRequired: e.target.checked })}
+                                    className="w-4 h-4 rounded"
+                                  />
+                                  <span className="text-sm">Richiedi Info (no prezzi)</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={editingServiceData.hasFreeTier || false}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, hasFreeTier: e.target.checked })}
+                                    className="w-4 h-4 rounded"
+                                  />
+                                  <span className="text-sm">Ha piano Free</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={editingServiceData.isActive !== false}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, isActive: e.target.checked })}
+                                    className="w-4 h-4 rounded"
+                                  />
+                                  <span className="text-sm">Attivo</span>
+                                </label>
+                              </div>
+
+                              {/* Descrizione */}
+                              <div className="mb-4">
                                 <label className="block text-xs font-medium text-gray-600 mb-1">Descrizione</label>
                                 <input
                                   type="text"
