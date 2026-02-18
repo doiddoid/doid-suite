@@ -64,6 +64,13 @@ export default function Admin() {
   const [expandedOrgDetails, setExpandedOrgDetails] = useState({}); // Dettagli per orgs espanse
   const [clientTypeFilter, setClientTypeFilter] = useState('all'); // 'all', 'agency', 'single'
 
+  // Stati per editing inline servizi
+  const [editingServiceId, setEditingServiceId] = useState(null);
+  const [editingServiceData, setEditingServiceData] = useState({});
+  const [addingNewService, setAddingNewService] = useState(false);
+  const [newServiceData, setNewServiceData] = useState({});
+  const [savingService, setSavingService] = useState(false);
+
   // Stati per comunicazioni e gestione servizi
   const [communicationLogs, setCommunicationLogs] = useState([]);
   const [logsFilters, setLogsFilters] = useState({});
@@ -1626,168 +1633,467 @@ export default function Admin() {
               <DeletedActivitiesTable />
             )}
 
-            {/* Plans Tab - Piani per Servizio Singolo */}
+            {/* Plans Tab - Gestione Servizi Inline */}
             {activeTab === 'plans' && (
               <div className="space-y-6">
-                {/* Services Management Section */}
-                <div className="bg-white rounded-xl shadow-sm p-6">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">Gestione Servizi</h3>
-                    <button onClick={() => openModal('service', 'create')} className="btn-primary flex items-center gap-2 text-sm">
-                      <Plus className="w-4 h-4" />
-                      Nuovo Servizio
-                    </button>
+                    {!addingNewService && (
+                      <button
+                        onClick={() => {
+                          setAddingNewService(true);
+                          setNewServiceData({
+                            code: '',
+                            name: '',
+                            description: '',
+                            appUrl: '',
+                            icon: 'star',
+                            colorPrimary: '#3B82F6',
+                            priceProMonthly: 0,
+                            priceProYearly: 0,
+                            priceAddonMonthly: '',
+                            hasFreeTier: false,
+                            trialDays: 30,
+                            isActive: true,
+                            sortOrder: services.length
+                          });
+                        }}
+                        className="btn-primary flex items-center gap-2 text-sm"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Nuovo Servizio
+                      </button>
+                    )}
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b text-left text-sm text-gray-500">
-                          <th className="pb-3 font-medium">Servizio</th>
-                          <th className="pb-3 font-medium">Codice</th>
-                          <th className="pb-3 font-medium text-right">Pro/mese</th>
-                          <th className="pb-3 font-medium text-right">Pro/anno</th>
-                          <th className="pb-3 font-medium text-right">Addon</th>
-                          <th className="pb-3 font-medium text-center">Free</th>
-                          <th className="pb-3 font-medium text-center">Trial</th>
-                          <th className="pb-3 font-medium text-center">Stato</th>
-                          <th className="pb-3 font-medium text-right">Azioni</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {services.map(service => {
-                          const IconComponent = SERVICE_ICONS[service.icon] || Star;
-                          return (
-                            <tr key={service.id} className={`hover:bg-gray-50 ${!service.isActive ? 'opacity-50' : ''}`}>
-                              <td className="py-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="p-1.5 rounded-lg" style={{ backgroundColor: `${service.color || service.colorPrimary}20` }}>
-                                    <IconComponent className="w-4 h-4" style={{ color: service.color || service.colorPrimary }} />
-                                  </div>
-                                  <span className="font-medium">{service.name}</span>
-                                </div>
-                              </td>
-                              <td className="py-3 font-mono text-sm text-gray-500">{service.code}</td>
-                              <td className="py-3 text-right font-medium">€{service.priceProMonthly?.toFixed(2) || '0.00'}</td>
-                              <td className="py-3 text-right font-medium">€{service.priceProYearly?.toFixed(2) || '0.00'}</td>
-                              <td className="py-3 text-right">{service.priceAddonMonthly ? `€${service.priceAddonMonthly.toFixed(2)}` : '-'}</td>
-                              <td className="py-3 text-center">{service.hasFreeTier ? <Check className="w-4 h-4 text-green-500 mx-auto" /> : '-'}</td>
-                              <td className="py-3 text-center">{service.trialDays || 0}gg</td>
-                              <td className="py-3 text-center">
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${service.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                  {service.isActive ? 'Attivo' : 'Off'}
-                                </span>
-                              </td>
-                              <td className="py-3 text-right">
-                                <div className="flex justify-end gap-1">
-                                  <button
-                                    onClick={() => openModal('service', 'edit', service)}
-                                    className="p-1.5 text-gray-400 hover:text-indigo-600 rounded hover:bg-indigo-50"
-                                    title="Modifica"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteConfirm({ type: 'service', id: service.id, name: service.name })}
-                                    className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
-                                    title="Disattiva"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
 
-                {/* Separator */}
-                <hr className="border-gray-200" />
-
-                {/* Plans section header */}
-                <h3 className="text-lg font-semibold text-gray-900">Piani per Servizio</h3>
-
-                {/* Service selector */}
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      onClick={() => setSelectedService(null)}
-                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${!selectedService ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-                    >
-                      Tutti
-                    </button>
-                    {services.filter(s => s.isActive).map(service => {
-                      const IconComponent = SERVICE_ICONS[service.icon] || Star;
-                      return (
-                        <button
-                          key={service.id}
-                          onClick={() => setSelectedService(service.id)}
-                          className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${selectedService === service.id ? 'text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-                          style={selectedService === service.id ? { backgroundColor: service.color || service.colorPrimary } : {}}
-                        >
-                          <IconComponent className="w-4 h-4" />
-                          {service.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button onClick={() => openModal('plan', 'create')} className="btn-primary flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    Nuovo Piano
-                  </button>
-                </div>
-
-                {/* Plans grouped by service */}
-                {selectedService ? (
-                  // Single service view
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredPlans.map(plan => {
-                      const service = services.find(s => s.id === plan.serviceId);
-                      return (
-                        <PlanCard
-                          key={plan.id}
-                          plan={plan}
-                          service={service}
-                          onEdit={() => openModal('plan', 'edit', plan)}
-                          onDelete={() => setDeleteConfirm({ type: 'plan', id: plan.id, name: plan.name })}
-                        />
-                      );
-                    })}
-                  </div>
-                ) : (
-                  // All services view
-                  plansByService.map(service => {
-                    const IconComponent = SERVICE_ICONS[service.icon] || Star;
-                    if (service.plans.length === 0) return null;
-                    return (
-                      <div key={service.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                        <div className="p-4 border-b flex items-center gap-3" style={{ borderLeftWidth: 4, borderLeftColor: service.color }}>
-                          <div className="p-2 rounded-lg" style={{ backgroundColor: `${service.color}20` }}>
-                            <IconComponent className="w-5 h-5" style={{ color: service.color }} />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{service.name}</h3>
-                            <p className="text-sm text-gray-500">{service.plans.length} piani disponibili</p>
+                  {/* New Service Form - Inline */}
+                  {addingNewService && (
+                    <div className="p-4 bg-green-50 border-b-2 border-green-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Plus className="w-5 h-5 text-green-600" />
+                        <h4 className="font-semibold text-green-900">Nuovo Servizio</h4>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Codice *</label>
+                          <input
+                            type="text"
+                            value={newServiceData.code || ''}
+                            onChange={(e) => setNewServiceData({ ...newServiceData, code: e.target.value.toLowerCase().replace(/[^a-z_]/g, '') })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm font-mono"
+                            placeholder="review"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
+                          <input
+                            type="text"
+                            value={newServiceData.name || ''}
+                            onChange={(e) => setNewServiceData({ ...newServiceData, name: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            placeholder="Smart Review"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Pro/mese *</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newServiceData.priceProMonthly ?? ''}
+                            onChange={(e) => setNewServiceData({ ...newServiceData, priceProMonthly: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            placeholder="14.90"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Pro/anno *</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newServiceData.priceProYearly ?? ''}
+                            onChange={(e) => setNewServiceData({ ...newServiceData, priceProYearly: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            placeholder="149.00"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Addon/mese</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newServiceData.priceAddonMonthly ?? ''}
+                            onChange={(e) => setNewServiceData({ ...newServiceData, priceAddonMonthly: e.target.value ? parseFloat(e.target.value) : null })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            placeholder="12.90"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Trial (gg)</label>
+                          <input
+                            type="number"
+                            value={newServiceData.trialDays ?? 30}
+                            onChange={(e) => setNewServiceData({ ...newServiceData, trialDays: parseInt(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
+                          <div className="flex gap-1">
+                            <input
+                              type="color"
+                              value={newServiceData.colorPrimary || '#3B82F6'}
+                              onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })}
+                              className="w-10 h-9 rounded border cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={newServiceData.colorPrimary || ''}
+                              onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })}
+                              className="flex-1 px-2 py-2 border rounded-lg text-xs font-mono"
+                            />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
-                          {service.plans.map(plan => (
-                            <PlanCard
-                              key={plan.id}
-                              plan={plan}
-                              service={service}
-                              compact
-                              onEdit={() => openModal('plan', 'edit', plan)}
-                              onDelete={() => setDeleteConfirm({ type: 'plan', id: plan.id, name: plan.name })}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
+                          <input
+                            type="text"
+                            value={newServiceData.icon || ''}
+                            onChange={(e) => setNewServiceData({ ...newServiceData, icon: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            placeholder="star"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">URL App</label>
+                          <input
+                            type="url"
+                            value={newServiceData.appUrl || ''}
+                            onChange={(e) => setNewServiceData({ ...newServiceData, appUrl: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                            placeholder="https://review.doid.it"
+                          />
+                        </div>
+                        <div className="flex items-end gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={newServiceData.hasFreeTier || false}
+                              onChange={(e) => setNewServiceData({ ...newServiceData, hasFreeTier: e.target.checked })}
+                              className="w-4 h-4 rounded"
                             />
-                          ))}
+                            <span className="text-sm">Free tier</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={newServiceData.isActive !== false}
+                              onChange={(e) => setNewServiceData({ ...newServiceData, isActive: e.target.checked })}
+                              className="w-4 h-4 rounded"
+                            />
+                            <span className="text-sm">Attivo</span>
+                          </label>
                         </div>
                       </div>
-                    );
-                  })
-                )}
+                      <div className="flex justify-end gap-2 mt-4">
+                        <button
+                          onClick={() => { setAddingNewService(false); setNewServiceData({}); }}
+                          className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+                        >
+                          Annulla
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!newServiceData.code || !newServiceData.name) {
+                              setError('Codice e nome sono obbligatori');
+                              return;
+                            }
+                            setSavingService(true);
+                            try {
+                              const response = await api.request('/admin/services', {
+                                method: 'POST',
+                                body: JSON.stringify(newServiceData)
+                              });
+                              if (response.success) {
+                                fetchServices();
+                                setAddingNewService(false);
+                                setNewServiceData({});
+                                setSuccessMessage('Servizio creato con successo');
+                              } else {
+                                setError(response.error || 'Errore nella creazione');
+                              }
+                            } catch (err) {
+                              setError(err.message);
+                            }
+                            setSavingService(false);
+                          }}
+                          disabled={savingService}
+                          className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {savingService && <Loader2 className="w-4 h-4 animate-spin" />}
+                          Crea Servizio
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Services List */}
+                  <div className="divide-y">
+                    {services.map(service => {
+                      const IconComponent = SERVICE_ICONS[service.icon] || Star;
+                      const isEditing = editingServiceId === service.id;
+
+                      return (
+                        <div key={service.id} className={`${!service.isActive ? 'bg-gray-50 opacity-60' : ''}`}>
+                          {/* View Mode */}
+                          {!isEditing ? (
+                            <div className="p-4 flex items-center gap-4 hover:bg-gray-50">
+                              <div className="p-2 rounded-lg" style={{ backgroundColor: `${service.color || service.colorPrimary}20` }}>
+                                <IconComponent className="w-5 h-5" style={{ color: service.color || service.colorPrimary }} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-gray-900">{service.name}</span>
+                                  <span className="text-xs font-mono text-gray-400">{service.code}</span>
+                                  {!service.isActive && <span className="px-1.5 py-0.5 text-xs bg-red-100 text-red-600 rounded">Off</span>}
+                                  {service.hasFreeTier && <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-600 rounded">Free</span>}
+                                </div>
+                                <p className="text-sm text-gray-500 truncate">{service.description || 'Nessuna descrizione'}</p>
+                              </div>
+                              <div className="flex items-center gap-6 text-sm">
+                                <div className="text-center">
+                                  <div className="text-gray-400 text-xs">Pro/mese</div>
+                                  <div className="font-semibold">€{service.priceProMonthly?.toFixed(2) || '0.00'}</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-gray-400 text-xs">Pro/anno</div>
+                                  <div className="font-semibold">€{service.priceProYearly?.toFixed(2) || '0.00'}</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-gray-400 text-xs">Addon</div>
+                                  <div className="font-semibold">{service.priceAddonMonthly ? `€${service.priceAddonMonthly.toFixed(2)}` : '-'}</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-gray-400 text-xs">Trial</div>
+                                  <div className="font-semibold">{service.trialDays || 0}gg</div>
+                                </div>
+                              </div>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingServiceId(service.id);
+                                    setEditingServiceData({ ...service });
+                                  }}
+                                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                                  title="Modifica"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => setDeleteConfirm({ type: 'service', id: service.id, name: service.name })}
+                                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                  title="Elimina"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Edit Mode */
+                            <div className="p-4 bg-indigo-50 border-l-4 border-indigo-500">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Edit2 className="w-5 h-5 text-indigo-600" />
+                                <h4 className="font-semibold text-indigo-900">Modifica: {service.name}</h4>
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Codice</label>
+                                  <input
+                                    type="text"
+                                    value={editingServiceData.code || ''}
+                                    disabled
+                                    className="w-full px-3 py-2 border rounded-lg text-sm font-mono bg-gray-100"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Nome</label>
+                                  <input
+                                    type="text"
+                                    value={editingServiceData.name || ''}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, name: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Pro/mese</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editingServiceData.priceProMonthly ?? ''}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, priceProMonthly: parseFloat(e.target.value) || 0 })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Pro/anno</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editingServiceData.priceProYearly ?? ''}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, priceProYearly: parseFloat(e.target.value) || 0 })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Addon/mese</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editingServiceData.priceAddonMonthly ?? ''}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, priceAddonMonthly: e.target.value ? parseFloat(e.target.value) : null })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Trial (gg)</label>
+                                  <input
+                                    type="number"
+                                    value={editingServiceData.trialDays ?? 30}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, trialDays: parseInt(e.target.value) || 0 })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
+                                  <div className="flex gap-1">
+                                    <input
+                                      type="color"
+                                      value={editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6'}
+                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })}
+                                      className="w-10 h-9 rounded border cursor-pointer"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={editingServiceData.colorPrimary || editingServiceData.color || ''}
+                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })}
+                                      className="flex-1 px-2 py-2 border rounded-lg text-xs font-mono"
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
+                                  <input
+                                    type="text"
+                                    value={editingServiceData.icon || ''}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, icon: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">URL App</label>
+                                  <input
+                                    type="url"
+                                    value={editingServiceData.appUrl || ''}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, appUrl: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  />
+                                </div>
+                                <div className="flex items-end gap-4">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={editingServiceData.hasFreeTier || false}
+                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, hasFreeTier: e.target.checked })}
+                                      className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm">Free tier</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={editingServiceData.isActive !== false}
+                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, isActive: e.target.checked })}
+                                      className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-sm">Attivo</span>
+                                  </label>
+                                </div>
+                              </div>
+                              <div className="col-span-full mt-3">
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Descrizione</label>
+                                <input
+                                  type="text"
+                                  value={editingServiceData.description || ''}
+                                  onChange={(e) => setEditingServiceData({ ...editingServiceData, description: e.target.value })}
+                                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  placeholder="Descrizione del servizio..."
+                                />
+                              </div>
+                              <div className="flex justify-end gap-2 mt-4">
+                                <button
+                                  onClick={() => { setEditingServiceId(null); setEditingServiceData({}); }}
+                                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+                                >
+                                  Annulla
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    setSavingService(true);
+                                    try {
+                                      const response = await api.request(`/admin/services/${service.id}`, {
+                                        method: 'PUT',
+                                        body: JSON.stringify(editingServiceData)
+                                      });
+                                      if (response.success) {
+                                        fetchServices();
+                                        setEditingServiceId(null);
+                                        setEditingServiceData({});
+                                        setSuccessMessage('Servizio aggiornato');
+                                      } else {
+                                        setError(response.error || 'Errore nel salvataggio');
+                                      }
+                                    } catch (err) {
+                                      setError(err.message);
+                                    }
+                                    setSavingService(false);
+                                  }}
+                                  disabled={savingService}
+                                  className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                                >
+                                  {savingService && <Loader2 className="w-4 h-4 animate-spin" />}
+                                  Salva Modifiche
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {services.length === 0 && !addingNewService && (
+                      <div className="p-8 text-center text-gray-500">
+                        <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                        <p>Nessun servizio configurato</p>
+                        <button
+                          onClick={() => {
+                            setAddingNewService(true);
+                            setNewServiceData({
+                              code: '',
+                              name: '',
+                              priceProMonthly: 0,
+                              priceProYearly: 0,
+                              trialDays: 30,
+                              isActive: true
+                            });
+                          }}
+                          className="mt-3 text-indigo-600 hover:text-indigo-700 font-medium"
+                        >
+                          + Aggiungi il primo servizio
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
