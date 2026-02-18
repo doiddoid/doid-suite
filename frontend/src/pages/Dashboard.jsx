@@ -2,12 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Building2, Plus, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useActivities } from '../hooks/useActivities';
-import { useMyServices } from '../hooks/useMyServices';
 import { DashboardStats, ServicesGrid, WelcomeBanner, ContactModal } from '../components/Dashboard';
 import { PlanModal } from '../components/Services';
 import { CONTACT_REQUIRED_SERVICES } from '../config/services';
-// CHECKPOINT: Import nuovi componenti my-services
-import { StatusBadge, ElementRow, ServiceCard, DiscountBanner } from '../components/my-services';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -21,25 +18,6 @@ export default function Dashboard() {
     activateSubscription,
     accessService
   } = useActivities();
-
-  // CHECKPOINT: useMyServices hook test
-  const {
-    services: myServices,
-    totals: myTotals,
-    loading: myServicesLoading,
-    error: myServicesError
-  } = useMyServices();
-
-  // CHECKPOINT: Log useMyServices data
-  useEffect(() => {
-    if (!myServicesLoading) {
-      console.log('[useMyServices] services:', myServices);
-      console.log('[useMyServices] totals:', myTotals);
-      if (myServicesError) {
-        console.error('[useMyServices] error:', myServicesError);
-      }
-    }
-  }, [myServices, myTotals, myServicesLoading, myServicesError]);
 
   const [services, setServices] = useState([]);
   const [stats, setStats] = useState(null);
@@ -229,9 +207,6 @@ export default function Dashboard() {
       <WelcomeBanner
         activityName={currentActivity?.name}
         show={showWelcomeBanner}
-        onExplore={() => {
-          document.getElementById('services-section')?.scrollIntoView({ behavior: 'smooth' });
-        }}
       />
 
       {/* Header */}
@@ -277,150 +252,6 @@ export default function Dashboard() {
           onClose={() => setContactService(null)}
         />
       )}
-
-      {/* CHECKPOINT: Test componenti my-services con dati mock */}
-      <div className="mt-12 pt-8 border-t border-dashed border-gray-300">
-        <h2 className="text-lg font-bold text-gray-400 mb-4">
-          [CHECKPOINT] Test Componenti my-services
-        </h2>
-
-        {/* Test StatusBadge */}
-        <div className="mb-6">
-          <p className="text-xs text-gray-400 mb-2">StatusBadge:</p>
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge status="pro" billing="monthly" />
-            <StatusBadge status="pro" billing="yearly" />
-            <StatusBadge status="trial" trialEnds={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()} />
-            <StatusBadge status="free" />
-            <StatusBadge status="expired" />
-            <StatusBadge status="inactive" />
-          </div>
-        </div>
-
-        {/* Test ElementRow */}
-        <div className="mb-6">
-          <p className="text-xs text-gray-400 mb-2">ElementRow:</p>
-          <div className="space-y-2 max-w-2xl">
-            <ElementRow
-              element={{
-                subscription_id: '1',
-                activity_name: 'Ristorante Da Mario',
-                status: 'pro',
-                billing_cycle: 'monthly',
-                is_addon: false,
-                current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                price: 14.90
-              }}
-              serviceColor="#F59E0B"
-              serviceDark="#D97706"
-              onAction={(el, action) => console.log('[ElementRow]', action, el)}
-            />
-            <ElementRow
-              element={{
-                subscription_id: '2',
-                activity_name: 'Bar Sport',
-                status: 'trial',
-                billing_cycle: 'monthly',
-                is_addon: true,
-                trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-                price: 7.90
-              }}
-              serviceColor="#3B82F6"
-              serviceDark="#2563EB"
-              onAction={(el, action) => console.log('[ElementRow]', action, el)}
-            />
-            <ElementRow
-              element={{
-                subscription_id: '3',
-                activity_name: 'Pizzeria Napoli',
-                status: 'free',
-                billing_cycle: 'monthly',
-                is_addon: false,
-                price: 0
-              }}
-              serviceColor="#10B981"
-              serviceDark="#059669"
-              onAction={(el, action) => console.log('[ElementRow]', action, el)}
-            />
-          </div>
-        </div>
-
-        {/* Test ServiceCard */}
-        <div className="mb-6">
-          <p className="text-xs text-gray-400 mb-2">ServiceCard:</p>
-          <ServiceCardCheckpoint />
-        </div>
-
-        {/* Test DiscountBanner */}
-        <div className="mb-6">
-          <p className="text-xs text-gray-400 mb-2">DiscountBanner:</p>
-          <DiscountBanner totalProElements={3} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Componente helper per testare ServiceCard con stato interno
-function ServiceCardCheckpoint() {
-  const [expanded, setExpanded] = useState(true);
-
-  const mockService = {
-    info: {
-      code: 'review',
-      name: 'Smart Review',
-      icon: 'star',
-      color_primary: '#F59E0B',
-      color_dark: '#D97706',
-      color_light: '#FFFBEB',
-      price_pro_monthly: 14.90,
-      price_pro_yearly: 149,
-      price_addon_monthly: 7.90,
-      has_free_tier: true
-    },
-    elements: [
-      {
-        subscription_id: '1',
-        activity_name: 'Ristorante Da Mario',
-        activity_id: 'act1',
-        status: 'pro',
-        billing_cycle: 'monthly',
-        is_addon: false,
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        price: 14.90
-      },
-      {
-        subscription_id: '2',
-        activity_name: 'Bar Sport',
-        activity_id: 'act2',
-        status: 'trial',
-        billing_cycle: 'monthly',
-        is_addon: false,
-        trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        price: 0
-      },
-      {
-        subscription_id: '3',
-        activity_name: 'Pizzeria Napoli',
-        activity_id: 'act3',
-        status: 'free',
-        billing_cycle: 'monthly',
-        is_addon: false,
-        price: 0
-      }
-    ]
-  };
-
-  return (
-    <div className="max-w-2xl">
-      <ServiceCard
-        service={mockService}
-        expanded={expanded}
-        onToggle={() => setExpanded(!expanded)}
-        onAction={(el, action) => console.log('[ServiceCard]', action, el)}
-        onAddElement={() => console.log('[ServiceCard] Add element')}
-        onDashboard={() => console.log('[ServiceCard] Dashboard')}
-      />
     </div>
   );
 }

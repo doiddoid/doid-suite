@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard, Info, Settings, Bot, Users, MessageSquare, Check } from 'lucide-react';
+import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard, Info, Settings, Bot, Users, MessageSquare, Check, Key, Building2, Store, Package, Mail, Shield, Zap, Activity, Layers } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { CONTACT_REQUIRED_SERVICE_CODES } from '../../config/services';
 
@@ -14,15 +14,26 @@ const SERVICE_LANDING_URLS = {
 };
 
 // Mappa icone per i servizi (nome icona dal DB -> componente)
+// Supporta formati: kebab-case (file-text), lowercase (filetext), PascalCase (FileText)
 const iconMap = {
-  // Nomi icone lowercase (come salvati nel DB)
-  star: Star,
-  filetext: FileText,
-  utensilscrossed: UtensilsCrossed,
-  monitor: Monitor,
-  bot: Bot,
-  users: Users,
-  messagesquare: MessageSquare,
+  // Kebab-case (come salvati nel DB da AVAILABLE_ICONS)
+  'star': Star,
+  'file-text': FileText,
+  'utensils-crossed': UtensilsCrossed,
+  'monitor': Monitor,
+  'key': Key,
+  'bot': Bot,
+  'users': Users,
+  'building': Building2,
+  'store': Store,
+  'package': Package,
+  'mail': Mail,
+  'credit-card': CreditCard,
+  'shield': Shield,
+  'zap': Zap,
+  'activity': Activity,
+  'layers': Layers,
+  'message-square': MessageSquare,
   // Fallback per codici servizio
   smart_review: Star,
   smart_page: FileText,
@@ -63,9 +74,8 @@ export default function ServiceCard({
 }) {
   const [loading, setLoading] = useState(false);
 
-  // Determina l'icona da usare (normalizza a lowercase)
-  const iconKey = service.icon?.toLowerCase?.() || service.icon;
-  const Icon = iconMap[iconKey] || iconMap[service.code] || Star;
+  // Determina l'icona da usare
+  const Icon = iconMap[service.icon] || iconMap[service.code] || Star;
 
   // Calcola giorni rimanenti per trial
   const getTrialDaysLeft = () => {

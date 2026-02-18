@@ -1,14 +1,13 @@
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 /**
  * WelcomeBanner - Banner di benvenuto per nuovi utenti
  *
  * Props:
  * - activityName: nome dell'attività
- * - onExplore: callback per esplorare servizi
  * - show: boolean per mostrare/nascondere
  */
-export default function WelcomeBanner({ activityName, onExplore, show = true }) {
+export default function WelcomeBanner({ activityName, show = true }) {
   if (!show) return null;
 
   return (
@@ -27,7 +26,7 @@ export default function WelcomeBanner({ activityName, onExplore, show = true }) 
           Ciao! Benvenuto in DOID Suite
         </h2>
 
-        <p className="text-white/80 mb-6 max-w-xl">
+        <p className="text-white/80 max-w-xl">
           {activityName ? (
             <>
               Gestisci <span className="font-semibold text-white">{activityName}</span> con
@@ -40,16 +39,6 @@ export default function WelcomeBanner({ activityName, onExplore, show = true }) 
             </>
           )}
         </p>
-
-        {onExplore && (
-          <button
-            onClick={onExplore}
-            className="inline-flex items-center space-x-2 px-5 py-2.5 bg-white text-primary-600 rounded-lg font-medium hover:bg-white/90 transition-colors"
-          >
-            <span>Esplora i servizi</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        )}
       </div>
     </div>
   );
