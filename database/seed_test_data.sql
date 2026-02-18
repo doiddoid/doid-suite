@@ -30,6 +30,7 @@ WHERE code = 'review';
 DO $$
 DECLARE
     v_user_id UUID;
+    v_organization_id UUID;
     v_activity_dolce_vita UUID;
     v_activity_napoli UUID;
     v_activity_bar_sport UUID;
@@ -52,7 +53,46 @@ BEGIN
     RAISE NOTICE 'Usando utente: %', v_user_id;
 
     -- ============================================
-    -- 2. OTTIENI GLI ID DEI SERVIZI
+    -- 2a. CREA ORGANIZZAZIONE DI TEST
+    -- (per visualizzazione in Admin > Clienti)
+    -- ============================================
+
+    INSERT INTO organizations (id, name, slug, email, phone, status, account_type, max_activities)
+    VALUES (
+        uuid_generate_v4(),
+        'DOID Test Account',
+        'doid-test-account',
+        'test@doid.biz',
+        '+39 02 9999999',
+        'active',
+        'agency',
+        10
+    )
+    ON CONFLICT (slug) DO UPDATE SET
+        name = EXCLUDED.name,
+        account_type = EXCLUDED.account_type,
+        max_activities = EXCLUDED.max_activities
+    RETURNING id INTO v_organization_id;
+
+    IF v_organization_id IS NULL THEN
+        SELECT id INTO v_organization_id FROM organizations WHERE slug = 'doid-test-account' LIMIT 1;
+    END IF;
+
+    RAISE NOTICE 'Organizzazione creata/trovata: %', v_organization_id;
+
+    -- ============================================
+    -- 2b. COLLEGA UTENTE ALL ORGANIZZAZIONE COME OWNER
+    -- ============================================
+
+    INSERT INTO organization_users (organization_id, user_id, role)
+    VALUES (v_organization_id, v_user_id, 'owner')
+    ON CONFLICT (organization_id, user_id) DO UPDATE SET
+        role = 'owner';
+
+    RAISE NOTICE 'Utente collegato come owner dell organizzazione';
+
+    -- ============================================
+    -- 3. OTTIENI GLI ID DEI SERVIZI
     -- ============================================
 
     SELECT id INTO v_service_review_id FROM services WHERE code = 'review' LIMIT 1;
@@ -70,24 +110,30 @@ BEGIN
     RAISE NOTICE 'Servizi trovati - Review: %, Page: %, Menu: %', v_service_review_id, v_service_page_id, v_service_menu_id;
 
     -- ============================================
-    -- 3. CREA LE ATTIVITA' DI TEST
+    -- 4. CREA LE ATTIVITA DI TEST
+    -- (con organization_id per visualizzazione in Admin)
     -- ============================================
 
     -- Ristorante La Dolce Vita
-    INSERT INTO activities (id, user_id, name, slug, address, phone, email, is_active)
+    INSERT INTO activities (id, user_id, organization_id, name, slug, address, phone, email, status, is_active)
     VALUES (
         uuid_generate_v4(),
         v_user_id,
+        v_organization_id,
         'Ristorante La Dolce Vita',
         'ristorante-la-dolce-vita',
         'Via Roma 123, 20100 Milano',
         '+39 02 1234567',
         'info@ladolcevita.it',
+        'active',
         TRUE
     )
     ON CONFLICT (slug) DO UPDATE SET
         name = EXCLUDED.name,
-        user_id = EXCLUDED.user_id
+        user_id = EXCLUDED.user_id,
+        organization_id = EXCLUDED.organization_id,
+        status = 'active',
+        is_active = TRUE
     RETURNING id INTO v_activity_dolce_vita;
 
     -- Se ON CONFLICT ha restituito null, cerca l'attivita esistente
@@ -98,20 +144,25 @@ BEGIN
     RAISE NOTICE 'Attivita La Dolce Vita: %', v_activity_dolce_vita;
 
     -- Pizzeria Bella Napoli
-    INSERT INTO activities (id, user_id, name, slug, address, phone, email, is_active)
+    INSERT INTO activities (id, user_id, organization_id, name, slug, address, phone, email, status, is_active)
     VALUES (
         uuid_generate_v4(),
         v_user_id,
+        v_organization_id,
         'Pizzeria Bella Napoli',
         'pizzeria-bella-napoli',
         'Corso Napoli 45, 80100 Napoli',
         '+39 081 7654321',
         'info@bellanapoli.it',
+        'active',
         TRUE
     )
     ON CONFLICT (slug) DO UPDATE SET
         name = EXCLUDED.name,
-        user_id = EXCLUDED.user_id
+        user_id = EXCLUDED.user_id,
+        organization_id = EXCLUDED.organization_id,
+        status = 'active',
+        is_active = TRUE
     RETURNING id INTO v_activity_napoli;
 
     IF v_activity_napoli IS NULL THEN
@@ -121,20 +172,25 @@ BEGIN
     RAISE NOTICE 'Attivita Bella Napoli: %', v_activity_napoli;
 
     -- Bar Sport Centro
-    INSERT INTO activities (id, user_id, name, slug, address, phone, email, is_active)
+    INSERT INTO activities (id, user_id, organization_id, name, slug, address, phone, email, status, is_active)
     VALUES (
         uuid_generate_v4(),
         v_user_id,
+        v_organization_id,
         'Bar Sport Centro',
         'bar-sport-centro',
         'Piazza Centrale 1, 00100 Roma',
         '+39 06 9876543',
         'info@barsportcentro.it',
+        'active',
         TRUE
     )
     ON CONFLICT (slug) DO UPDATE SET
         name = EXCLUDED.name,
-        user_id = EXCLUDED.user_id
+        user_id = EXCLUDED.user_id,
+        organization_id = EXCLUDED.organization_id,
+        status = 'active',
+        is_active = TRUE
     RETURNING id INTO v_activity_bar_sport;
 
     IF v_activity_bar_sport IS NULL THEN
@@ -144,7 +200,7 @@ BEGIN
     RAISE NOTICE 'Attivita Bar Sport Centro: %', v_activity_bar_sport;
 
     -- ============================================
-    -- 4. CREA LE SUBSCRIPTIONS
+    -- 5. CREA LE SUBSCRIPTIONS
     -- ============================================
 
     -- Review / La Dolce Vita: PRO mensile, addon=false
@@ -254,16 +310,31 @@ BEGIN
 END $$;
 
 -- ============================================
--- 5. CHECKPOINT: Verifica dati inseriti
+-- 6. CHECKPOINT: Verifica dati inseriti
 -- ============================================
+
+-- Verifica organizzazione
+SELECT
+    o.name AS organization_name,
+    o.slug,
+    o.status,
+    o.account_type,
+    u.email AS owner_email
+FROM organizations o
+JOIN organization_users ou ON o.id = ou.organization_id AND ou.role = 'owner'
+JOIN auth.users u ON ou.user_id = u.id
+WHERE o.slug = 'doid-test-account';
 
 -- Verifica attivita
 SELECT
     a.name AS activity_name,
     a.slug,
+    o.name AS organization_name,
     u.email AS owner_email,
+    a.status,
     a.is_active
 FROM activities a
+LEFT JOIN organizations o ON a.organization_id = o.id
 JOIN auth.users u ON a.user_id = u.id
 WHERE a.slug IN ('ristorante-la-dolce-vita', 'pizzeria-bella-napoli', 'bar-sport-centro')
 ORDER BY a.name;
@@ -308,18 +379,22 @@ WHERE a.slug IN ('ristorante-la-dolce-vita', 'pizzeria-bella-napoli', 'bar-sport
 -- ============================================
 -- RISULTATI ATTESI:
 --
--- Review: 3 elementi
---   - La Dolce Vita: PRO mensile (14,90€) -> bottone "Annuale"
---   - Bella Napoli: PRO ADD-ON mensile (7,90€) -> bottone "Annuale"
---   - Bar Sport: FREE -> bottone "Attiva PRO"
+-- ADMIN > CLIENTI:
+--   - Organizzazione "DOID Test Account" con 3 attivita
 --
--- Page: 2 elementi
---   - La Dolce Vita: TRIAL (scade tra 15gg) -> countdown + "Attiva PRO"
---   - Bar Sport: FREE -> bottone "Attiva PRO"
+-- I MIEI SERVIZI:
+--   Review: 3 elementi
+--     - La Dolce Vita: PRO mensile (14,90) -> bottone "Annuale"
+--     - Bella Napoli: PRO ADD-ON mensile (7,90) -> bottone "Annuale"
+--     - Bar Sport: FREE -> bottone "Attiva PRO"
 --
--- Menu: 0 elementi -> card con bottone "Attiva"
+--   Page: 2 elementi
+--     - La Dolce Vita: TRIAL (scade tra 15gg) -> countdown + "Attiva PRO"
+--     - Bar Sport: FREE -> bottone "Attiva PRO"
 --
--- Totale mensile: 14,90 + 7,90 = 22,80€
+--   Menu: 0 elementi -> card con bottone "Attiva"
+--
+-- Totale mensile: 14,90 + 7,90 = 22,80
 --
 -- Banner sconto: NON visibile (solo 2 PRO ma dello stesso servizio Review)
 -- ============================================
