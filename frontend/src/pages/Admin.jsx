@@ -7,7 +7,8 @@ import {
   Check, Clock, Ban, Search, UtensilsCrossed, Monitor,
   User, Shield, Briefcase, MapPin, Phone, Layers,
   ExternalLink, Loader2, LogIn, ChevronDown, ChevronRight,
-  MessageSquare, Zap, Key, Bot, CheckCircle, XCircle
+  MessageSquare, Zap, Key, Bot, CheckCircle, XCircle,
+  ChevronUp, GripVertical
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -224,6 +225,35 @@ export default function Admin() {
       if (response.success) {
         setServices(response.data.services || []);
       }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Sposta servizio su/giù per cambiare ordine
+  const moveService = async (serviceId, direction) => {
+    const currentIndex = services.findIndex(s => s.id === serviceId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= services.length) return;
+
+    const otherService = services[newIndex];
+    const currentService = services[currentIndex];
+
+    try {
+      // Scambia sortOrder tra i due servizi
+      await Promise.all([
+        api.request(`/admin/services/${currentService.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ sortOrder: newIndex })
+        }),
+        api.request(`/admin/services/${otherService.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ sortOrder: currentIndex })
+        })
+      ]);
+      fetchServices();
     } catch (err) {
       setError(err.message);
     }
@@ -1844,7 +1874,7 @@ export default function Admin() {
 
                   {/* Services List */}
                   <div className="divide-y">
-                    {services.map(service => {
+                    {services.map((service, index) => {
                       const IconComponent = SERVICE_ICONS[service.icon] || Star;
                       const isEditing = editingServiceId === service.id;
 
@@ -1853,6 +1883,25 @@ export default function Admin() {
                           {/* View Mode */}
                           {!isEditing ? (
                             <div className="p-4 flex items-center gap-4 hover:bg-gray-50">
+                              {/* Sort Order Controls */}
+                              <div className="flex flex-col gap-0.5">
+                                <button
+                                  onClick={() => moveService(service.id, 'up')}
+                                  disabled={index === 0}
+                                  className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  title="Sposta su"
+                                >
+                                  <ChevronUp className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => moveService(service.id, 'down')}
+                                  disabled={index === services.length - 1}
+                                  className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  title="Sposta giù"
+                                >
+                                  <ChevronDown className="w-4 h-4" />
+                                </button>
+                              </div>
                               <div className="p-2 rounded-lg" style={{ backgroundColor: `${service.color || service.colorPrimary}20` }}>
                                 <IconComponent className="w-5 h-5" style={{ color: service.color || service.colorPrimary }} />
                               </div>

@@ -108,22 +108,24 @@ class ServiceService {
 
   // Formatta servizio per risposta
   formatService(service) {
-    // Ottieni campi extra dalla config (tagline, benefits, bgLight, borderColor, type)
+    // Usa i valori dal database, con fallback alla config per compatibilità
     const configService = SERVICES[service.code] || {};
 
     return {
       id: service.id,
       code: service.code,
       name: service.name,
-      description: configService.description || service.description,
-      tagline: configService.tagline || null,
-      benefits: configService.benefits || [],
+      description: service.description || configService.description,
+      tagline: service.tagline || configService.tagline || null,
+      headline: service.headline || null,
+      benefits: service.benefits || configService.benefits || [],
       appUrl: service.app_url,
       icon: service.icon,
       color: service.color,
-      bgLight: configService.bgLight || null,
-      borderColor: configService.borderColor || null,
-      type: configService.type || 'activatable',
+      bgLight: service.color_light || configService.bgLight || null,
+      borderColor: service.border_color || configService.borderColor || null,
+      type: service.contact_required ? 'contact_required' : (configService.type || 'activatable'),
+      contactRequired: service.contact_required || false,
       sortOrder: service.sort_order
     };
   }

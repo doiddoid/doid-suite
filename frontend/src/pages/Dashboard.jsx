@@ -148,40 +148,12 @@ export default function Dashboard() {
     }
   };
 
-  // Combina servizi API con servizi contact_required
+  // Usa servizi dall'API (configurati in Piani Servizi) ordinati per sortOrder
   const allServices = useMemo(() => {
-    // Ordine desiderato: attivabili prima, poi contact_required
-    const SERVICE_ORDER = [
-      'smart_review',
-      'smart_page',
-      'menu_digitale',
-      'display_suite',
-      'smart_agent_ai',
-      'smart_connect'
-    ];
-
-    // Servizi dall'API
-    const apiServiceCodes = services.map(s => s.service.code);
-
-    // Aggiungi servizi contact_required che non sono già presenti
-    const contactRequiredItems = Object.values(CONTACT_REQUIRED_SERVICES)
-      .filter(s => !apiServiceCodes.includes(s.code))
-      .map(service => ({
-        service,
-        subscription: null,
-        isActive: false,
-        canAccess: false,
-        hasLinkedAccount: false
-      }));
-
-    const combined = [...services, ...contactRequiredItems];
-
-    // Ordina secondo l'ordine definito
-    return combined.sort((a, b) => {
-      const indexA = SERVICE_ORDER.indexOf(a.service.code);
-      const indexB = SERVICE_ORDER.indexOf(b.service.code);
-      return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-    });
+    // Filtra solo servizi attivi e configurati, ordina per sortOrder
+    return services
+      .filter(s => s.service.isActive !== false)
+      .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
   }, [services]);
 
   // Calcola se mostrare welcome banner
