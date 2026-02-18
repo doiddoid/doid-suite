@@ -33,10 +33,10 @@ export default function Sidebar({ collapsed, onToggle }) {
 
   // Service icons and colors mapping
   const serviceConfig = {
-    smart_review: { icon: Star, color: 'text-yellow-500', bgColor: 'bg-yellow-50' },
-    smart_page: { icon: FileText, color: 'text-blue-500', bgColor: 'bg-blue-50' },
-    menu_digitale: { icon: UtensilsCrossed, color: 'text-green-500', bgColor: 'bg-green-50' },
-    display_suite: { icon: Monitor, color: 'text-purple-500', bgColor: 'bg-purple-50' }
+    review: { icon: Star, color: 'text-yellow-500', bgColor: 'bg-yellow-50' },
+    page: { icon: FileText, color: 'text-blue-500', bgColor: 'bg-blue-50' },
+    menu: { icon: UtensilsCrossed, color: 'text-green-500', bgColor: 'bg-green-50' },
+    display: { icon: Monitor, color: 'text-purple-500', bgColor: 'bg-purple-50' }
   };
 
   // Load active services when activity changes

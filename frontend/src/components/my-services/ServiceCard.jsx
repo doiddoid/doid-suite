@@ -12,13 +12,11 @@ const iconMap = {
   users: Users,
   // Fallback per codici servizio
   review: Star,
-  smart_review: Star,
   page: FileText,
-  smart_page: FileText,
   menu: UtensilsCrossed,
-  menu_digitale: UtensilsCrossed,
   display: Monitor,
-  display_suite: Monitor,
+  agent_ai: Bot,
+  connect: Users,
   accessi: Key,
 };
 

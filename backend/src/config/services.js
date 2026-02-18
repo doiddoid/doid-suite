@@ -1,7 +1,7 @@
 // Configurazione dei servizi DOID Suite
 export const SERVICES = {
-  smart_review: {
-    code: 'smart_review',
+  review: {
+    code: 'review',
     name: 'Smart Review',
     description: 'Trasforma ogni recensione in un cliente fedele',
     tagline: 'Più recensioni positive, più clienti',
@@ -17,8 +17,8 @@ export const SERVICES = {
     borderColor: '#FDE68A',
     type: 'activatable'
   },
-  smart_page: {
-    code: 'smart_page',
+  page: {
+    code: 'page',
     name: 'Smart Page',
     description: 'Il tuo biglietto da visita digitale che converte',
     tagline: 'Fatti trovare. Fatti scegliere.',
@@ -34,8 +34,8 @@ export const SERVICES = {
     borderColor: '#BFDBFE',
     type: 'activatable'
   },
-  menu_digitale: {
-    code: 'menu_digitale',
+  menu: {
+    code: 'menu',
     name: 'Menu Digitale',
     description: 'Il menu che fa ordinare di più',
     tagline: 'Addio carta. Benvenuto fatturato.',
@@ -51,8 +51,8 @@ export const SERVICES = {
     borderColor: '#A7F3D0',
     type: 'activatable'
   },
-  smart_agent_ai: {
-    code: 'smart_agent_ai',
+  agent_ai: {
+    code: 'agent_ai',
     name: 'Smart Agent AI',
     description: 'L\'assistente AI che lavora mentre tu riposi',
     tagline: 'Automatizza. Risparmia. Cresci.',
@@ -68,8 +68,8 @@ export const SERVICES = {
     borderColor: '#FBCFE8',
     type: 'contact_required'
   },
-  smart_connect: {
-    code: 'smart_connect',
+  connect: {
+    code: 'connect',
     name: 'Smart Connect',
     description: 'Il CRM che trasforma contatti in clienti',
     tagline: 'Relazioni che generano fatturato',
@@ -85,8 +85,8 @@ export const SERVICES = {
     borderColor: '#A5F3FC',
     type: 'contact_required'
   },
-  display_suite: {
-    code: 'display_suite',
+  display: {
+    code: 'display',
     name: 'Display Suite',
     description: 'I tuoi schermi che vendono per te',
     tagline: 'Digital signage che attira clienti',
@@ -105,8 +105,8 @@ export const SERVICES = {
 };
 
 // Lista servizi per tipo
-export const ACTIVATABLE_SERVICES = ['smart_review', 'smart_page', 'menu_digitale'];
-export const CONTACT_REQUIRED_SERVICES = ['smart_agent_ai', 'smart_connect', 'display_suite'];
+export const ACTIVATABLE_SERVICES = ['review', 'page', 'menu'];
+export const CONTACT_REQUIRED_SERVICES = ['agent_ai', 'connect', 'display'];
 
 // Piani disponibili
 export const PLANS = {

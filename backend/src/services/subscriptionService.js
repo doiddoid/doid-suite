@@ -619,8 +619,8 @@ class SubscriptionService {
         }
 
         // canAccess richiede abbonamento attivo E account collegato (se il servizio lo richiede)
-        // Per ora, i servizi smart_review, smart_page, menu_digitale richiedono account collegato
-        const requiresLinkedAccount = ['smart_review', 'smart_page', 'menu_digitale'].includes(service.code);
+        // Per ora, i servizi review, page, menu richiedono account collegato
+        const requiresLinkedAccount = ['review', 'page', 'menu'].includes(service.code);
         canAccess = isActive && (!requiresLinkedAccount || hasLinkedAccount);
 
         subscription = {
@@ -646,7 +646,7 @@ class SubscriptionService {
         inherited = true;
 
         // canAccess richiede anche account collegato
-        const requiresLinkedAccount = ['smart_review', 'smart_page', 'menu_digitale'].includes(service.code);
+        const requiresLinkedAccount = ['review', 'page', 'menu'].includes(service.code);
         canAccess = !requiresLinkedAccount || hasLinkedAccount;
 
         subscription = {

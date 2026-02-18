@@ -5,12 +5,12 @@ import { useAuth } from '../hooks/useAuth';
 
 // Mappa servizi da query param a valore backend
 const SERVICE_MAP = {
-  'review': 'smart_review',
-  'smart-review': 'smart_review',
-  'page': 'smart_page',
-  'smart-page': 'smart_page',
-  'menu': 'menu_digitale',
-  'display': 'display_suite'
+  'review': 'review',
+  'smart-review': 'review',
+  'page': 'page',
+  'smart-page': 'page',
+  'menu': 'menu',
+  'display': 'display'
 };
 
 export default function Register() {
@@ -22,7 +22,7 @@ export default function Register() {
   const urlParams = useMemo(() => {
     const serviceParam = searchParams.get('service');
     return {
-      requestedService: SERVICE_MAP[serviceParam] || 'smart_review',
+      requestedService: SERVICE_MAP[serviceParam] || 'review',
       utmSource: searchParams.get('utm_source'),
       utmMedium: searchParams.get('utm_medium'),
       utmCampaign: searchParams.get('utm_campaign'),

@@ -3,17 +3,17 @@ import { Star, FileText, UtensilsCrossed, Monitor, X, Search, Plus, Link, Buildi
 import api from '../../services/api';
 
 const SERVICE_ICONS = {
-  smart_review: Star,
-  smart_page: FileText,
-  menu_digitale: UtensilsCrossed,
-  display_suite: Monitor
+  review: Star,
+  page: FileText,
+  menu: UtensilsCrossed,
+  display: Monitor
 };
 
 const SERVICE_COLORS = {
-  smart_review: '#FFB800',
-  smart_page: '#4F46E5',
-  menu_digitale: '#10B981',
-  display_suite: '#EF4444'
+  review: '#FFB800',
+  page: '#4F46E5',
+  menu: '#10B981',
+  display: '#EF4444'
 };
 
 export default function ServiceAssignmentModal({

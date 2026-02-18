@@ -5,12 +5,12 @@ import { CONTACT_REQUIRED_SERVICE_CODES } from '../../config/services';
 
 // URL delle landing page per i servizi
 const SERVICE_LANDING_URLS = {
-  smart_review: 'https://review.doid.it',
-  smart_page: 'https://page.doid.it',
-  menu_digitale: 'https://menu.doid.it',
-  display_suite: null,
-  smart_agent_ai: null,
-  smart_connect: null,
+  review: 'https://review.doid.it',
+  page: 'https://page.doid.it',
+  menu: 'https://menu.doid.it',
+  display: null,
+  agent_ai: null,
+  connect: null,
 };
 
 // Mappa icone per i servizi (nome icona dal DB -> componente)
@@ -35,12 +35,12 @@ const iconMap = {
   'layers': Layers,
   'message-square': MessageSquare,
   // Fallback per codici servizio
-  smart_review: Star,
-  smart_page: FileText,
-  menu_digitale: UtensilsCrossed,
-  display_suite: Monitor,
-  smart_agent_ai: Bot,
-  smart_connect: Users,
+  review: Star,
+  page: FileText,
+  menu: UtensilsCrossed,
+  display: Monitor,
+  agent_ai: Bot,
+  connect: Users,
 };
 
 /**

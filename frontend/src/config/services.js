@@ -10,8 +10,8 @@ export const CONTACT_INFO = {
 
 // Servizi che richiedono contatto (non attivabili direttamente)
 export const CONTACT_REQUIRED_SERVICES = {
-  display_suite: {
-    code: 'display_suite',
+  display: {
+    code: 'display',
     name: 'Display Suite',
     description: 'I tuoi schermi che vendono per te',
     tagline: 'Digital signage che attira clienti',
@@ -26,8 +26,8 @@ export const CONTACT_REQUIRED_SERVICES = {
     borderColor: '#DDD6FE',
     type: 'contact_required'
   },
-  smart_agent_ai: {
-    code: 'smart_agent_ai',
+  agent_ai: {
+    code: 'agent_ai',
     name: 'Smart Agent AI',
     description: 'L\'assistente AI che lavora mentre tu riposi',
     tagline: 'Automatizza. Risparmia. Cresci.',
@@ -42,8 +42,8 @@ export const CONTACT_REQUIRED_SERVICES = {
     borderColor: '#FBCFE8',
     type: 'contact_required'
   },
-  smart_connect: {
-    code: 'smart_connect',
+  connect: {
+    code: 'connect',
     name: 'Smart Connect',
     description: 'Il CRM che trasforma contatti in clienti',
     tagline: 'Relazioni che generano fatturato',
@@ -61,7 +61,7 @@ export const CONTACT_REQUIRED_SERVICES = {
 };
 
 // Lista codici servizi contact_required
-export const CONTACT_REQUIRED_SERVICE_CODES = ['display_suite', 'smart_agent_ai', 'smart_connect'];
+export const CONTACT_REQUIRED_SERVICE_CODES = ['display', 'agent_ai', 'connect'];
 
 // Genera link WhatsApp con messaggio precompilato
 export const getWhatsAppLink = (serviceName) => {

@@ -2431,7 +2431,7 @@ class AdminService {
     }
 
     // Verifica che il service code sia valido
-    const validServices = ['smart_review', 'smart_page', 'menu_digitale', 'display_suite'];
+    const validServices = ['review', 'page', 'menu', 'display'];
     if (!validServices.includes(serviceCode)) {
       throw Errors.BadRequest(`Codice servizio non valido. Valori ammessi: ${validServices.join(', ')}`);
     }

@@ -32,7 +32,7 @@ router.post('/register',
       .withMessage('Nome attività deve essere almeno 3 caratteri'),
     body('requestedService')
       .optional()
-      .isIn(['smart_review', 'smart_page', 'menu_digitale', 'display_suite'])
+      .isIn(['review', 'page', 'menu', 'display'])
       .withMessage('Servizio non valido'),
     body('utmSource').optional().trim(),
     body('utmMedium').optional().trim(),

@@ -17,7 +17,7 @@ class AuthService {
     password,
     fullName,
     activityName = 'La mia attività',
-    requestedService = 'smart_review',
+    requestedService = 'review',
     utmSource = null,
     utmMedium = null,
     utmCampaign = null,

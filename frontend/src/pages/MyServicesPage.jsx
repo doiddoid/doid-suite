@@ -9,20 +9,20 @@ const GHL_DOMAIN = 'checkout.doid.it';
 
 // Configurazione URL dashboard servizi
 const SERVICE_DASHBOARD_URLS = {
-  smart_review: 'https://review.doid.it/dashboard',
-  smart_page: 'https://page.doid.it/dashboard',
-  menu_digitale: 'https://menu.doid.it/dashboard',
-  display_suite: 'https://display.doid.it/dashboard'
+  review: 'https://review.doid.it/dashboard',
+  page: 'https://page.doid.it/dashboard',
+  menu: 'https://menu.doid.it/dashboard',
+  display: 'https://display.doid.it/dashboard'
 };
 
 // Ordine servizi
 const SERVICE_ORDER = [
-  'smart_review',
-  'smart_page',
-  'menu_digitale',
-  'display_suite',
-  'smart_agent_ai',
-  'smart_connect'
+  'review',
+  'page',
+  'menu',
+  'display',
+  'agent_ai',
+  'connect'
 ];
 
 export default function MyServicesPage() {

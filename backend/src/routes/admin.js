@@ -1960,7 +1960,7 @@ router.get('/jobs/trial-reminders/stats',
 router.get('/webhook/test/:activityId',
   [
     param('activityId').isUUID().withMessage('ID attività non valido'),
-    query('service').optional().isIn(['smart_review', 'smart_page', 'menu_digitale', 'display_suite'])
+    query('service').optional().isIn(['review', 'page', 'menu', 'display'])
       .withMessage('Servizio non valido'),
     query('action').optional().isIn(['trial_activated', 'activated', 'renewed', 'cancelled', 'expired', 'payment_failed'])
       .withMessage('Azione non valida')
@@ -1977,7 +1977,7 @@ router.get('/webhook/test/:activityId',
     }
 
     const { activityId } = req.params;
-    const serviceCode = req.query.service || 'smart_review';
+    const serviceCode = req.query.service || 'review';
     const action = req.query.action || 'trial_activated';
 
     // Ottieni dati attività

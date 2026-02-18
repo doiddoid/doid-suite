@@ -21,10 +21,10 @@ export default function ChangePassword() {
 
   const getServiceName = (code) => {
     const names = {
-      smart_review: 'Smart Review',
-      smart_page: 'Smart Page',
-      menu_digitale: 'Menu Digitale',
-      display_suite: 'Display Suite'
+      review: 'Smart Review',
+      page: 'Smart Page',
+      menu: 'Menu Digitale',
+      display: 'Display Suite'
     };
     return names[code] || code;
   };
