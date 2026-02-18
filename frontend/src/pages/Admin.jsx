@@ -2077,9 +2077,26 @@ export default function Admin() {
                                   onClick={async () => {
                                     setSavingService(true);
                                     try {
+                                      // Invia solo i campi modificabili con i tipi corretti
+                                      const updatePayload = {
+                                        name: editingServiceData.name,
+                                        tagline: editingServiceData.tagline || '',
+                                        headline: editingServiceData.headline || '',
+                                        benefits: editingServiceData.benefits || [],
+                                        contactRequired: Boolean(editingServiceData.contactRequired),
+                                        appUrl: editingServiceData.appUrl || '',
+                                        icon: editingServiceData.icon || 'star',
+                                        colorPrimary: editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6',
+                                        priceProMonthly: parseFloat(editingServiceData.priceProMonthly) || 0,
+                                        priceProYearly: parseFloat(editingServiceData.priceProYearly) || 0,
+                                        priceAddonMonthly: editingServiceData.priceAddonMonthly ? parseFloat(editingServiceData.priceAddonMonthly) : null,
+                                        hasFreeTier: Boolean(editingServiceData.hasFreeTier),
+                                        trialDays: parseInt(editingServiceData.trialDays) || 30,
+                                        isActive: editingServiceData.isActive !== false
+                                      };
                                       const response = await api.request(`/admin/services/${service.id}`, {
                                         method: 'PUT',
-                                        body: JSON.stringify(editingServiceData)
+                                        body: JSON.stringify(updatePayload)
                                       });
                                       if (response.success) {
                                         fetchServices();
