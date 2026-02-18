@@ -718,6 +718,7 @@ router.get('/services',
           colorPrimary: s.color_primary,
           colorDark: s.color_dark,
           colorLight: s.color_light,
+          borderColor: s.border_color,
           isActive: s.is_active,
           sortOrder: s.sort_order,
           // Pricing fields
@@ -748,6 +749,7 @@ router.post('/services',
     body('colorPrimary').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore primario deve essere esadecimale'),
     body('colorDark').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore scuro deve essere esadecimale'),
     body('colorLight').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore chiaro deve essere esadecimale'),
+    body('borderColor').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore bordo deve essere esadecimale'),
     body('priceProMonthly').isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
     body('priceProYearly').isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
     body('priceAddonMonthly').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }).withMessage('Prezzo addon non valido'),
@@ -760,7 +762,7 @@ router.post('/services',
   asyncHandler(async (req, res) => {
     const {
       code, name, description, tagline, headline, benefits, contactRequired,
-      appUrl, icon, colorPrimary, colorDark, colorLight,
+      appUrl, icon, colorPrimary, colorDark, colorLight, borderColor,
       priceProMonthly, priceProYearly, priceAddonMonthly,
       hasFreeTier, trialDays, sortOrder
     } = req.body;
@@ -780,6 +782,7 @@ router.post('/services',
         color_primary: colorPrimary || null,
         color_dark: colorDark || null,
         color_light: colorLight || null,
+        border_color: borderColor || null,
         price_pro_monthly: priceProMonthly,
         price_pro_yearly: priceProYearly,
         price_addon_monthly: priceAddonMonthly || null,
@@ -825,6 +828,7 @@ router.put('/services/:id',
     body('colorPrimary').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore primario deve essere esadecimale'),
     body('colorDark').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore scuro deve essere esadecimale'),
     body('colorLight').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore chiaro deve essere esadecimale'),
+    body('borderColor').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore bordo deve essere esadecimale'),
     body('priceProMonthly').optional().isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
     body('priceProYearly').optional().isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
     body('priceAddonMonthly').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }).withMessage('Prezzo addon non valido'),
@@ -838,7 +842,7 @@ router.put('/services/:id',
   asyncHandler(async (req, res) => {
     const {
       name, description, tagline, headline, benefits, contactRequired,
-      appUrl, icon, color, colorPrimary, colorDark, colorLight,
+      appUrl, icon, color, colorPrimary, colorDark, colorLight, borderColor,
       priceProMonthly, priceProYearly, priceAddonMonthly,
       hasFreeTier, trialDays, isActive, sortOrder
     } = req.body;
@@ -856,6 +860,7 @@ router.put('/services/:id',
     if (colorPrimary !== undefined) updateData.color_primary = colorPrimary;
     if (colorDark !== undefined) updateData.color_dark = colorDark;
     if (colorLight !== undefined) updateData.color_light = colorLight;
+    if (borderColor !== undefined) updateData.border_color = borderColor;
     if (priceProMonthly !== undefined) updateData.price_pro_monthly = priceProMonthly;
     if (priceProYearly !== undefined) updateData.price_pro_yearly = priceProYearly;
     if (priceAddonMonthly !== undefined) updateData.price_addon_monthly = priceAddonMonthly;

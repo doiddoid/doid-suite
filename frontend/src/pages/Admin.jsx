@@ -7,7 +7,7 @@ import {
   Check, Clock, Ban, Search, UtensilsCrossed, Monitor,
   User, Shield, Briefcase, MapPin, Phone, Layers,
   ExternalLink, Loader2, LogIn, ChevronDown, ChevronRight,
-  MessageSquare, Zap, Key
+  MessageSquare, Zap, Key, Bot, CheckCircle, XCircle
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -51,7 +51,9 @@ const SERVICE_ICONS = {
   Activity: Activity,
   activity: Activity,
   Layers: Layers,
-  layers: Layers
+  layers: Layers,
+  Bot: Bot,
+  bot: Bot
 };
 
 // Lista icone disponibili per il selettore
@@ -61,6 +63,7 @@ const AVAILABLE_ICONS = [
   { value: 'utensils-crossed', label: 'Posate', icon: UtensilsCrossed },
   { value: 'monitor', label: 'Monitor', icon: Monitor },
   { value: 'key', label: 'Chiave', icon: Key },
+  { value: 'bot', label: 'Bot', icon: Bot },
   { value: 'users', label: 'Utenti', icon: Users },
   { value: 'building', label: 'Edificio', icon: Building2 },
   { value: 'store', label: 'Negozio', icon: Store },
@@ -1743,23 +1746,39 @@ export default function Admin() {
                       </div>
 
                       {/* Aspetto */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
-                          <div className="flex gap-2">
-                            <div className="p-2 rounded-lg border bg-white" style={{ backgroundColor: `${newServiceData.colorPrimary || '#3B82F6'}15` }}>
+                          <div className="flex gap-2 mb-3">
+                            <div className="p-3 rounded-lg border" style={{ backgroundColor: newServiceData.colorLight || `${newServiceData.colorPrimary || '#3B82F6'}15`, borderColor: newServiceData.borderColor || `${newServiceData.colorPrimary || '#3B82F6'}40` }}>
                               {(() => { const IconComp = SERVICE_ICONS[newServiceData.icon] || Star; return <IconComp className="w-6 h-6" style={{ color: newServiceData.colorPrimary || '#3B82F6' }} />; })()}
                             </div>
                             <select value={newServiceData.icon || 'star'} onChange={(e) => setNewServiceData({ ...newServiceData, icon: e.target.value })} className="flex-1 px-3 py-2 border rounded-lg text-sm">
                               {AVAILABLE_ICONS.map(ic => <option key={ic.value} value={ic.value}>{ic.label}</option>)}
                             </select>
                           </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
-                          <div className="flex gap-2">
-                            <input type="color" value={newServiceData.colorPrimary || '#3B82F6'} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
-                            <input type="text" value={newServiceData.colorPrimary || ''} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono" placeholder="#3B82F6" />
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Colore</label>
+                              <div className="flex gap-1">
+                                <input type="color" value={newServiceData.colorPrimary || '#3B82F6'} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="w-8 h-8 rounded border cursor-pointer" />
+                                <input type="text" value={newServiceData.colorPrimary || ''} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="flex-1 px-2 py-1 border rounded text-xs font-mono" placeholder="#3B82F6" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Bg Light</label>
+                              <div className="flex gap-1">
+                                <input type="color" value={newServiceData.colorLight || '#EFF6FF'} onChange={(e) => setNewServiceData({ ...newServiceData, colorLight: e.target.value })} className="w-8 h-8 rounded border cursor-pointer" />
+                                <input type="text" value={newServiceData.colorLight || ''} onChange={(e) => setNewServiceData({ ...newServiceData, colorLight: e.target.value })} className="flex-1 px-2 py-1 border rounded text-xs font-mono" placeholder="#EFF6FF" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">Bordo</label>
+                              <div className="flex gap-1">
+                                <input type="color" value={newServiceData.borderColor || '#BFDBFE'} onChange={(e) => setNewServiceData({ ...newServiceData, borderColor: e.target.value })} className="w-8 h-8 rounded border cursor-pointer" />
+                                <input type="text" value={newServiceData.borderColor || ''} onChange={(e) => setNewServiceData({ ...newServiceData, borderColor: e.target.value })} className="flex-1 px-2 py-1 border rounded text-xs font-mono" placeholder="#BFDBFE" />
+                              </div>
+                            </div>
                           </div>
                         </div>
                         <div>
@@ -1842,12 +1861,17 @@ export default function Admin() {
                                   <span className="font-semibold text-gray-900">{service.name}</span>
                                   <span className="text-xs font-mono text-gray-400">{service.code}</span>
                                   {!service.isActive && <span className="px-1.5 py-0.5 text-xs bg-red-100 text-red-600 rounded">Off</span>}
-                                  {service.hasFreeTier && <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-600 rounded">Free</span>}
                                   {service.contactRequired && <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-600 rounded">Info</span>}
                                 </div>
                                 {service.tagline && <p className="text-sm text-gray-500 truncate">{service.tagline}</p>}
                               </div>
                               <div className="flex items-center gap-6 text-sm">
+                                <div className="text-center">
+                                  <div className="text-gray-400 text-xs">Free</div>
+                                  <div className="flex justify-center">
+                                    {service.hasFreeTier ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-400" />}
+                                  </div>
+                                </div>
                                 <div className="text-center">
                                   <div className="text-gray-400 text-xs">Pro/mese</div>
                                   <div className="font-semibold">€{service.priceProMonthly?.toFixed(2) || '0.00'}</div>
@@ -1948,11 +1972,11 @@ export default function Admin() {
                               </div>
 
                               {/* Aspetto */}
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                 <div>
                                   <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
-                                  <div className="flex gap-2">
-                                    <div className="p-2 rounded-lg border bg-white" style={{ backgroundColor: `${editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6'}15` }}>
+                                  <div className="flex gap-2 mb-3">
+                                    <div className="p-3 rounded-lg border" style={{ backgroundColor: editingServiceData.colorLight || `${editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6'}15`, borderColor: editingServiceData.borderColor || `${editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6'}40` }}>
                                       {(() => { const IconComp = SERVICE_ICONS[editingServiceData.icon] || Star; return <IconComp className="w-6 h-6" style={{ color: editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6' }} />; })()}
                                     </div>
                                     <select
@@ -1963,22 +1987,28 @@ export default function Admin() {
                                       {AVAILABLE_ICONS.map(ic => <option key={ic.value} value={ic.value}>{ic.label}</option>)}
                                     </select>
                                   </div>
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
-                                  <div className="flex gap-2">
-                                    <input
-                                      type="color"
-                                      value={editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6'}
-                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })}
-                                      className="w-10 h-10 rounded border cursor-pointer"
-                                    />
-                                    <input
-                                      type="text"
-                                      value={editingServiceData.colorPrimary || editingServiceData.color || ''}
-                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })}
-                                      className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
-                                    />
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <label className="block text-xs text-gray-500 mb-1">Colore</label>
+                                      <div className="flex gap-1">
+                                        <input type="color" value={editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6'} onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })} className="w-8 h-8 rounded border cursor-pointer" />
+                                        <input type="text" value={editingServiceData.colorPrimary || editingServiceData.color || ''} onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })} className="flex-1 px-2 py-1 border rounded text-xs font-mono" />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-500 mb-1">Bg Light</label>
+                                      <div className="flex gap-1">
+                                        <input type="color" value={editingServiceData.colorLight || '#EFF6FF'} onChange={(e) => setEditingServiceData({ ...editingServiceData, colorLight: e.target.value })} className="w-8 h-8 rounded border cursor-pointer" />
+                                        <input type="text" value={editingServiceData.colorLight || ''} onChange={(e) => setEditingServiceData({ ...editingServiceData, colorLight: e.target.value })} className="flex-1 px-2 py-1 border rounded text-xs font-mono" />
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-500 mb-1">Bordo</label>
+                                      <div className="flex gap-1">
+                                        <input type="color" value={editingServiceData.borderColor || '#BFDBFE'} onChange={(e) => setEditingServiceData({ ...editingServiceData, borderColor: e.target.value })} className="w-8 h-8 rounded border cursor-pointer" />
+                                        <input type="text" value={editingServiceData.borderColor || ''} onChange={(e) => setEditingServiceData({ ...editingServiceData, borderColor: e.target.value })} className="flex-1 px-2 py-1 border rounded text-xs font-mono" />
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                                 <div>
@@ -2087,6 +2117,8 @@ export default function Admin() {
                                         appUrl: editingServiceData.appUrl || '',
                                         icon: editingServiceData.icon || 'star',
                                         colorPrimary: editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6',
+                                        colorLight: editingServiceData.colorLight || '',
+                                        borderColor: editingServiceData.borderColor || '',
                                         priceProMonthly: parseFloat(editingServiceData.priceProMonthly) || 0,
                                         priceProYearly: parseFloat(editingServiceData.priceProYearly) || 0,
                                         priceAddonMonthly: editingServiceData.priceAddonMonthly ? parseFloat(editingServiceData.priceAddonMonthly) : null,
