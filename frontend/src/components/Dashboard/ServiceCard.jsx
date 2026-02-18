@@ -142,18 +142,7 @@ export default function ServiceCard({
 
   // Determina label e stile del pulsante
   const getButtonConfig = () => {
-    // Servizi che richiedono contatto (Display Suite, Smart Agent AI, Smart Connect)
-    if (isContactRequired) {
-      return {
-        label: 'Richiedi Info',
-        icon: MessageSquare,
-        className: 'hover:opacity-90 font-semibold',
-        style: getAccessButtonStyle(),
-        isContactAction: true
-      };
-    }
-
-    // Servizio attivo - mostra Accedi
+    // Servizio attivo - mostra Accedi (anche per contact_required con subscription attiva)
     if (canAccess) {
       return {
         label: 'Accedi',
@@ -170,6 +159,18 @@ export default function ServiceCard({
         icon: ExternalLink,
         className: 'hover:opacity-80 font-semibold',
         style: getAccessButtonStyle()
+      };
+    }
+
+    // Servizi che richiedono contatto (Display Suite, Smart Agent AI, Smart Connect)
+    // Solo se NON hanno subscription attiva
+    if (isContactRequired && !subscription) {
+      return {
+        label: 'Richiedi Info',
+        icon: MessageSquare,
+        className: 'hover:opacity-90 font-semibold',
+        style: getAccessButtonStyle(),
+        isContactAction: true
       };
     }
 

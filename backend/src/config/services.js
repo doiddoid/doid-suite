@@ -84,12 +84,29 @@ export const SERVICES = {
     bgLight: '#ECFEFF',
     borderColor: '#A5F3FC',
     type: 'contact_required'
+  },
+  display_suite: {
+    code: 'display_suite',
+    name: 'Display Suite',
+    description: 'I tuoi schermi che vendono per te',
+    tagline: 'Digital signage che attira clienti',
+    benefits: [
+      'Palinsesti automatici e dinamici',
+      'Gestione multi-schermo da remoto',
+      'Contenuti che catturano l\'attenzione'
+    ],
+    appUrl: process.env.DISPLAY_SUITE_URL || 'https://display.doid.it',
+    icon: 'Monitor',
+    color: '#8B5CF6',
+    bgLight: '#F5F3FF',
+    borderColor: '#DDD6FE',
+    type: 'contact_required'
   }
 };
 
 // Lista servizi per tipo
 export const ACTIVATABLE_SERVICES = ['smart_review', 'smart_page', 'menu_digitale'];
-export const CONTACT_REQUIRED_SERVICES = ['smart_agent_ai', 'smart_connect'];
+export const CONTACT_REQUIRED_SERVICES = ['smart_agent_ai', 'smart_connect', 'display_suite'];
 
 // Piani disponibili
 export const PLANS = {
