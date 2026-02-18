@@ -18,6 +18,7 @@ import Activities from './pages/Activities';
 import NewActivity from './pages/NewActivity';
 import ActivitySettings from './pages/ActivitySettings';
 import Admin from './pages/Admin';
+import MyServicesPage from './pages/MyServicesPage';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
               }
             >
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/servizi" element={<MyServicesPage />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/organizations/new" element={<NewOrganization />} />
               <Route path="/activities" element={<Activities />} />

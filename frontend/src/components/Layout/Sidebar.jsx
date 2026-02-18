@@ -16,7 +16,8 @@ import {
   Sparkles,
   Check,
   ExternalLink,
-  Loader2
+  Loader2,
+  Layers
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useActivities } from '../../hooks/useActivities';
@@ -75,6 +76,11 @@ export default function Sidebar({ collapsed, onToggle }) {
       name: 'Dashboard',
       path: '/dashboard',
       icon: LayoutDashboard
+    },
+    {
+      name: 'I Miei Servizi',
+      path: '/servizi',
+      icon: Layers
     },
     {
       name: 'Attività',
