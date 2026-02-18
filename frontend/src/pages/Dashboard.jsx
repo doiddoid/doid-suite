@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Building2, Plus, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useActivities } from '../hooks/useActivities';
+import { useMyServices } from '../hooks/useMyServices';
 import { DashboardStats, ServicesGrid, WelcomeBanner, ContactModal } from '../components/Dashboard';
 import { PlanModal } from '../components/Services';
 import { CONTACT_REQUIRED_SERVICES } from '../config/services';
@@ -18,6 +19,25 @@ export default function Dashboard() {
     activateSubscription,
     accessService
   } = useActivities();
+
+  // CHECKPOINT: useMyServices hook test
+  const {
+    services: myServices,
+    totals: myTotals,
+    loading: myServicesLoading,
+    error: myServicesError
+  } = useMyServices();
+
+  // CHECKPOINT: Log useMyServices data
+  useEffect(() => {
+    if (!myServicesLoading) {
+      console.log('[useMyServices] services:', myServices);
+      console.log('[useMyServices] totals:', myTotals);
+      if (myServicesError) {
+        console.error('[useMyServices] error:', myServicesError);
+      }
+    }
+  }, [myServices, myTotals, myServicesLoading, myServicesError]);
 
   const [services, setServices] = useState([]);
   const [stats, setStats] = useState(null);
