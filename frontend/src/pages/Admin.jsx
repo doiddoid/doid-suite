@@ -1742,8 +1742,34 @@ export default function Admin() {
                         <textarea value={(newServiceData.benefits || []).join('\n')} onChange={(e) => setNewServiceData({ ...newServiceData, benefits: e.target.value.split('\n').filter(b => b.trim()) })} className="w-full px-3 py-2 border rounded-lg text-sm" rows={3} placeholder="Palinsesti automatici e dinamici&#10;Gestione multi-schermo da remoto&#10;Contenuti che catturano l'attenzione" />
                       </div>
 
-                      {/* Prezzi e Aspetto */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+                      {/* Aspetto */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
+                          <div className="flex gap-2">
+                            <div className="p-2 rounded-lg border bg-white" style={{ backgroundColor: `${newServiceData.colorPrimary || '#3B82F6'}15` }}>
+                              {(() => { const IconComp = SERVICE_ICONS[newServiceData.icon] || Star; return <IconComp className="w-6 h-6" style={{ color: newServiceData.colorPrimary || '#3B82F6' }} />; })()}
+                            </div>
+                            <select value={newServiceData.icon || 'star'} onChange={(e) => setNewServiceData({ ...newServiceData, icon: e.target.value })} className="flex-1 px-3 py-2 border rounded-lg text-sm">
+                              {AVAILABLE_ICONS.map(ic => <option key={ic.value} value={ic.value}>{ic.label}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
+                          <div className="flex gap-2">
+                            <input type="color" value={newServiceData.colorPrimary || '#3B82F6'} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="w-10 h-10 rounded border cursor-pointer" />
+                            <input type="text" value={newServiceData.colorPrimary || ''} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono" placeholder="#3B82F6" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">URL App</label>
+                          <input type="url" value={newServiceData.appUrl || ''} onChange={(e) => setNewServiceData({ ...newServiceData, appUrl: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="https://review.doid.it" />
+                        </div>
+                      </div>
+
+                      {/* Prezzi */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Pro/mese *</label>
                           <input type="number" step="0.01" value={newServiceData.priceProMonthly ?? ''} onChange={(e) => setNewServiceData({ ...newServiceData, priceProMonthly: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="14.90" />
@@ -1759,26 +1785,6 @@ export default function Admin() {
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Trial (gg)</label>
                           <input type="number" value={newServiceData.trialDays ?? 30} onChange={(e) => setNewServiceData({ ...newServiceData, trialDays: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 border rounded-lg text-sm" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
-                          <select value={newServiceData.icon || 'star'} onChange={(e) => setNewServiceData({ ...newServiceData, icon: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
-                            {AVAILABLE_ICONS.map(ic => {
-                              const IconComp = ic.icon;
-                              return <option key={ic.value} value={ic.value}>{ic.label}</option>;
-                            })}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
-                          <div className="flex gap-1">
-                            <input type="color" value={newServiceData.colorPrimary || '#3B82F6'} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="w-10 h-9 rounded border cursor-pointer" />
-                            <input type="text" value={newServiceData.colorPrimary || ''} onChange={(e) => setNewServiceData({ ...newServiceData, colorPrimary: e.target.value })} className="flex-1 px-2 py-2 border rounded-lg text-xs font-mono" placeholder="#3B82F6" />
-                          </div>
-                        </div>
-                        <div className="col-span-2">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">URL App</label>
-                          <input type="url" value={newServiceData.appUrl || ''} onChange={(e) => setNewServiceData({ ...newServiceData, appUrl: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="https://review.doid.it" />
                         </div>
                       </div>
 
@@ -1837,8 +1843,9 @@ export default function Admin() {
                                   <span className="text-xs font-mono text-gray-400">{service.code}</span>
                                   {!service.isActive && <span className="px-1.5 py-0.5 text-xs bg-red-100 text-red-600 rounded">Off</span>}
                                   {service.hasFreeTier && <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-600 rounded">Free</span>}
+                                  {service.contactRequired && <span className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-600 rounded">Info</span>}
                                 </div>
-                                <p className="text-sm text-gray-500 truncate">{service.description || 'Nessuna descrizione'}</p>
+                                {service.tagline && <p className="text-sm text-gray-500 truncate">{service.tagline}</p>}
                               </div>
                               <div className="flex items-center gap-6 text-sm">
                                 <div className="text-center">
@@ -1940,8 +1947,53 @@ export default function Admin() {
                                 />
                               </div>
 
-                              {/* Prezzi e Aspetto */}
-                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+                              {/* Aspetto */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
+                                  <div className="flex gap-2">
+                                    <div className="p-2 rounded-lg border bg-white" style={{ backgroundColor: `${editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6'}15` }}>
+                                      {(() => { const IconComp = SERVICE_ICONS[editingServiceData.icon] || Star; return <IconComp className="w-6 h-6" style={{ color: editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6' }} />; })()}
+                                    </div>
+                                    <select
+                                      value={editingServiceData.icon || 'star'}
+                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, icon: e.target.value })}
+                                      className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                                    >
+                                      {AVAILABLE_ICONS.map(ic => <option key={ic.value} value={ic.value}>{ic.label}</option>)}
+                                    </select>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="color"
+                                      value={editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6'}
+                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })}
+                                      className="w-10 h-10 rounded border cursor-pointer"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={editingServiceData.colorPrimary || editingServiceData.color || ''}
+                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })}
+                                      className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
+                                    />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">URL App</label>
+                                  <input
+                                    type="url"
+                                    value={editingServiceData.appUrl || ''}
+                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, appUrl: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Prezzi */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                 <div>
                                   <label className="block text-xs font-medium text-gray-600 mb-1">Pro/mese *</label>
                                   <input
@@ -1981,44 +2033,6 @@ export default function Admin() {
                                     className="w-full px-3 py-2 border rounded-lg text-sm"
                                   />
                                 </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
-                                  <select
-                                    value={editingServiceData.icon || 'star'}
-                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, icon: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg text-sm"
-                                  >
-                                    {AVAILABLE_ICONS.map(ic => (
-                                      <option key={ic.value} value={ic.value}>{ic.label}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">Colore</label>
-                                  <div className="flex gap-1">
-                                    <input
-                                      type="color"
-                                      value={editingServiceData.colorPrimary || editingServiceData.color || '#3B82F6'}
-                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })}
-                                      className="w-10 h-9 rounded border cursor-pointer"
-                                    />
-                                    <input
-                                      type="text"
-                                      value={editingServiceData.colorPrimary || editingServiceData.color || ''}
-                                      onChange={(e) => setEditingServiceData({ ...editingServiceData, colorPrimary: e.target.value })}
-                                      className="flex-1 px-2 py-2 border rounded-lg text-xs font-mono"
-                                    />
-                                  </div>
-                                </div>
-                                <div className="col-span-2">
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">URL App</label>
-                                  <input
-                                    type="url"
-                                    value={editingServiceData.appUrl || ''}
-                                    onChange={(e) => setEditingServiceData({ ...editingServiceData, appUrl: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg text-sm"
-                                  />
-                                </div>
                               </div>
 
                               {/* Flags */}
@@ -2052,18 +2066,7 @@ export default function Admin() {
                                 </label>
                               </div>
 
-                              {/* Descrizione */}
-                              <div className="mb-4">
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Descrizione</label>
-                                <input
-                                  type="text"
-                                  value={editingServiceData.description || ''}
-                                  onChange={(e) => setEditingServiceData({ ...editingServiceData, description: e.target.value })}
-                                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                                  placeholder="Descrizione del servizio..."
-                                />
-                              </div>
-                              <div className="flex justify-end gap-2 mt-4">
+                              <div className="flex justify-end gap-2">
                                 <button
                                   onClick={() => { setEditingServiceId(null); setEditingServiceData({}); }}
                                   className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
