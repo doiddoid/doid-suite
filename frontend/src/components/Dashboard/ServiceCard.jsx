@@ -13,14 +13,17 @@ const SERVICE_LANDING_URLS = {
   smart_connect: null,
 };
 
-// Mappa icone per i servizi
+// Mappa icone per i servizi (nome icona dal DB -> componente)
 const iconMap = {
-  Star,
-  FileText,
-  UtensilsCrossed,
-  Monitor,
-  Bot,
-  Users,
+  // Nomi icone lowercase (come salvati nel DB)
+  star: Star,
+  filetext: FileText,
+  utensilscrossed: UtensilsCrossed,
+  monitor: Monitor,
+  bot: Bot,
+  users: Users,
+  messagesquare: MessageSquare,
+  // Fallback per codici servizio
   smart_review: Star,
   smart_page: FileText,
   menu_digitale: UtensilsCrossed,
@@ -60,8 +63,9 @@ export default function ServiceCard({
 }) {
   const [loading, setLoading] = useState(false);
 
-  // Determina l'icona da usare
-  const Icon = iconMap[service.icon] || iconMap[service.code] || Star;
+  // Determina l'icona da usare (normalizza a lowercase)
+  const iconKey = service.icon?.toLowerCase?.() || service.icon;
+  const Icon = iconMap[iconKey] || iconMap[service.code] || Star;
 
   // Calcola giorni rimanenti per trial
   const getTrialDaysLeft = () => {
@@ -89,9 +93,9 @@ export default function ServiceCard({
     try {
       if (canAccess && onAccess) {
         await onAccess();
-      } else if (isActive && !hasLinkedAccount && onConfigure) {
-        // Abbonamento attivo ma nessun account collegato - configura
-        await onConfigure();
+      } else if (isActive && !hasLinkedAccount && onAccess) {
+        // Abbonamento attivo ma nessun account collegato - accedi per configurare
+        await onAccess();
       } else if (!subscription && onActivateTrial) {
         await onActivateTrial();
       } else if ((subscription?.status === 'expired' || subscription?.status === 'canceled' || subscription?.status === 'suspended' || isTrialExpired) && onChoosePlan) {
@@ -149,12 +153,13 @@ export default function ServiceCard({
       };
     }
 
-    // Abbonamento attivo ma nessun account collegato - mostra Configura
+    // Abbonamento attivo ma nessun account collegato - mostra Accedi (per configurare)
     if (isActive && !hasLinkedAccount) {
       return {
-        label: 'Configura',
-        icon: Settings,
-        className: 'bg-primary-600 text-white hover:bg-primary-700'
+        label: 'Accedi',
+        icon: ExternalLink,
+        className: 'hover:opacity-80 font-semibold',
+        style: getAccessButtonStyle()
       };
     }
 
@@ -163,7 +168,8 @@ export default function ServiceCard({
       return {
         label: 'Attiva Trial',
         icon: Play,
-        className: 'bg-primary-600 text-white hover:bg-primary-700',
+        className: 'hover:opacity-80 font-semibold',
+        style: getAccessButtonStyle(),
         secondaryAction: landingUrl ? {
           label: 'Scopri di più',
           icon: Info,
