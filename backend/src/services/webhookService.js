@@ -88,7 +88,7 @@ class WebhookService {
     // Info supporto da includere nei payload
     this.supportInfo = {
       support_email: process.env.SUPPORT_EMAIL || 'info@doid.biz',
-      support_whatsapp: process.env.SUPPORT_WHATSAPP || '+393480890477'
+      support_whatsapp: process.env.SUPPORT_WHATSAPP || '+393516781324'
     };
 
     // Mapping servizio → label italiano
