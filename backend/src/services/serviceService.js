@@ -121,7 +121,7 @@ class ServiceService {
       benefits: service.benefits || configService.benefits || [],
       appUrl: service.app_url,
       icon: service.icon,
-      color: service.color,
+      color: service.color_primary || service.color,
       bgLight: service.color_light || configService.bgLight || null,
       borderColor: service.border_color || configService.borderColor || null,
       type: service.contact_required ? 'contact_required' : (configService.type || 'activatable'),
