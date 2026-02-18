@@ -710,11 +710,89 @@ router.get('/services',
           description: s.description,
           appUrl: s.app_url,
           icon: s.icon,
-          color: s.color,
+          color: s.color_primary || s.color,
+          colorPrimary: s.color_primary,
+          colorDark: s.color_dark,
+          colorLight: s.color_light,
           isActive: s.is_active,
-          sortOrder: s.sort_order
+          sortOrder: s.sort_order,
+          // Pricing fields
+          priceProMonthly: parseFloat(s.price_pro_monthly || 0),
+          priceProYearly: parseFloat(s.price_pro_yearly || 0),
+          priceAddonMonthly: s.price_addon_monthly ? parseFloat(s.price_addon_monthly) : null,
+          hasFreeTier: s.has_free_tier || false,
+          trialDays: s.trial_days || 30
         }))
       }
+    });
+  })
+);
+
+// POST /api/admin/services
+router.post('/services',
+  [
+    body('code').trim().notEmpty().withMessage('Codice servizio richiesto')
+      .matches(/^[a-z_]+$/).withMessage('Codice deve contenere solo lettere minuscole e underscore'),
+    body('name').trim().notEmpty().withMessage('Nome servizio richiesto'),
+    body('description').optional().trim(),
+    body('appUrl').optional().isURL().withMessage('URL non valido'),
+    body('icon').optional().trim(),
+    body('colorPrimary').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore primario deve essere esadecimale'),
+    body('colorDark').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore scuro deve essere esadecimale'),
+    body('colorLight').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore chiaro deve essere esadecimale'),
+    body('priceProMonthly').isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
+    body('priceProYearly').isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
+    body('priceAddonMonthly').optional({ nullable: true }).isFloat({ min: 0 }).withMessage('Prezzo addon non valido'),
+    body('hasFreeTier').optional().isBoolean(),
+    body('trialDays').optional().isInt({ min: 0 }),
+    body('sortOrder').optional().isInt({ min: 0 })
+  ],
+  validate,
+  logAdminAction('create_service'),
+  asyncHandler(async (req, res) => {
+    const {
+      code, name, description, appUrl, icon,
+      colorPrimary, colorDark, colorLight,
+      priceProMonthly, priceProYearly, priceAddonMonthly,
+      hasFreeTier, trialDays, sortOrder
+    } = req.body;
+
+    const { data: service, error } = await supabaseAdmin
+      .from('services')
+      .insert({
+        code,
+        name,
+        description: description || null,
+        app_url: appUrl || null,
+        icon: icon || null,
+        color_primary: colorPrimary || null,
+        color_dark: colorDark || null,
+        color_light: colorLight || null,
+        price_pro_monthly: priceProMonthly,
+        price_pro_yearly: priceProYearly,
+        price_addon_monthly: priceAddonMonthly || null,
+        has_free_tier: hasFreeTier || false,
+        trial_days: trialDays || 30,
+        sort_order: sortOrder || 0,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(400).json({
+          success: false,
+          error: 'Esiste già un servizio con questo codice'
+        });
+      }
+      throw error;
+    }
+
+    res.status(201).json({
+      success: true,
+      data: service,
+      message: 'Servizio creato con successo'
     });
   })
 );
@@ -728,13 +806,26 @@ router.put('/services/:id',
     body('appUrl').optional().isURL().withMessage('URL non valido'),
     body('icon').optional().trim(),
     body('color').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore deve essere esadecimale'),
+    body('colorPrimary').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore primario deve essere esadecimale'),
+    body('colorDark').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore scuro deve essere esadecimale'),
+    body('colorLight').optional().matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore chiaro deve essere esadecimale'),
+    body('priceProMonthly').optional().isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
+    body('priceProYearly').optional().isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
+    body('priceAddonMonthly').optional({ nullable: true }).isFloat({ min: 0 }).withMessage('Prezzo addon non valido'),
+    body('hasFreeTier').optional().isBoolean(),
+    body('trialDays').optional().isInt({ min: 0 }),
     body('isActive').optional().isBoolean(),
     body('sortOrder').optional().isInt({ min: 0 })
   ],
   validate,
   logAdminAction('update_service'),
   asyncHandler(async (req, res) => {
-    const { name, description, appUrl, icon, color, isActive, sortOrder } = req.body;
+    const {
+      name, description, appUrl, icon, color,
+      colorPrimary, colorDark, colorLight,
+      priceProMonthly, priceProYearly, priceAddonMonthly,
+      hasFreeTier, trialDays, isActive, sortOrder
+    } = req.body;
 
     const updateData = {};
     if (name !== undefined) updateData.name = name;
@@ -742,6 +833,14 @@ router.put('/services/:id',
     if (appUrl !== undefined) updateData.app_url = appUrl;
     if (icon !== undefined) updateData.icon = icon;
     if (color !== undefined) updateData.color = color;
+    if (colorPrimary !== undefined) updateData.color_primary = colorPrimary;
+    if (colorDark !== undefined) updateData.color_dark = colorDark;
+    if (colorLight !== undefined) updateData.color_light = colorLight;
+    if (priceProMonthly !== undefined) updateData.price_pro_monthly = priceProMonthly;
+    if (priceProYearly !== undefined) updateData.price_pro_yearly = priceProYearly;
+    if (priceAddonMonthly !== undefined) updateData.price_addon_monthly = priceAddonMonthly;
+    if (hasFreeTier !== undefined) updateData.has_free_tier = hasFreeTier;
+    if (trialDays !== undefined) updateData.trial_days = trialDays;
     if (isActive !== undefined) updateData.is_active = isActive;
     if (sortOrder !== undefined) updateData.sort_order = sortOrder;
 
@@ -759,6 +858,67 @@ router.put('/services/:id',
       data: service,
       message: 'Servizio aggiornato'
     });
+  })
+);
+
+// DELETE /api/admin/services/:id (soft delete - disattiva oppure elimina se non ha subscription)
+router.delete('/services/:id',
+  [
+    param('id').isUUID().withMessage('ID servizio non valido'),
+    query('permanent').optional().isBoolean()
+  ],
+  validate,
+  logAdminAction('delete_service'),
+  asyncHandler(async (req, res) => {
+    const permanent = req.query.permanent === 'true';
+
+    // Verifica se ci sono subscription attive
+    const { data: subscriptions } = await supabaseAdmin
+      .from('service_subscriptions')
+      .select('id')
+      .eq('service_id', req.params.id)
+      .limit(1);
+
+    if (permanent) {
+      if (subscriptions && subscriptions.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Impossibile eliminare: esistono subscription associate a questo servizio'
+        });
+      }
+
+      // Elimina i piani associati
+      await supabaseAdmin
+        .from('plans')
+        .delete()
+        .eq('service_id', req.params.id);
+
+      // Elimina il servizio
+      const { error } = await supabaseAdmin
+        .from('services')
+        .delete()
+        .eq('id', req.params.id);
+
+      if (error) throw error;
+
+      res.json({
+        success: true,
+        message: 'Servizio eliminato permanentemente'
+      });
+    } else {
+      // Soft delete - disattiva
+      const { error } = await supabaseAdmin
+        .from('services')
+        .update({ is_active: false })
+        .eq('id', req.params.id);
+
+      if (error) throw error;
+
+      res.json({
+        success: true,
+        message: 'Servizio disattivato'
+      });
+    }
   })
 );
 

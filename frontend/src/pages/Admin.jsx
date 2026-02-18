@@ -460,6 +460,8 @@ export default function Admin() {
         setFormData({ code: '', name: '', description: '', priceMonthly: 0, priceYearly: 0, maxActivities: -1, isActive: true });
       } else if (type === 'plan') {
         setFormData({ serviceId: selectedService || '', code: '', name: '', priceMonthly: 0, priceYearly: 0, features: [], isActive: true, sortOrder: 0 });
+      } else if (type === 'service') {
+        setFormData({ code: '', name: '', description: '', appUrl: '', icon: '', colorPrimary: '#3B82F6', priceProMonthly: 0, priceProYearly: 0, priceAddonMonthly: null, hasFreeTier: false, trialDays: 30, isActive: true, sortOrder: 0 });
       }
     }
     setShowModal(true);
@@ -577,6 +579,22 @@ export default function Admin() {
           fetchPlans();
           setSuccessMessage(modalMode === 'create' ? 'Piano creato' : 'Piano aggiornato');
         }
+      } else if (modalType === 'service') {
+        if (modalMode === 'create') {
+          response = await api.request('/admin/services', {
+            method: 'POST',
+            body: JSON.stringify(formData)
+          });
+        } else if (modalMode === 'edit') {
+          response = await api.request(`/admin/services/${editingItem.id}`, {
+            method: 'PUT',
+            body: JSON.stringify(formData)
+          });
+        }
+        if (response.success) {
+          fetchServices();
+          setSuccessMessage(modalMode === 'create' ? 'Servizio creato' : 'Servizio aggiornato');
+        }
       }
 
       // Chiudi modal solo se operazione riuscita
@@ -618,6 +636,15 @@ export default function Admin() {
         if (response.success) {
           fetchPlans();
           setSuccessMessage('Piano disattivato con successo');
+        }
+      } else if (type === 'service') {
+        if (!id) {
+          throw new Error('ID servizio mancante');
+        }
+        response = await api.request(`/admin/services/${id}`, { method: 'DELETE' });
+        if (response.success) {
+          fetchServices();
+          setSuccessMessage('Servizio disattivato con successo');
         }
       }
       if (!response?.success) {
@@ -1602,6 +1629,86 @@ export default function Admin() {
             {/* Plans Tab - Piani per Servizio Singolo */}
             {activeTab === 'plans' && (
               <div className="space-y-6">
+                {/* Services Management Section */}
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Gestione Servizi</h3>
+                    <button onClick={() => openModal('service', 'create')} className="btn-primary flex items-center gap-2 text-sm">
+                      <Plus className="w-4 h-4" />
+                      Nuovo Servizio
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b text-left text-sm text-gray-500">
+                          <th className="pb-3 font-medium">Servizio</th>
+                          <th className="pb-3 font-medium">Codice</th>
+                          <th className="pb-3 font-medium text-right">Pro/mese</th>
+                          <th className="pb-3 font-medium text-right">Pro/anno</th>
+                          <th className="pb-3 font-medium text-right">Addon</th>
+                          <th className="pb-3 font-medium text-center">Free</th>
+                          <th className="pb-3 font-medium text-center">Trial</th>
+                          <th className="pb-3 font-medium text-center">Stato</th>
+                          <th className="pb-3 font-medium text-right">Azioni</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {services.map(service => {
+                          const IconComponent = SERVICE_ICONS[service.icon] || Star;
+                          return (
+                            <tr key={service.id} className={`hover:bg-gray-50 ${!service.isActive ? 'opacity-50' : ''}`}>
+                              <td className="py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="p-1.5 rounded-lg" style={{ backgroundColor: `${service.color || service.colorPrimary}20` }}>
+                                    <IconComponent className="w-4 h-4" style={{ color: service.color || service.colorPrimary }} />
+                                  </div>
+                                  <span className="font-medium">{service.name}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 font-mono text-sm text-gray-500">{service.code}</td>
+                              <td className="py-3 text-right font-medium">€{service.priceProMonthly?.toFixed(2) || '0.00'}</td>
+                              <td className="py-3 text-right font-medium">€{service.priceProYearly?.toFixed(2) || '0.00'}</td>
+                              <td className="py-3 text-right">{service.priceAddonMonthly ? `€${service.priceAddonMonthly.toFixed(2)}` : '-'}</td>
+                              <td className="py-3 text-center">{service.hasFreeTier ? <Check className="w-4 h-4 text-green-500 mx-auto" /> : '-'}</td>
+                              <td className="py-3 text-center">{service.trialDays || 0}gg</td>
+                              <td className="py-3 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${service.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                  {service.isActive ? 'Attivo' : 'Off'}
+                                </span>
+                              </td>
+                              <td className="py-3 text-right">
+                                <div className="flex justify-end gap-1">
+                                  <button
+                                    onClick={() => openModal('service', 'edit', service)}
+                                    className="p-1.5 text-gray-400 hover:text-indigo-600 rounded hover:bg-indigo-50"
+                                    title="Modifica"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirm({ type: 'service', id: service.id, name: service.name })}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
+                                    title="Disattiva"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Separator */}
+                <hr className="border-gray-200" />
+
+                {/* Plans section header */}
+                <h3 className="text-lg font-semibold text-gray-900">Piani per Servizio</h3>
+
                 {/* Service selector */}
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1611,14 +1718,14 @@ export default function Admin() {
                     >
                       Tutti
                     </button>
-                    {services.map(service => {
+                    {services.filter(s => s.isActive).map(service => {
                       const IconComponent = SERVICE_ICONS[service.icon] || Star;
                       return (
                         <button
                           key={service.id}
                           onClick={() => setSelectedService(service.id)}
                           className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${selectedService === service.id ? 'text-white' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-                          style={selectedService === service.id ? { backgroundColor: service.color } : {}}
+                          style={selectedService === service.id ? { backgroundColor: service.color || service.colorPrimary } : {}}
                         >
                           <IconComponent className="w-4 h-4" />
                           {service.name}
@@ -1800,6 +1907,8 @@ export default function Admin() {
                   {modalMode === 'edit' && modalType === 'package' && 'Modifica Pacchetto'}
                   {modalMode === 'create' && modalType === 'plan' && 'Nuovo Piano Servizio'}
                   {modalMode === 'edit' && modalType === 'plan' && 'Modifica Piano'}
+                  {modalMode === 'create' && modalType === 'service' && 'Nuovo Servizio'}
+                  {modalMode === 'edit' && modalType === 'service' && 'Modifica Servizio'}
                 </h3>
                 <button onClick={closeModal} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
                   <X className="w-5 h-5" />
@@ -2055,6 +2164,76 @@ export default function Admin() {
                     <input type="checkbox" checked={formData.isActive !== false} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                     <div><p className="font-medium text-gray-700">Piano attivo</p><p className="text-xs text-gray-500">I piani disattivati non sono disponibili</p></div>
                   </label>
+                </>
+              )}
+
+              {/* Service Form */}
+              {modalType === 'service' && (
+                <>
+                  <FormField label="Codice" required hint="Identificativo univoco (es: review, page, menu)">
+                    <input type="text" required value={formData.code || ''} onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/[^a-z_]/g, '') })} className="input-field font-mono" disabled={modalMode === 'edit'} placeholder="review" />
+                  </FormField>
+                  <FormField label="Nome" required>
+                    <input type="text" required value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="input-field" placeholder="Smart Review" />
+                  </FormField>
+                  <FormField label="Descrizione">
+                    <textarea value={formData.description || ''} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="input-field resize-none" rows={2} placeholder="Descrizione del servizio..." />
+                  </FormField>
+                  <FormField label="URL App">
+                    <input type="url" value={formData.appUrl || ''} onChange={(e) => setFormData({ ...formData, appUrl: e.target.value })} className="input-field" placeholder="https://review.doid.it" />
+                  </FormField>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label="Icona" hint="Nome icona Lucide">
+                      <input type="text" value={formData.icon || ''} onChange={(e) => setFormData({ ...formData, icon: e.target.value })} className="input-field" placeholder="star" />
+                    </FormField>
+                    <FormField label="Colore Primario">
+                      <div className="flex gap-2">
+                        <input type="color" value={formData.colorPrimary || '#3B82F6'} onChange={(e) => setFormData({ ...formData, colorPrimary: e.target.value })} className="w-12 h-10 rounded border cursor-pointer" />
+                        <input type="text" value={formData.colorPrimary || ''} onChange={(e) => setFormData({ ...formData, colorPrimary: e.target.value })} className="input-field flex-1 font-mono" placeholder="#3B82F6" />
+                      </div>
+                    </FormField>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="font-semibold text-blue-900 mb-3">Prezzi</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField label="Pro Mensile" required>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                          <input type="number" required min={0} step={0.01} value={formData.priceProMonthly ?? 0} onChange={(e) => setFormData({ ...formData, priceProMonthly: parseFloat(e.target.value) })} className="input-field pl-8" />
+                        </div>
+                      </FormField>
+                      <FormField label="Pro Annuale" required>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                          <input type="number" required min={0} step={0.01} value={formData.priceProYearly ?? 0} onChange={(e) => setFormData({ ...formData, priceProYearly: parseFloat(e.target.value) })} className="input-field pl-8" />
+                        </div>
+                      </FormField>
+                      <FormField label="Addon Mensile" hint="Opzionale">
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                          <input type="number" min={0} step={0.01} value={formData.priceAddonMonthly ?? ''} onChange={(e) => setFormData({ ...formData, priceAddonMonthly: e.target.value ? parseFloat(e.target.value) : null })} className="input-field pl-8" placeholder="-" />
+                        </div>
+                      </FormField>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label="Giorni Trial">
+                      <input type="number" min={0} value={formData.trialDays ?? 30} onChange={(e) => setFormData({ ...formData, trialDays: parseInt(e.target.value) })} className="input-field" />
+                    </FormField>
+                    <FormField label="Ordine">
+                      <input type="number" min={0} value={formData.sortOrder ?? 0} onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) })} className="input-field" />
+                    </FormField>
+                  </div>
+                  <div className="flex gap-4">
+                    <label className="flex-1 flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                      <input type="checkbox" checked={formData.hasFreeTier === true} onChange={(e) => setFormData({ ...formData, hasFreeTier: e.target.checked })} className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                      <div><p className="font-medium text-gray-700">Ha piano Free</p></div>
+                    </label>
+                    <label className="flex-1 flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                      <input type="checkbox" checked={formData.isActive !== false} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                      <div><p className="font-medium text-gray-700">Servizio attivo</p></div>
+                    </label>
+                  </div>
                 </>
               )}
 

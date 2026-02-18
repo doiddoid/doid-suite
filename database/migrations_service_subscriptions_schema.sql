@@ -382,7 +382,7 @@ INSERT INTO services (
 -- review: Smart Review
 (
     'review', 'Smart Review', 'Trasforma ogni recensione in un cliente fedele',
-    14.90, 149.00, 7.90,
+    14.90, 149.00, 12.90,
     TRUE, 30, TRUE,
     'star', '#F59E0B', '#D97706', '#FFFBEB',
     1
@@ -390,7 +390,7 @@ INSERT INTO services (
 -- page: Smart Page
 (
     'page', 'Smart Page', 'Il tuo biglietto da visita digitale che converte',
-    14.90, 149.00, 7.90,
+    14.90, 149.00, 12.90,
     TRUE, 30, TRUE,
     'file-text', '#3B82F6', '#2563EB', '#EFF6FF',
     2
@@ -398,26 +398,10 @@ INSERT INTO services (
 -- menu: Smart Menu
 (
     'menu', 'Smart Menu', 'Il menu che fa ordinare di piu',
-    24.90, 249.00, NULL,
+    24.90, 249.00, 24.90,
     FALSE, 30, TRUE,
     'utensils-crossed', '#10B981', '#059669', '#ECFDF5',
     3
-),
--- display: Display Suite
-(
-    'display', 'Display Suite', 'I tuoi schermi che vendono per te',
-    29.90, 287.00, NULL,
-    FALSE, 30, FALSE,
-    'monitor', '#A855F7', '#7C3AED', '#FAF5FF',
-    4
-),
--- accessi: Smart Accessi
-(
-    'accessi', 'Smart Accessi', 'Gestione accessi e controllo ingressi per attivita',
-    14.90, 143.00, NULL,
-    FALSE, 30, FALSE,
-    'key-round', '#6B7280', '#4B5563', '#F9FAFB',
-    5
 )
 ON CONFLICT (code) DO UPDATE SET
     name = EXCLUDED.name,
