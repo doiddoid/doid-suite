@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import supabase from '../services/supabase.js';
+import { useAuth } from './useAuth.jsx';
 
 /**
  * Custom hook per recuperare tutti i dati per la pagina "I Miei Servizi"
@@ -12,30 +13,13 @@ import supabase from '../services/supabase.js';
  * @returns {Object} { services, totals, loading, error, refetch }
  */
 export function useMyServices() {
+  const { user, isAuthenticated } = useAuth();
   const [rawData, setRawData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [userId, setUserId] = useState(null);
 
-  // Ottieni user_id dall'utente loggato (Supabase Auth)
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        console.error('Auth error:', authError);
-        setError('Errore di autenticazione');
-        setLoading(false);
-        return;
-      }
-      if (user) {
-        setUserId(user.id);
-      } else {
-        setError('Utente non autenticato');
-        setLoading(false);
-      }
-    };
-    getUser();
-  }, []);
+  // Ottieni user_id dall'utente loggato (via useAuth context)
+  const userId = user?.id || null;
 
   // Fetch data from Supabase
   const fetchData = useCallback(async () => {
@@ -167,12 +151,17 @@ export function useMyServices() {
     }
   }, [userId]);
 
-  // Refetch quando cambia userId
+  // Refetch quando cambia userId o isAuthenticated
   useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      setError('Utente non autenticato');
+      return;
+    }
     if (userId) {
       fetchData();
     }
-  }, [userId, fetchData]);
+  }, [userId, isAuthenticated, fetchData]);
 
   // Servizi raggruppati per code (memoized)
   const services = useMemo(() => {
