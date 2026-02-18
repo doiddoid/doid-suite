@@ -126,26 +126,32 @@ export default function Dashboard() {
     }
   };
 
-  // Separa servizi attivi da quelli disponibili
-  const { activeServices, availableServices } = useMemo(() => {
+  // Separa servizi "tuoi" (con subscription) da quelli disponibili (mai attivati)
+  const { myServices, availableServices } = useMemo(() => {
     const filtered = services.filter(s => s.service.isActive !== false);
 
-    // Servizi con abbonamento attivo (trial o subscription attiva)
-    const active = filtered
-      .filter(s => s.isActive)
-      .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
+    // "I tuoi servizi": tutti quelli con una subscription (attiva, free, trial, scaduta, sospesa, etc.)
+    // Include: active, trial, free, expired, canceled, past_due, suspended
+    const mine = filtered
+      .filter(s => s.subscription !== null && s.subscription !== undefined)
+      .sort((a, b) => {
+        // Prima i servizi attivi, poi gli altri per sortOrder
+        if (a.isActive && !b.isActive) return -1;
+        if (!a.isActive && b.isActive) return 1;
+        return (a.service.sortOrder || 0) - (b.service.sortOrder || 0);
+      });
 
-    // Servizi disponibili ma non ancora attivati
+    // "Scopri altri servizi": quelli senza subscription (mai attivati)
     const available = filtered
-      .filter(s => !s.isActive)
+      .filter(s => s.subscription === null || s.subscription === undefined)
       .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
 
-    return { activeServices: active, availableServices: available };
+    return { myServices: mine, availableServices: available };
   }, [services]);
 
-  // Calcola se mostrare welcome banner
-  const hasActiveServices = activeServices.length > 0;
-  const showWelcomeBanner = !loading && !hasActiveServices && services.length > 0;
+  // Calcola se mostrare welcome banner (solo se non ha MAI attivato servizi)
+  const hasMyServices = myServices.length > 0;
+  const showWelcomeBanner = !loading && !hasMyServices && services.length > 0;
 
   // Nessuna attività selezionata
   if (!activitiesLoading && !currentActivity) {
@@ -231,12 +237,12 @@ export default function Dashboard() {
       {/* Stats */}
       <DashboardStats stats={stats} />
 
-      {/* Servizi Attivi */}
-      {activeServices.length > 0 && (
-        <div id="active-services-section" className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">I tuoi servizi attivi</h2>
+      {/* I tuoi servizi (attivati, free, trial, scaduti, sospesi) */}
+      {myServices.length > 0 && (
+        <div id="my-services-section" className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">I tuoi servizi</h2>
           <ServicesGrid
-            services={activeServices}
+            services={myServices}
             onAccessService={handleAccessService}
             onActivateTrialService={handleActivateTrial}
             onChoosePlanService={handleChoosePlan}
