@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import supabase from '../services/supabase.js';
+import activitiesApi from '../services/activitiesApi.js';
 import { useAuth } from './useAuth.jsx';
 
 /**
  * Custom hook per recuperare tutti i dati per la pagina "I Miei Servizi"
  *
- * Effettua una query diretta su Supabase joinando:
+ * Usa le API backend esistenti per recuperare:
  * - services (tutti i servizi attivi)
- * - service_subscriptions (sottoscrizioni dell'utente)
  * - activities (attivita' dell'utente)
+ * - subscriptions (sottoscrizioni per ogni attivita')
  *
  * @returns {Object} { services, totals, loading, error, refetch }
  */
@@ -18,150 +18,116 @@ export function useMyServices() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Ottieni user_id dall'utente loggato (via useAuth context)
-  const userId = user?.id || null;
-
-  // Fetch data from Supabase
+  // Fetch data from backend APIs
   const fetchData = useCallback(async () => {
-    if (!userId) return;
+    if (!isAuthenticated || !user) {
+      setLoading(false);
+      setError('Utente non autenticato');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      // Query che prende TUTTI i servizi attivi
-      // LEFT JOIN con service_subscriptions filtrate sulle activities dell'utente
-      // LEFT JOIN con activities per avere il nome attivita'
-      //
-      // Nota: Supabase non supporta JOIN dirette cross-table come SQL puro,
-      // quindi eseguiamo query separate e combiniamo i risultati
-
-      // 1. Ottieni tutte le activities dell'utente
-      const { data: userActivities, error: activitiesError } = await supabase
-        .from('activities')
-        .select('id, name')
-        .eq('user_id', userId);
-
-      if (activitiesError) {
-        throw new Error(`Errore caricamento attivita: ${activitiesError.message}`);
+      // 1. Ottieni tutti i servizi disponibili
+      const servicesResult = await activitiesApi.getAllServices();
+      if (!servicesResult.success) {
+        throw new Error(servicesResult.error || 'Errore caricamento servizi');
       }
+      const allServices = servicesResult.data.services || [];
 
-      const activityIds = userActivities?.map(a => a.id) || [];
-      const activityMap = new Map(userActivities?.map(a => [a.id, a.name]) || []);
-
-      // 2. Ottieni tutti i servizi attivi
-      const { data: allServices, error: servicesError } = await supabase
-        .from('services')
-        .select(`
-          id,
-          code,
-          name,
-          icon,
-          color_primary,
-          color_dark,
-          color_light,
-          price_pro_monthly,
-          price_pro_yearly,
-          price_addon_monthly,
-          has_free_tier,
-          sort_order
-        `)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      if (servicesError) {
-        throw new Error(`Errore caricamento servizi: ${servicesError.message}`);
+      // 2. Ottieni tutte le attivita' dell'utente
+      const activitiesResult = await activitiesApi.getActivities();
+      if (!activitiesResult.success) {
+        throw new Error(activitiesResult.error || 'Errore caricamento attivita');
       }
+      const userActivities = activitiesResult.data.activities || [];
 
-      // 3. Ottieni tutte le subscriptions per le activities dell'utente
-      let subscriptions = [];
-      if (activityIds.length > 0) {
-        const { data: subsData, error: subsError } = await supabase
-          .from('service_subscriptions')
-          .select(`
-            id,
-            activity_id,
-            service_id,
-            status,
-            billing_cycle,
-            is_addon,
-            trial_ends_at,
-            current_period_end,
-            cancel_at_period_end,
-            price_override
-          `)
-          .in('activity_id', activityIds)
-          .order('is_addon', { ascending: true });
-
-        if (subsError) {
-          throw new Error(`Errore caricamento sottoscrizioni: ${subsError.message}`);
+      // 3. Per ogni attivita', ottieni le subscriptions
+      const allSubscriptions = [];
+      for (const activity of userActivities) {
+        try {
+          const subsResult = await activitiesApi.getSubscriptions(activity.id);
+          if (subsResult.success && subsResult.data.subscriptions) {
+            // Aggiungi activity info a ogni subscription
+            subsResult.data.subscriptions.forEach(sub => {
+              allSubscriptions.push({
+                ...sub,
+                activity_id: activity.id,
+                activity_name: activity.name
+              });
+            });
+          }
+        } catch (err) {
+          console.warn(`Errore caricamento subscriptions per ${activity.name}:`, err);
         }
-        subscriptions = subsData || [];
       }
 
-      // Combina i dati: per ogni servizio, crea un array di elementi (subscriptions)
-      const combinedData = allServices.map(service => {
-        // Trova tutte le subscriptions per questo servizio
-        const serviceSubscriptions = subscriptions
-          .filter(sub => sub.service_id === service.id)
-          .map(sub => ({
-            subscription_id: sub.id,
-            activity_id: sub.activity_id,
-            activity_name: activityMap.get(sub.activity_id) || 'Attività sconosciuta',
-            status: sub.status,
-            billing_cycle: sub.billing_cycle,
-            is_addon: sub.is_addon,
-            trial_ends_at: sub.trial_ends_at,
-            current_period_end: sub.current_period_end,
-            cancel_at_period_end: sub.cancel_at_period_end,
-            // Calcola price
-            price: calculatePrice(sub, service)
-          }))
-          // Ordina per is_addon e poi activity_name
-          .sort((a, b) => {
-            if (a.is_addon !== b.is_addon) {
-              return a.is_addon ? 1 : -1;
-            }
-            return a.activity_name.localeCompare(b.activity_name);
-          });
+      // 4. Combina i dati: per ogni servizio, crea un array di elementi (subscriptions)
+      const combinedData = allServices
+        .filter(service => service.is_active !== false)
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+        .map(service => {
+          // Trova tutte le subscriptions per questo servizio
+          const serviceSubscriptions = allSubscriptions
+            .filter(sub => sub.service_id === service.id || sub.serviceCode === service.code)
+            .map(sub => ({
+              subscription_id: sub.id,
+              activity_id: sub.activity_id,
+              activity_name: sub.activity_name,
+              status: sub.status,
+              billing_cycle: sub.billing_cycle || sub.billingCycle || 'monthly',
+              is_addon: sub.is_addon || sub.isAddon || false,
+              trial_ends_at: sub.trial_ends_at || sub.trialEndsAt,
+              current_period_end: sub.current_period_end || sub.currentPeriodEnd,
+              cancel_at_period_end: sub.cancel_at_period_end || sub.cancelAtPeriodEnd || false,
+              // Calcola price
+              price: calculatePrice(sub, service)
+            }))
+            // Ordina per is_addon e poi activity_name
+            .sort((a, b) => {
+              if (a.is_addon !== b.is_addon) {
+                return a.is_addon ? 1 : -1;
+              }
+              return (a.activity_name || '').localeCompare(b.activity_name || '');
+            });
 
-        return {
-          info: {
-            code: service.code,
-            name: service.name,
-            icon: service.icon,
-            color_primary: service.color_primary,
-            color_dark: service.color_dark,
-            color_light: service.color_light,
-            price_pro_monthly: parseFloat(service.price_pro_monthly) || 0,
-            price_pro_yearly: parseFloat(service.price_pro_yearly) || 0,
-            price_addon_monthly: parseFloat(service.price_addon_monthly) || null,
-            has_free_tier: service.has_free_tier
-          },
-          elements: serviceSubscriptions
-        };
-      });
+          return {
+            info: {
+              code: service.code,
+              name: service.name,
+              icon: service.icon,
+              color_primary: service.color_primary || service.color,
+              color_dark: service.color_dark,
+              color_light: service.color_light || service.bgLight,
+              price_pro_monthly: parseFloat(service.price_pro_monthly || service.priceProMonthly) || 0,
+              price_pro_yearly: parseFloat(service.price_pro_yearly || service.priceProYearly) || 0,
+              price_addon_monthly: parseFloat(service.price_addon_monthly || service.priceAddonMonthly) || null,
+              has_free_tier: service.has_free_tier || service.hasFreeTier || false
+            },
+            elements: serviceSubscriptions
+          };
+        });
 
       setRawData(combinedData);
+      setError(null);
     } catch (err) {
       console.error('useMyServices fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [isAuthenticated, user]);
 
-  // Refetch quando cambia userId o isAuthenticated
+  // Fetch on mount and when auth changes
   useEffect(() => {
-    if (!isAuthenticated) {
-      setLoading(false);
-      setError('Utente non autenticato');
-      return;
-    }
-    if (userId) {
+    if (isAuthenticated && user) {
       fetchData();
+    } else {
+      setLoading(false);
     }
-  }, [userId, isAuthenticated, fetchData]);
+  }, [isAuthenticated, user, fetchData]);
 
   // Servizi raggruppati per code (memoized)
   const services = useMemo(() => {
@@ -181,7 +147,7 @@ export function useMyServices() {
 
     for (const item of rawData) {
       for (const element of item.elements) {
-        if (element.status === 'pro') {
+        if (element.status === 'pro' || element.status === 'active') {
           totalMonthly += element.price || 0;
           totalProElements++;
         } else if (element.status === 'free') {
@@ -224,23 +190,30 @@ export function useMyServices() {
  * - Default -> price_pro_monthly
  */
 function calculatePrice(subscription, service) {
+  const priceOverride = subscription.price_override || subscription.priceOverride;
+  const isAddon = subscription.is_addon || subscription.isAddon;
+  const billingCycle = subscription.billing_cycle || subscription.billingCycle || 'monthly';
+  const priceProMonthly = parseFloat(service.price_pro_monthly || service.priceProMonthly) || 0;
+  const priceProYearly = parseFloat(service.price_pro_yearly || service.priceProYearly) || 0;
+  const priceAddonMonthly = parseFloat(service.price_addon_monthly || service.priceAddonMonthly) || 0;
+
   // price_override ha priorita'
-  if (subscription.price_override !== null && subscription.price_override !== undefined) {
-    return parseFloat(subscription.price_override);
+  if (priceOverride !== null && priceOverride !== undefined) {
+    return parseFloat(priceOverride);
   }
 
   // is_addon -> price_addon_monthly
-  if (subscription.is_addon && service.price_addon_monthly) {
-    return parseFloat(service.price_addon_monthly);
+  if (isAddon && priceAddonMonthly) {
+    return priceAddonMonthly;
   }
 
   // billing_cycle yearly -> price_pro_yearly / 12
-  if (subscription.billing_cycle === 'yearly' && service.price_pro_yearly) {
-    return Math.round((parseFloat(service.price_pro_yearly) / 12) * 100) / 100;
+  if (billingCycle === 'yearly' && priceProYearly) {
+    return Math.round((priceProYearly / 12) * 100) / 100;
   }
 
   // Default -> price_pro_monthly
-  return parseFloat(service.price_pro_monthly) || 0;
+  return priceProMonthly;
 }
 
 export default useMyServices;
