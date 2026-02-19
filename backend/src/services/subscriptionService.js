@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../config/supabase.js';
 import { Errors } from '../middleware/errorHandler.js';
 import serviceService from './serviceService.js';
 import webhookService from './webhookService.js';
+import { normalizeServiceCodeShort } from '../config/services.js';
 
 class SubscriptionService {
   /**
@@ -620,7 +621,9 @@ class SubscriptionService {
 
         // canAccess richiede abbonamento attivo E account collegato (se il servizio lo richiede)
         // Per ora, i servizi review, page, menu richiedono account collegato
-        const requiresLinkedAccount = ['review', 'page', 'menu'].includes(service.code);
+        // Normalizza il service code per supportare sia 'review' che 'smart_review' ecc.
+        const normalizedCode = normalizeServiceCodeShort(service.code);
+        const requiresLinkedAccount = ['review', 'page', 'menu'].includes(normalizedCode);
         canAccess = isActive && (!requiresLinkedAccount || hasLinkedAccount);
 
         subscription = {
@@ -646,7 +649,9 @@ class SubscriptionService {
         inherited = true;
 
         // canAccess richiede anche account collegato
-        const requiresLinkedAccount = ['review', 'page', 'menu'].includes(service.code);
+        // Riutilizza normalizedCode se già definito, altrimenti normalizza
+        const normalizedCodeForPkg = normalizeServiceCodeShort(service.code);
+        const requiresLinkedAccount = ['review', 'page', 'menu'].includes(normalizedCodeForPkg);
         canAccess = !requiresLinkedAccount || hasLinkedAccount;
 
         subscription = {

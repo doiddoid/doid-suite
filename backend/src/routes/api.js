@@ -4,6 +4,7 @@ import { verifyExternalToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import authService from '../services/authService.js';
+import { areServiceCodesEquivalent, normalizeServiceCodeShort, normalizeServiceCodeFull } from '../config/services.js';
 
 const router = express.Router();
 
@@ -219,13 +220,20 @@ router.post('/sso/authenticate',
       // 1. Verifica il token JWT
       const decoded = authService.verifyExternalToken(token);
 
-      // 2. Verifica che il servizio richiesto corrisponda
-      if (decoded.service !== requestedService) {
+      // 2. Verifica che il servizio richiesto corrisponda (con normalizzazione dei codici)
+      // Supporta sia i codici brevi (review, page, menu) che quelli lunghi (smart_review, smart_page, menu_digitale)
+      if (!areServiceCodesEquivalent(decoded.service, requestedService)) {
+        console.error(`SSO: Service code mismatch - token has '${decoded.service}', request has '${requestedService}'`);
         return res.status(403).json({
           success: false,
           error: 'Token non valido per questo servizio'
         });
       }
+
+      // Normalizza il service code per le query successive
+      const normalizedService = normalizeServiceCodeShort(requestedService);
+      // Normalizza al formato database (smart_review, smart_page, menu_digitale)
+      const dbServiceCode = normalizeServiceCodeFull(requestedService);
 
       // 3. Ottieni utente da Supabase Auth
       const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(decoded.userId);
@@ -303,7 +311,7 @@ router.post('/sso/authenticate',
             )
           `)
           .eq('activity_id', activity.id)
-          .eq('service.code', requestedService)
+          .eq('service.code', dbServiceCode)
           .in('status', ['active', 'trial', 'suspended', 'past_due'])
           .single();
 
@@ -369,7 +377,7 @@ router.post('/sso/authenticate',
         if (orgPackages) {
           for (const pkg of orgPackages) {
             const matchingService = pkg.package?.services?.find(
-              s => s.service?.code === requestedService
+              s => areServiceCodesEquivalent(s.service?.code, requestedService)
             );
 
             if (matchingService) {

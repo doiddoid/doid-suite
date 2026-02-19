@@ -108,6 +108,63 @@ export const SERVICES = {
 export const ACTIVATABLE_SERVICES = ['review', 'page', 'menu'];
 export const CONTACT_REQUIRED_SERVICES = ['agent_ai', 'connect', 'display'];
 
+// Mappatura codici servizio: database <-> frontend
+// Il database usa smart_review, smart_page, menu_digitale
+// Il frontend config usa review, page, menu
+export const SERVICE_CODE_MAP = {
+  // Database code -> Short code
+  'smart_review': 'review',
+  'smart_page': 'page',
+  'menu_digitale': 'menu',
+  // Short code -> Database code
+  'review': 'smart_review',
+  'page': 'smart_page',
+  'menu': 'menu_digitale',
+  // Display/other services (same in both)
+  'display_suite': 'display',
+  'display': 'display_suite',
+  'agent_ai': 'agent_ai',
+  'connect': 'connect'
+};
+
+// Normalizza un service code al formato breve (review, page, menu)
+export const normalizeServiceCodeShort = (code) => {
+  if (!code) return code;
+  const mapped = SERVICE_CODE_MAP[code];
+  // Se il mapping esiste e il risultato è un codice breve, usalo
+  if (mapped && ['review', 'page', 'menu', 'display', 'agent_ai', 'connect'].includes(mapped)) {
+    return mapped;
+  }
+  // Altrimenti ritorna il codice originale se già breve
+  if (['review', 'page', 'menu', 'display', 'agent_ai', 'connect'].includes(code)) {
+    return code;
+  }
+  return code;
+};
+
+// Normalizza un service code al formato database (smart_review, smart_page, menu_digitale)
+export const normalizeServiceCodeFull = (code) => {
+  if (!code) return code;
+  const mapped = SERVICE_CODE_MAP[code];
+  // Se il mapping esiste e il risultato è un codice lungo, usalo
+  if (mapped && ['smart_review', 'smart_page', 'menu_digitale', 'display_suite'].includes(mapped)) {
+    return mapped;
+  }
+  // Altrimenti ritorna il codice originale se già lungo
+  if (['smart_review', 'smart_page', 'menu_digitale', 'display_suite'].includes(code)) {
+    return code;
+  }
+  return code;
+};
+
+// Verifica se due service codes sono equivalenti (considerando la mappatura)
+export const areServiceCodesEquivalent = (code1, code2) => {
+  if (!code1 || !code2) return false;
+  if (code1 === code2) return true;
+  // Normalizza entrambi al formato breve e confronta
+  return normalizeServiceCodeShort(code1) === normalizeServiceCodeShort(code2);
+};
+
 // Piani disponibili
 export const PLANS = {
   free: {
