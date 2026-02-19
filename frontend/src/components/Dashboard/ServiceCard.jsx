@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard, Info, Settings, Bot, Users, MessageSquare, Check, Key, Building2, Store, Package, Mail, Shield, Zap, Activity, Layers } from 'lucide-react';
+import { Star, FileText, UtensilsCrossed, Monitor, ExternalLink, Loader2, Play, RefreshCw, CreditCard, Info, Settings, Bot, Users, MessageSquare, Check, Key, Building2, Store, Package, Mail, Shield, Zap, Activity, Layers, Calendar } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { CONTACT_REQUIRED_SERVICE_CODES } from '../../config/services';
 
@@ -88,6 +88,53 @@ export default function ServiceCard({
 
   const trialDaysLeft = getTrialDaysLeft();
   const isTrialExpiring = trialDaysLeft !== null && trialDaysLeft <= 3 && trialDaysLeft > 0;
+
+  // Calcola info rinnovo/scadenza per il badge
+  const getRenewalInfo = () => {
+    if (!subscription) return null;
+
+    const { status, trialEndsAt, currentPeriodEnd, plan } = subscription;
+
+    // Non mostrare per piani free o stati terminali
+    if (plan?.code === 'free' || status === 'expired' || status === 'canceled' || status === 'suspended') {
+      return null;
+    }
+
+    let date = null;
+    let isRenewal = false; // true = rinnovo, false = scadenza
+
+    if (status === 'trial' && trialEndsAt) {
+      date = new Date(trialEndsAt);
+      isRenewal = false; // Trial non si rinnova automaticamente
+    } else if (status === 'active' && currentPeriodEnd) {
+      date = new Date(currentPeriodEnd);
+      isRenewal = true; // Abbonamento attivo si rinnova
+    }
+
+    if (!date || isNaN(date.getTime())) return null;
+
+    const now = new Date();
+    const daysUntil = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+
+    // Non mostrare se già scaduto
+    if (daysUntil < 0) return null;
+
+    // Formatta la data in GG/MM/AAAA
+    const formattedDate = date.toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+    return {
+      date: formattedDate,
+      isRenewal,
+      isUrgent: daysUntil <= 7,
+      daysUntil
+    };
+  };
+
+  const renewalInfo = getRenewalInfo();
   // Trial scaduto: status è 'trial' ma isActive è false (data scaduta)
   const isTrialExpired = subscription?.status === 'trial' && !isActive;
 
@@ -306,6 +353,19 @@ export default function ServiceCard({
                 <span className="ml-1 text-red-600 font-medium">- Trial scaduto</span>
               )}
             </p>
+            {/* Badge rinnovo/scadenza */}
+            {renewalInfo && (
+              <div className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
+                renewalInfo.isUrgent
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-teal-100 text-teal-700'
+              }`}>
+                <Calendar className="w-3 h-3" />
+                <span>
+                  {renewalInfo.isRenewal ? 'Prossimo rinnovo' : 'Scadenza'}: {renewalInfo.date}
+                </span>
+              </div>
+            )}
             {subscription.status === 'trial' && trialDaysLeft !== null && !isTrialExpired && (
               <p className={`text-xs mt-1 ${trialDaysLeft <= 7 ? 'text-amber-600' : 'text-emerald-600'}`}>
                 {trialDaysLeft > 1 ? (
