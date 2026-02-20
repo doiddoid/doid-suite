@@ -19,6 +19,7 @@ import CommunicationLogs from '../components/Admin/CommunicationLogs';
 import PlansSummaryTable from '../components/Admin/PlansSummaryTable';
 import DeletedActivitiesTable from '../components/Admin/DeletedActivitiesTable';
 import OrganizationAssignModal from '../components/Admin/OrganizationAssignModal';
+import CredentialsModal from '../components/Admin/CredentialsModal';
 
 // Mappa icone servizi - estesa
 const SERVICE_ICONS = {
@@ -125,6 +126,7 @@ export default function Admin() {
   const [activityServices, setActivityServices] = useState({}); // Cache dei servizi per attività
   const [showServiceAssignment, setShowServiceAssignment] = useState(false); // Modal assegnazione servizi
   const [orgAssignModal, setOrgAssignModal] = useState(null); // { activityId, activityName, currentOrganization }
+  const [credentialsModal, setCredentialsModal] = useState(null); // { userId, userEmail, userName }
 
   // Fetch stats on mount
   useEffect(() => {
@@ -1268,6 +1270,18 @@ export default function Admin() {
                           >
                             {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
                           </button>
+                          <button
+                            onClick={() => {
+                              const owner = (itemDetails?.members || []).find(m => m.role === 'owner');
+                              if (owner) {
+                                setCredentialsModal({ userId: owner.userId || owner.id, userEmail: owner.email, userName: owner.fullName });
+                              }
+                            }}
+                            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                            title="Credenziali"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
                           <button onClick={() => openModal('organization', 'edit', selectedItem)} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><Edit2 className="w-4 h-4" /></button>
                           <button onClick={() => setDeleteConfirm({ type: 'organization', id: selectedItem.id, name: selectedItem.name })} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
@@ -1493,6 +1507,18 @@ export default function Admin() {
                           <Store className="w-8 h-8" />
                         </div>
                         <div className="flex gap-1">
+                          <button
+                            onClick={() => {
+                              const owner = (itemDetails?.members || []).find(m => m.role === 'owner');
+                              if (owner) {
+                                setCredentialsModal({ userId: owner.userId || owner.id, userEmail: owner.email, userName: owner.fullName });
+                              }
+                            }}
+                            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                            title="Credenziali"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => setOrgAssignModal({
                               activityId: selectedItem.id,
@@ -2433,6 +2459,16 @@ export default function Admin() {
             }
           }}
           onClose={() => setOrgAssignModal(null)}
+        />
+      )}
+
+      {/* Credentials Modal */}
+      {credentialsModal && (
+        <CredentialsModal
+          userId={credentialsModal.userId}
+          userEmail={credentialsModal.userEmail}
+          userName={credentialsModal.userName}
+          onClose={() => setCredentialsModal(null)}
         />
       )}
 

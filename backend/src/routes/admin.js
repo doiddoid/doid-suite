@@ -209,6 +209,46 @@ router.delete('/users/:id',
   })
 );
 
+// ==================== CREDENTIALS MANAGEMENT ====================
+
+// POST /api/admin/users/:userId/reset-password
+// Invia email di reset password al cliente
+router.post('/users/:userId/reset-password',
+  [
+    param('userId').isUUID().withMessage('ID utente non valido')
+  ],
+  validate,
+  logAdminAction('admin_reset_password'),
+  asyncHandler(async (req, res) => {
+    const result = await adminService.adminResetPassword(req.params.userId, req.user.id);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Email di reset password inviata'
+    });
+  })
+);
+
+// POST /api/admin/users/:userId/regenerate-credentials
+// Genera nuove credenziali e invia email al cliente
+router.post('/users/:userId/regenerate-credentials',
+  [
+    param('userId').isUUID().withMessage('ID utente non valido')
+  ],
+  validate,
+  logAdminAction('admin_regenerate_credentials'),
+  asyncHandler(async (req, res) => {
+    const result = await adminService.adminRegenerateCredentials(req.params.userId, req.user.id);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Nuove credenziali inviate'
+    });
+  })
+);
+
 // ==================== ORGANIZATIONS ====================
 
 // GET /api/admin/organizations

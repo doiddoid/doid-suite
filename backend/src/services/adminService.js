@@ -315,6 +315,122 @@ class AdminService {
     return { success: true };
   }
 
+  // ==================== CREDENTIALS MANAGEMENT ====================
+
+  // Invia email di reset password al cliente (admin)
+  async adminResetPassword(userId, adminUserId) {
+    // Trova l'utente
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (userError || !userData?.user) {
+      throw Errors.NotFound('Utente non trovato');
+    }
+
+    const user = userData.user;
+    const email = user.email;
+
+    // Genera link di reset
+    const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: {
+        redirectTo: `${process.env.FRONTEND_URL || 'https://suite.doid.it'}/reset-password`
+      }
+    });
+
+    if (resetError) {
+      throw Errors.Internal('Errore nella generazione del link di reset: ' + resetError.message);
+    }
+
+    const resetUrl = resetData?.properties?.action_link;
+
+    // Invia webhook a GHL per email
+    try {
+      await webhookService.send('admin.password_reset', {
+        userId,
+        email,
+        fullName: user.user_metadata?.full_name || '',
+        resetPasswordUrl: resetUrl,
+        triggeredByAdmin: true
+      });
+    } catch (webhookErr) {
+      console.error('[ADMIN] Webhook failed for password reset:', webhookErr.message);
+    }
+
+    // Log
+    await this.logAdminAction(adminUserId, 'password_reset', 'user', userId, {
+      email,
+      fullName: user.user_metadata?.full_name
+    });
+
+    return { email, sent: true };
+  }
+
+  // Genera nuove credenziali e invia email al cliente (admin)
+  async adminRegenerateCredentials(userId, adminUserId) {
+    // Trova l'utente
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (userError || !userData?.user) {
+      throw Errors.NotFound('Utente non trovato');
+    }
+
+    const user = userData.user;
+    const email = user.email;
+
+    // Genera nuova password temporanea
+    const newPassword = this.generateTempPassword(12);
+
+    // Aggiorna password in Supabase
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: newPassword,
+      user_metadata: {
+        ...user.user_metadata,
+        must_reset_password: true
+      }
+    });
+
+    if (updateError) {
+      throw Errors.Internal('Errore nell\'aggiornamento della password: ' + updateError.message);
+    }
+
+    // Genera anche link di reset per sicurezza
+    let resetUrl = null;
+    try {
+      const { data: resetData } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: {
+          redirectTo: `${process.env.FRONTEND_URL || 'https://suite.doid.it'}/reset-password`
+        }
+      });
+      resetUrl = resetData?.properties?.action_link;
+    } catch (err) {
+      console.error('[ADMIN] Error generating reset link:', err.message);
+    }
+
+    // Invia webhook a GHL per email con nuove credenziali
+    try {
+      await webhookService.send('admin.credentials_regenerated', {
+        userId,
+        email,
+        fullName: user.user_metadata?.full_name || '',
+        temporaryPassword: newPassword,
+        resetPasswordUrl: resetUrl,
+        triggeredByAdmin: true
+      });
+    } catch (webhookErr) {
+      console.error('[ADMIN] Webhook failed for credentials regeneration:', webhookErr.message);
+    }
+
+    // Log (NON logga la password)
+    await this.logAdminAction(adminUserId, 'credentials_regenerated', 'user', userId, {
+      email,
+      fullName: user.user_metadata?.full_name
+    });
+
+    // NON ritornare la password nella response
+    return { email, sent: true };
+  }
+
   // ==================== ORGANIZATIONS/AGENCIES ====================
 
   // Crea nuova organizzazione/agenzia (super admin)
