@@ -958,6 +958,198 @@ class AdminService {
     return activity;
   }
 
+  // Assegna o dissocia un'attività da un'organizzazione
+  async updateActivityOrganization(activityId, organizationId, adminUserId) {
+    // Verifica che l'attività esista
+    const { data: activity, error: activityError } = await supabaseAdmin
+      .from('activities')
+      .select('id, name, organization_id')
+      .eq('id', activityId)
+      .single();
+
+    if (activityError || !activity) {
+      throw Errors.NotFound('Attività non trovata');
+    }
+
+    const previousOrgId = activity.organization_id;
+
+    if (organizationId) {
+      // ASSEGNAZIONE: verifica che l'organizzazione esista e sia di tipo agency
+      const { data: org, error: orgError } = await supabaseAdmin
+        .from('organizations')
+        .select('id, name, account_type')
+        .eq('id', organizationId)
+        .single();
+
+      if (orgError || !org) {
+        throw Errors.NotFound('Organizzazione non trovata');
+      }
+
+      if (org.account_type !== 'agency') {
+        throw Errors.BadRequest('È possibile assegnare attività solo a organizzazioni di tipo agenzia');
+      }
+
+      // Aggiorna organization_id dell'attività
+      const { error: updateError } = await supabaseAdmin
+        .from('activities')
+        .update({ organization_id: organizationId, updated_at: new Date().toISOString() })
+        .eq('id', activityId);
+
+      if (updateError) throw Errors.Internal('Errore nell\'assegnazione: ' + updateError.message);
+
+      // Aggiungi l'owner dell'organizzazione come membro dell'attività (se non già presente)
+      const { data: orgOwner } = await supabaseAdmin
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('role', 'owner')
+        .single();
+
+      if (orgOwner) {
+        const { data: existingMember } = await supabaseAdmin
+          .from('activity_users')
+          .select('id')
+          .eq('activity_id', activityId)
+          .eq('user_id', orgOwner.user_id)
+          .single();
+
+        if (!existingMember) {
+          await supabaseAdmin
+            .from('activity_users')
+            .insert({
+              activity_id: activityId,
+              user_id: orgOwner.user_id,
+              role: 'admin'
+            });
+        }
+      }
+
+      // Log
+      await this.logAdminAction(adminUserId, 'org_assign', 'activity', activityId, {
+        activityName: activity.name,
+        previousOrgId,
+        newOrgId: organizationId,
+        orgName: org.name
+      });
+
+      return { activityId, organizationId, organizationName: org.name, action: 'assigned' };
+
+    } else {
+      // DISSOCIAZIONE
+      if (!previousOrgId) {
+        throw Errors.BadRequest('L\'attività non è associata a nessuna organizzazione');
+      }
+
+      // Trova l'owner originale dell'attività (non rimuoverlo)
+      const { data: activityOwner } = await supabaseAdmin
+        .from('activity_users')
+        .select('user_id')
+        .eq('activity_id', activityId)
+        .eq('role', 'owner')
+        .single();
+
+      // Rimuovi i membri dell'organizzazione dall'attività (tranne l'owner dell'attività)
+      const { data: orgMembers } = await supabaseAdmin
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', previousOrgId);
+
+      if (orgMembers && orgMembers.length > 0) {
+        const orgMemberIds = orgMembers
+          .map(m => m.user_id)
+          .filter(uid => uid !== activityOwner?.user_id);
+
+        if (orgMemberIds.length > 0) {
+          await supabaseAdmin
+            .from('activity_users')
+            .delete()
+            .eq('activity_id', activityId)
+            .in('user_id', orgMemberIds);
+        }
+      }
+
+      // Rimuovi organization_id
+      const { error: updateError } = await supabaseAdmin
+        .from('activities')
+        .update({ organization_id: null, updated_at: new Date().toISOString() })
+        .eq('id', activityId);
+
+      if (updateError) throw Errors.Internal('Errore nella dissociazione: ' + updateError.message);
+
+      // Log
+      await this.logAdminAction(adminUserId, 'org_unassign', 'activity', activityId, {
+        activityName: activity.name,
+        previousOrgId
+      });
+
+      return { activityId, organizationId: null, action: 'unassigned' };
+    }
+  }
+
+  // Ottieni attività gestite da un'organizzazione con dettagli servizi
+  async getManagedActivities(orgId) {
+    // Verifica che l'organizzazione esista
+    const { data: org, error: orgError } = await supabaseAdmin
+      .from('organizations')
+      .select('id, name')
+      .eq('id', orgId)
+      .single();
+
+    if (orgError || !org) {
+      throw Errors.NotFound('Organizzazione non trovata');
+    }
+
+    // Ottieni tutte le attività dell'organizzazione
+    const { data: activities, error: actError } = await supabaseAdmin
+      .from('activities')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('name');
+
+    if (actError) throw Errors.Internal('Errore nel recupero delle attività');
+
+    // Per ogni attività, ottieni i servizi
+    const result = [];
+    for (const activity of (activities || [])) {
+      const services = await this.getActivityServicesWithStatus(activity.id);
+      const activeServices = services.filter(s => s.isActive);
+
+      result.push({
+        id: activity.id,
+        name: activity.name,
+        slug: activity.slug,
+        email: activity.email,
+        phone: activity.phone,
+        status: activity.status,
+        services: activeServices.map(s => ({
+          code: s.service.code,
+          name: s.service.name,
+          color: s.service.color,
+          icon: s.service.icon,
+          effectiveStatus: s.effectiveStatus,
+          daysRemaining: s.daysRemaining
+        }))
+      });
+    }
+
+    return result;
+  }
+
+  // Helper per loggare azioni admin su admin_logs
+  async logAdminAction(adminUserId, action, entityType, entityId, details) {
+    try {
+      await supabaseAdmin.from('admin_logs').insert({
+        admin_user_id: adminUserId,
+        action,
+        entity_type: entityType,
+        entity_id: entityId,
+        details
+      });
+    } catch (err) {
+      console.error('Error logging admin action:', err.message);
+    }
+  }
+
   // Aggiorna organizzazione
   async updateOrganization(organizationId, updates) {
     const allowedFields = ['name', 'email', 'phone', 'vat_number', 'logo_url', 'status'];

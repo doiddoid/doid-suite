@@ -18,6 +18,7 @@ import BillingSummary from '../components/Admin/BillingSummary';
 import CommunicationLogs from '../components/Admin/CommunicationLogs';
 import PlansSummaryTable from '../components/Admin/PlansSummaryTable';
 import DeletedActivitiesTable from '../components/Admin/DeletedActivitiesTable';
+import OrganizationAssignModal from '../components/Admin/OrganizationAssignModal';
 
 // Mappa icone servizi - estesa
 const SERVICE_ICONS = {
@@ -123,6 +124,7 @@ export default function Admin() {
   const [serviceStatusModal, setServiceStatusModal] = useState(null); // { activityId, activityName, service, subscription, effectiveStatus, isActive, daysRemaining }
   const [activityServices, setActivityServices] = useState({}); // Cache dei servizi per attività
   const [showServiceAssignment, setShowServiceAssignment] = useState(false); // Modal assegnazione servizi
+  const [orgAssignModal, setOrgAssignModal] = useState(null); // { activityId, activityName, currentOrganization }
 
   // Fetch stats on mount
   useEffect(() => {
@@ -1327,11 +1329,13 @@ export default function Admin() {
                           )}
                         </div>
 
-                        {/* Attività con Servizi */}
+                        {/* Attività e Servizi (Clienti gestiti per agenzie) */}
                         <div className="p-4 border-b">
-                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-                            Attività e Servizi ({itemDetails?.activities?.length || 0})
-                          </h4>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase">
+                              {selectedItem.accountType === 'agency' ? 'Clienti Gestiti' : 'Attività e Servizi'} ({itemDetails?.activities?.length || 0})
+                            </h4>
+                          </div>
                           {(itemDetails?.activities || []).length === 0 ? (
                             <p className="text-sm text-gray-400 italic">Nessuna attività</p>
                           ) : (
@@ -1344,7 +1348,25 @@ export default function Admin() {
                                       <Store className="w-4 h-4 text-amber-500" />
                                       <span className="text-sm font-medium">{activity.name}</span>
                                     </div>
-                                    {getStatusBadge(activity.status)}
+                                    <div className="flex items-center gap-2">
+                                      {getStatusBadge(activity.status)}
+                                      {selectedItem.accountType === 'agency' && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOrgAssignModal({
+                                              activityId: activity.id,
+                                              activityName: activity.name,
+                                              currentOrganization: { id: selectedItem.id, name: selectedItem.name, accountType: 'agency' }
+                                            });
+                                          }}
+                                          className="p-1 hover:bg-red-100 rounded transition-colors"
+                                          title="Dissocia cliente"
+                                        >
+                                          <X className="w-3.5 h-3.5 text-red-400 hover:text-red-600" />
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                   {/* Servizi dell'attività */}
                                   <div className="p-2 space-y-1">
@@ -1471,6 +1493,17 @@ export default function Admin() {
                           <Store className="w-8 h-8" />
                         </div>
                         <div className="flex gap-1">
+                          <button
+                            onClick={() => setOrgAssignModal({
+                              activityId: selectedItem.id,
+                              activityName: selectedItem.name,
+                              currentOrganization: itemDetails?.organization || selectedItem.organization || null
+                            })}
+                            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                            title="Organizzazione"
+                          >
+                            <Building2 className="w-4 h-4" />
+                          </button>
                           <button onClick={() => openModal('activity', 'edit', selectedItem)} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><Edit2 className="w-4 h-4" /></button>
                         </div>
                       </div>
@@ -1500,9 +1533,21 @@ export default function Admin() {
                         </div>
 
                         {/* Organizzazione */}
-                        {(itemDetails?.organization || selectedItem.organization) && (
-                          <div className="p-4 border-b">
-                            <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">Organizzazione</h4>
+                        <div className="p-4 border-b">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase">Organizzazione</h4>
+                            <button
+                              onClick={() => setOrgAssignModal({
+                                activityId: selectedItem.id,
+                                activityName: selectedItem.name,
+                                currentOrganization: itemDetails?.organization || selectedItem.organization || null
+                              })}
+                              className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                            >
+                              {(itemDetails?.organization || selectedItem.organization) ? 'Cambia' : 'Assegna'}
+                            </button>
+                          </div>
+                          {(itemDetails?.organization || selectedItem.organization) ? (
                             <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                               <div className="flex items-center gap-2">
                                 <Building2 className="w-4 h-4 text-gray-400" />
@@ -1516,8 +1561,10 @@ export default function Admin() {
                                 {(itemDetails?.organization?.accountType || selectedItem.organization?.accountType) === 'agency' ? 'Agenzia' : 'Singolo'}
                               </span>
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <p className="text-sm text-gray-400 italic">Nessuna organizzazione assegnata</p>
+                          )}
+                        </div>
 
                         {/* Membri */}
                         <div className="p-4 border-b">
@@ -2368,6 +2415,24 @@ export default function Admin() {
           }}
           activities={activities}
           services={services}
+        />
+      )}
+
+      {/* Organization Assignment Modal */}
+      {orgAssignModal && (
+        <OrganizationAssignModal
+          activityId={orgAssignModal.activityId}
+          activityName={orgAssignModal.activityName}
+          currentOrganization={orgAssignModal.currentOrganization}
+          onUpdate={() => {
+            // Refresh dei dettagli dopo assegnazione
+            if (selectedItem?.type === 'activity') {
+              fetchItemDetails('activity', selectedItem.id);
+            } else if (selectedItem?.type === 'organization') {
+              fetchItemDetails('organization', selectedItem.id);
+            }
+          }}
+          onClose={() => setOrgAssignModal(null)}
         />
       )}
 

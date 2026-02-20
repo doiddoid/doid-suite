@@ -511,6 +511,49 @@ router.post('/organizations/:organizationId/activities',
   })
 );
 
+// ==================== ORGANIZATION ASSIGNMENT ====================
+
+// PUT /api/admin/activities/:activityId/organization
+// Assegna o dissocia un'attività da un'organizzazione
+router.put('/activities/:activityId/organization',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    body('organization_id').optional({ nullable: true })
+  ],
+  validate,
+  logAdminAction('update_activity_organization'),
+  asyncHandler(async (req, res) => {
+    const { activityId } = req.params;
+    const { organization_id } = req.body;
+
+    const result = await adminService.updateActivityOrganization(activityId, organization_id, req.user.id);
+
+    res.json({
+      success: true,
+      data: result,
+      message: organization_id ? 'Attività assegnata all\'organizzazione' : 'Attività dissociata dall\'organizzazione'
+    });
+  })
+);
+
+// GET /api/admin/organizations/:orgId/managed-activities
+// Lista attività gestite da un'organizzazione con dettagli servizi
+router.get('/organizations/:orgId/managed-activities',
+  [
+    param('orgId').isUUID().withMessage('ID organizzazione non valido')
+  ],
+  validate,
+  logAdminAction('view_managed_activities'),
+  asyncHandler(async (req, res) => {
+    const activities = await adminService.getManagedActivities(req.params.orgId);
+
+    res.json({
+      success: true,
+      data: { activities }
+    });
+  })
+);
+
 // ==================== PACKAGES ====================
 
 // GET /api/admin/packages
