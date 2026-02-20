@@ -1313,7 +1313,7 @@ router.get('/users/:userId/subscriptions',
           )
         `)
         .eq('activity_id', au.activity.id)
-        .in('status', ['active', 'trial']);
+        .in('status', ['active', 'trial', 'past_due', 'suspended', 'expired']);
 
       if (!subError && subs) {
         for (const sub of subs) {

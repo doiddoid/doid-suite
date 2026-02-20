@@ -1133,7 +1133,7 @@ export default function Admin() {
                               {/* Icone servizi attivi */}
                               {(() => {
                                 const orgData = expandedOrgDetails[org.id] || (selectedItem?.id === org.id ? itemDetails : null);
-                                const subscriptions = (orgData?.subscriptions || []).filter(s => ['active', 'trial'].includes(s.status));
+                                const subscriptions = (orgData?.subscriptions || []);
                                 if (subscriptions.length === 0) return null;
 
                                 // Raggruppa per servizio (evita duplicati)
@@ -1402,13 +1402,13 @@ export default function Admin() {
                         {selectedItem.accountType === 'agency' && (
                           <div className="p-4 border-b">
                             <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-                              Pacchetti Agency ({(itemDetails?.packages || []).filter(p => ['active', 'trial'].includes(p.status)).length})
+                              Pacchetti Agency ({(itemDetails?.packages || []).length})
                             </h4>
-                            {(itemDetails?.packages || []).filter(p => ['active', 'trial'].includes(p.status)).length === 0 ? (
-                              <p className="text-sm text-gray-400 italic">Nessun pacchetto attivo</p>
+                            {(itemDetails?.packages || []).length === 0 ? (
+                              <p className="text-sm text-gray-400 italic">Nessun pacchetto</p>
                             ) : (
                               <div className="space-y-2">
-                                {(itemDetails?.packages || []).filter(p => ['active', 'trial'].includes(p.status)).map((pkg) => (
+                                {(itemDetails?.packages || []).map((pkg) => (
                                   <div key={pkg.id} className="p-3 border rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50">
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-2">
@@ -1430,13 +1430,13 @@ export default function Admin() {
                         {/* Abbonamenti Singoli */}
                         <div className="p-4">
                           <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-                            Abbonamenti Servizi ({(itemDetails?.subscriptions || []).filter(s => ['active', 'trial'].includes(s.status)).length})
+                            Abbonamenti Servizi ({(itemDetails?.subscriptions || []).length})
                           </h4>
-                          {(itemDetails?.subscriptions || []).filter(s => ['active', 'trial'].includes(s.status)).length === 0 ? (
-                            <p className="text-sm text-gray-400 italic">Nessun abbonamento attivo</p>
+                          {(itemDetails?.subscriptions || []).length === 0 ? (
+                            <p className="text-sm text-gray-400 italic">Nessun abbonamento</p>
                           ) : (
                             <div className="space-y-2">
-                              {(itemDetails?.subscriptions || []).filter(s => ['active', 'trial'].includes(s.status)).map((sub) => {
+                              {(itemDetails?.subscriptions || []).map((sub) => {
                                 const ServiceIcon = SERVICE_ICONS[sub.plan?.service?.icon] || Star;
                                 return (
                                   <div key={sub.id} className="p-3 border rounded-lg">
@@ -1643,7 +1643,7 @@ export default function Admin() {
                                         </div>
                                         {getStatusBadge(sub.status)}
                                       </div>
-                                      {['active', 'trial', 'past_due', 'suspended'].includes(sub.status) && sub.plan?.service?.code && (
+                                      {sub.plan?.service?.code && (
                                         <button
                                           onClick={() => {
                                             const owner = (itemDetails?.members || []).find(m => m.role === 'owner');
