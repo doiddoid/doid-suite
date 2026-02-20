@@ -23,37 +23,12 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_manual_renew
 ON subscriptions(manual_renew_date)
 WHERE payment_method = 'bonifico' AND manual_renew_date IS NOT NULL;
 
--- 2. Tabella admin_logs
-CREATE TABLE IF NOT EXISTS admin_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  admin_user_id UUID NOT NULL REFERENCES auth.users(id),
-  action VARCHAR(50) NOT NULL,
-  target_type VARCHAR(50),
-  target_id UUID,
-  details JSONB,
-  ip_address VARCHAR(45),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- 2. Aggiorna tabella admin_logs esistente (aggiunge colonne mancanti)
+ALTER TABLE admin_logs
+ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45);
 
+-- Indici su admin_logs (colonne esistenti: entity_type, entity_id)
 CREATE INDEX IF NOT EXISTS idx_admin_logs_action ON admin_logs(action);
-CREATE INDEX IF NOT EXISTS idx_admin_logs_target ON admin_logs(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_entity ON admin_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_admin_logs_date ON admin_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_admin_logs_admin ON admin_logs(admin_user_id);
-
--- RLS per admin_logs (solo super admin possono leggere/scrivere)
-ALTER TABLE admin_logs ENABLE ROW LEVEL SECURITY;
-
--- Policy: solo service_role può inserire (il backend usa service_key)
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'admin_logs' AND policyname = 'Service role can manage admin_logs'
-  ) THEN
-    CREATE POLICY "Service role can manage admin_logs"
-    ON admin_logs
-    FOR ALL
-    USING (true)
-    WITH CHECK (true);
-  END IF;
-END
-$$;

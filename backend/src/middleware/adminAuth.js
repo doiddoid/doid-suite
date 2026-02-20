@@ -103,8 +103,8 @@ async function saveAdminLog(logEntry) {
     await supabaseAdmin.from('admin_logs').insert({
       admin_user_id: logEntry.adminId,
       action: logEntry.action,
-      target_type: logEntry.params?.activityId ? 'activity' : logEntry.params?.id ? 'user' : null,
-      target_id: logEntry.params?.activityId || logEntry.params?.id || null,
+      entity_type: logEntry.params?.activityId ? 'activity' : logEntry.params?.id ? 'user' : null,
+      entity_id: logEntry.params?.activityId || logEntry.params?.id || null,
       details: {
         method: logEntry.method,
         path: logEntry.path,
