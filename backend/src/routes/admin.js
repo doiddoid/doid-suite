@@ -594,6 +594,150 @@ router.get('/organizations/:orgId/managed-activities',
   })
 );
 
+// ==================== MEMBER MANAGEMENT ====================
+
+// POST /api/admin/organizations/:orgId/members
+// Aggiunge un membro a un'organizzazione
+router.post('/organizations/:orgId/members',
+  [
+    param('orgId').isUUID().withMessage('ID organizzazione non valido'),
+    body('email').isEmail().withMessage('Email non valida'),
+    body('role').optional().isIn(['owner', 'admin', 'manager', 'user']).withMessage('Ruolo non valido')
+  ],
+  validate,
+  logAdminAction('admin_add_org_member'),
+  asyncHandler(async (req, res) => {
+    const member = await adminService.adminAddOrganizationMember(
+      req.params.orgId,
+      { email: req.body.email, role: req.body.role }
+    );
+
+    res.status(201).json({
+      success: true,
+      data: member,
+      message: 'Membro aggiunto all\'organizzazione'
+    });
+  })
+);
+
+// PUT /api/admin/organizations/:orgId/members/:memberId
+// Modifica ruolo di un membro dell'organizzazione
+router.put('/organizations/:orgId/members/:memberId',
+  [
+    param('orgId').isUUID().withMessage('ID organizzazione non valido'),
+    param('memberId').isUUID().withMessage('ID membro non valido'),
+    body('role').isIn(['owner', 'admin', 'manager', 'user']).withMessage('Ruolo non valido')
+  ],
+  validate,
+  logAdminAction('admin_update_org_member_role'),
+  asyncHandler(async (req, res) => {
+    const result = await adminService.adminUpdateOrganizationMemberRole(
+      req.params.orgId,
+      req.params.memberId,
+      req.body.role
+    );
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Ruolo aggiornato'
+    });
+  })
+);
+
+// DELETE /api/admin/organizations/:orgId/members/:memberId
+// Rimuove un membro dall'organizzazione
+router.delete('/organizations/:orgId/members/:memberId',
+  [
+    param('orgId').isUUID().withMessage('ID organizzazione non valido'),
+    param('memberId').isUUID().withMessage('ID membro non valido')
+  ],
+  validate,
+  logAdminAction('admin_remove_org_member'),
+  asyncHandler(async (req, res) => {
+    await adminService.adminRemoveOrganizationMember(
+      req.params.orgId,
+      req.params.memberId
+    );
+
+    res.json({
+      success: true,
+      message: 'Membro rimosso dall\'organizzazione'
+    });
+  })
+);
+
+// POST /api/admin/activities/:activityId/members
+// Aggiunge un membro a un'attività
+router.post('/activities/:activityId/members',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    body('email').isEmail().withMessage('Email non valida'),
+    body('role').optional().isIn(['owner', 'admin', 'user']).withMessage('Ruolo non valido')
+  ],
+  validate,
+  logAdminAction('admin_add_activity_member'),
+  asyncHandler(async (req, res) => {
+    const member = await adminService.adminAddActivityMember(
+      req.params.activityId,
+      { email: req.body.email, role: req.body.role }
+    );
+
+    res.status(201).json({
+      success: true,
+      data: member,
+      message: 'Membro aggiunto all\'attività'
+    });
+  })
+);
+
+// PUT /api/admin/activities/:activityId/members/:memberId
+// Modifica ruolo di un membro dell'attività
+router.put('/activities/:activityId/members/:memberId',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    param('memberId').isUUID().withMessage('ID membro non valido'),
+    body('role').isIn(['owner', 'admin', 'user']).withMessage('Ruolo non valido')
+  ],
+  validate,
+  logAdminAction('admin_update_activity_member_role'),
+  asyncHandler(async (req, res) => {
+    const result = await adminService.adminUpdateActivityMemberRole(
+      req.params.activityId,
+      req.params.memberId,
+      req.body.role
+    );
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Ruolo aggiornato'
+    });
+  })
+);
+
+// DELETE /api/admin/activities/:activityId/members/:memberId
+// Rimuove un membro dall'attività
+router.delete('/activities/:activityId/members/:memberId',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    param('memberId').isUUID().withMessage('ID membro non valido')
+  ],
+  validate,
+  logAdminAction('admin_remove_activity_member'),
+  asyncHandler(async (req, res) => {
+    await adminService.adminRemoveActivityMember(
+      req.params.activityId,
+      req.params.memberId
+    );
+
+    res.json({
+      success: true,
+      message: 'Membro rimosso dall\'attività'
+    });
+  })
+);
+
 // ==================== PACKAGES ====================
 
 // GET /api/admin/packages

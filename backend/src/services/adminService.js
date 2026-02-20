@@ -3513,6 +3513,258 @@ class AdminService {
 
     return restoredOrg;
   }
+
+  // ==================== MEMBER MANAGEMENT ====================
+
+  /**
+   * Aggiunge un membro a un'organizzazione (admin)
+   */
+  async adminAddOrganizationMember(organizationId, { email, role }) {
+    // Trova utente per email
+    const { data: { users }, error: searchError } = await supabaseAdmin.auth.admin.listUsers();
+    if (searchError) throw Errors.Internal('Errore nella ricerca utenti');
+
+    const user = users.find(u => u.email === email);
+    if (!user) throw Errors.NotFound('Utente non trovato con questa email');
+
+    // Verifica se già membro
+    const { data: existing } = await supabaseAdmin
+      .from('organization_users')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (existing) throw Errors.Conflict('L\'utente è già membro dell\'organizzazione');
+
+    const { data, error } = await supabaseAdmin
+      .from('organization_users')
+      .insert({
+        organization_id: organizationId,
+        user_id: user.id,
+        role: role || 'user'
+      })
+      .select()
+      .single();
+
+    if (error) throw Errors.Internal('Errore nell\'aggiunta del membro');
+
+    await this.logAdminAction('admin_add_org_member', 'organization', organizationId, {
+      userId: user.id, email, role: role || 'user'
+    });
+
+    return {
+      id: data.id,
+      userId: user.id,
+      email: user.email,
+      fullName: user.user_metadata?.full_name,
+      role: data.role,
+      joinedAt: data.created_at
+    };
+  }
+
+  /**
+   * Modifica il ruolo di un membro in un'organizzazione (admin)
+   */
+  async adminUpdateOrganizationMemberRole(organizationId, memberId, newRole) {
+    // Trova il membro
+    const { data: member } = await supabaseAdmin
+      .from('organization_users')
+      .select('*')
+      .eq('id', memberId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (!member) throw Errors.NotFound('Membro non trovato');
+
+    // Protezione: non permettere downgrade dell'ultimo owner
+    if (member.role === 'owner' && newRole !== 'owner') {
+      const { data: owners } = await supabaseAdmin
+        .from('organization_users')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('role', 'owner');
+
+      if (owners?.length <= 1) {
+        throw Errors.BadRequest('Impossibile cambiare ruolo dell\'ultimo proprietario');
+      }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('organization_users')
+      .update({ role: newRole })
+      .eq('id', memberId)
+      .select()
+      .single();
+
+    if (error) throw Errors.Internal('Errore nell\'aggiornamento del ruolo');
+
+    await this.logAdminAction('admin_update_org_member_role', 'organization', organizationId, {
+      memberId, oldRole: member.role, newRole
+    });
+
+    return data;
+  }
+
+  /**
+   * Rimuove un membro da un'organizzazione (admin)
+   */
+  async adminRemoveOrganizationMember(organizationId, memberId) {
+    const { data: member } = await supabaseAdmin
+      .from('organization_users')
+      .select('*')
+      .eq('id', memberId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (!member) throw Errors.NotFound('Membro non trovato');
+
+    // Protezione: non rimuovere l'ultimo owner
+    if (member.role === 'owner') {
+      const { data: owners } = await supabaseAdmin
+        .from('organization_users')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('role', 'owner');
+
+      if (owners?.length <= 1) {
+        throw Errors.BadRequest('Impossibile rimuovere l\'ultimo proprietario');
+      }
+    }
+
+    const { error } = await supabaseAdmin
+      .from('organization_users')
+      .delete()
+      .eq('id', memberId);
+
+    if (error) throw Errors.Internal('Errore nella rimozione del membro');
+
+    await this.logAdminAction('admin_remove_org_member', 'organization', organizationId, {
+      memberId, userId: member.user_id, role: member.role
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Aggiunge un membro a un'attività (admin)
+   */
+  async adminAddActivityMember(activityId, { email, role }) {
+    const { data: { users }, error: searchError } = await supabaseAdmin.auth.admin.listUsers();
+    if (searchError) throw Errors.Internal('Errore nella ricerca utenti');
+
+    const user = users.find(u => u.email === email);
+    if (!user) throw Errors.NotFound('Utente non trovato con questa email');
+
+    // Verifica se già membro
+    const { data: existing } = await supabaseAdmin
+      .from('activity_users')
+      .select('id')
+      .eq('activity_id', activityId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (existing) throw Errors.Conflict('L\'utente è già membro dell\'attività');
+
+    const { data, error } = await supabaseAdmin
+      .from('activity_users')
+      .insert({
+        activity_id: activityId,
+        user_id: user.id,
+        role: role || 'user'
+      })
+      .select()
+      .single();
+
+    if (error) throw Errors.Internal('Errore nell\'aggiunta del membro');
+
+    await this.logAdminAction('admin_add_activity_member', 'activity', activityId, {
+      userId: user.id, email, role: role || 'user'
+    });
+
+    return {
+      id: data.id,
+      userId: user.id,
+      email: user.email,
+      fullName: user.user_metadata?.full_name,
+      role: data.role,
+      joinedAt: data.created_at
+    };
+  }
+
+  /**
+   * Modifica il ruolo di un membro in un'attività (admin)
+   */
+  async adminUpdateActivityMemberRole(activityId, memberId, newRole) {
+    const { data: member } = await supabaseAdmin
+      .from('activity_users')
+      .select('*')
+      .eq('id', memberId)
+      .eq('activity_id', activityId)
+      .single();
+
+    if (!member) throw Errors.NotFound('Membro non trovato');
+
+    // Protezione owner
+    if (member.role === 'owner' && newRole !== 'owner') {
+      const { data: owners } = await supabaseAdmin
+        .from('activity_users')
+        .select('id')
+        .eq('activity_id', activityId)
+        .eq('role', 'owner');
+
+      if (owners?.length <= 1) {
+        throw Errors.BadRequest('Impossibile cambiare ruolo dell\'ultimo proprietario');
+      }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('activity_users')
+      .update({ role: newRole })
+      .eq('id', memberId)
+      .select()
+      .single();
+
+    if (error) throw Errors.Internal('Errore nell\'aggiornamento del ruolo');
+
+    await this.logAdminAction('admin_update_activity_member_role', 'activity', activityId, {
+      memberId, oldRole: member.role, newRole
+    });
+
+    return data;
+  }
+
+  /**
+   * Rimuove un membro da un'attività (admin)
+   */
+  async adminRemoveActivityMember(activityId, memberId) {
+    const { data: member } = await supabaseAdmin
+      .from('activity_users')
+      .select('*')
+      .eq('id', memberId)
+      .eq('activity_id', activityId)
+      .single();
+
+    if (!member) throw Errors.NotFound('Membro non trovato');
+
+    // Protezione: non rimuovere owner
+    if (member.role === 'owner') {
+      throw Errors.BadRequest('Impossibile rimuovere il proprietario dell\'attività');
+    }
+
+    const { error } = await supabaseAdmin
+      .from('activity_users')
+      .delete()
+      .eq('id', memberId);
+
+    if (error) throw Errors.Internal('Errore nella rimozione del membro');
+
+    await this.logAdminAction('admin_remove_activity_member', 'activity', activityId, {
+      memberId, userId: member.user_id, role: member.role
+    });
+
+    return { success: true };
+  }
 }
 
 export default new AdminService();

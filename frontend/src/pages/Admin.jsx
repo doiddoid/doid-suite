@@ -20,6 +20,7 @@ import PlansSummaryTable from '../components/Admin/PlansSummaryTable';
 import DeletedActivitiesTable from '../components/Admin/DeletedActivitiesTable';
 import OrganizationAssignModal from '../components/Admin/OrganizationAssignModal';
 import CredentialsModal from '../components/Admin/CredentialsModal';
+import MembersManageModal from '../components/Admin/MembersManageModal';
 
 // Mappa icone servizi - estesa
 const SERVICE_ICONS = {
@@ -127,6 +128,7 @@ export default function Admin() {
   const [showServiceAssignment, setShowServiceAssignment] = useState(false); // Modal assegnazione servizi
   const [orgAssignModal, setOrgAssignModal] = useState(null); // { activityId, activityName, currentOrganization }
   const [credentialsModal, setCredentialsModal] = useState(null); // { userId, userEmail, userName }
+  const [membersModal, setMembersModal] = useState(null); // { entityType, entityId, entityName, members }
 
   // Fetch stats on mount
   useEffect(() => {
@@ -1312,9 +1314,22 @@ export default function Admin() {
 
                         {/* Membri */}
                         <div className="p-4 border-b">
-                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-                            Membri ({itemDetails?.members?.length || selectedItem.membersCount || 0})
-                          </h4>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase">
+                              Membri ({itemDetails?.members?.length || selectedItem.membersCount || 0})
+                            </h4>
+                            <button
+                              onClick={() => setMembersModal({
+                                entityType: 'organization',
+                                entityId: selectedItem.id,
+                                entityName: selectedItem.name,
+                                members: itemDetails?.members || []
+                              })}
+                              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                            >
+                              Gestisci
+                            </button>
+                          </div>
                           {(itemDetails?.members || []).length === 0 ? (
                             <p className="text-sm text-gray-400 italic">Nessun membro</p>
                           ) : (
@@ -1594,9 +1609,22 @@ export default function Admin() {
 
                         {/* Membri */}
                         <div className="p-4 border-b">
-                          <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
-                            Membri ({itemDetails?.members?.length || selectedItem.membersCount || 0})
-                          </h4>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase">
+                              Membri ({itemDetails?.members?.length || selectedItem.membersCount || 0})
+                            </h4>
+                            <button
+                              onClick={() => setMembersModal({
+                                entityType: 'activity',
+                                entityId: selectedItem.id,
+                                entityName: selectedItem.name,
+                                members: itemDetails?.members || []
+                              })}
+                              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                            >
+                              Gestisci
+                            </button>
+                          </div>
                           {(itemDetails?.members || []).length === 0 ? (
                             <p className="text-sm text-gray-400 italic">Nessun membro</p>
                           ) : (
@@ -2469,6 +2497,26 @@ export default function Admin() {
           userEmail={credentialsModal.userEmail}
           userName={credentialsModal.userName}
           onClose={() => setCredentialsModal(null)}
+        />
+      )}
+
+      {membersModal && (
+        <MembersManageModal
+          entityType={membersModal.entityType}
+          entityId={membersModal.entityId}
+          entityName={membersModal.entityName}
+          members={membersModal.members}
+          onUpdate={() => {
+            // Ricarica i dettagli dell'entità
+            if (selectedItem?.id) {
+              if (membersModal.entityType === 'organization') {
+                fetchItemDetails('organization', selectedItem.id);
+              } else {
+                fetchItemDetails('activity', selectedItem.id);
+              }
+            }
+          }}
+          onClose={() => setMembersModal(null)}
         />
       )}
 
