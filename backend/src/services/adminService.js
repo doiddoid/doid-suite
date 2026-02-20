@@ -1695,6 +1695,11 @@ class AdminService {
           currentPeriodEnd: sub.current_period_end,
           cancelAtPeriodEnd: sub.cancel_at_period_end,
           isFreePromo: sub.is_free_promo || false,
+          paymentMethod: sub.payment_method || 'stripe',
+          manualRenewDate: sub.manual_renew_date,
+          manualRenewNotes: sub.manual_renew_notes,
+          lastPaymentDate: sub.last_payment_date,
+          paymentReference: sub.payment_reference,
           createdAt: sub.created_at
         } : null,
         effectiveStatus,
@@ -1706,7 +1711,7 @@ class AdminService {
 
   // Aggiorna stato servizio per un'attività (admin)
   async updateActivityServiceStatus(activityId, serviceCode, updates) {
-    const { status, billingCycle, trialDays, periodEndDate, cancelAtPeriodEnd, isFreePromo } = updates;
+    const { status, billingCycle, trialDays, periodEndDate, cancelAtPeriodEnd, isFreePromo, paymentMethod, manualRenewDate, paymentReference, manualRenewNotes } = updates;
 
     // Trova servizio
     const { data: service, error: serviceError } = await supabaseAdmin
@@ -1746,6 +1751,16 @@ class AdminService {
       updateData.current_period_start = now.toISOString();
       updateData.upgraded_at = now.toISOString();
 
+      // Gestisci metodo di pagamento
+      if (paymentMethod) {
+        updateData.payment_method = paymentMethod;
+      }
+
+      // Validazione: bonifico richiede data rinnovo
+      if (paymentMethod === 'bonifico' && !manualRenewDate && !isFreePromo) {
+        throw Errors.BadRequest('Data di rinnovo obbligatoria per pagamenti via bonifico');
+      }
+
       // Gestisci PRO gratuito (promo/partner)
       if (isFreePromo) {
         updateData.is_free_promo = true;
@@ -1753,6 +1768,11 @@ class AdminService {
         const endDate = new Date();
         endDate.setFullYear(endDate.getFullYear() + 10);
         updateData.current_period_end = endDate.toISOString();
+      } else if (manualRenewDate) {
+        // Data rinnovo manuale (bonifico/manual)
+        updateData.is_free_promo = false;
+        updateData.manual_renew_date = new Date(manualRenewDate).toISOString();
+        updateData.current_period_end = new Date(manualRenewDate).toISOString();
       } else if (periodEndDate) {
         updateData.is_free_promo = false;
         updateData.current_period_end = new Date(periodEndDate).toISOString();
@@ -1766,6 +1786,17 @@ class AdminService {
         }
         updateData.current_period_end = endDate.toISOString();
       }
+
+      // Campi aggiuntivi pagamento
+      if (paymentReference) {
+        updateData.payment_reference = paymentReference;
+      }
+      if (manualRenewNotes) {
+        updateData.manual_renew_notes = manualRenewNotes;
+      }
+      // Segna data ultimo pagamento
+      updateData.last_payment_date = now.toISOString();
+
       updateData.trial_ends_at = null;
     } else if (status === 'free') {
       if (!service.has_free_tier) {
@@ -1778,6 +1809,9 @@ class AdminService {
       if (cancelAtPeriodEnd !== undefined) {
         updateData.cancel_at_period_end = cancelAtPeriodEnd;
       }
+    } else if (status === 'past_due') {
+      // In attesa di pagamento: mantiene date correnti ma cambia stato
+      updateData.status = 'past_due';
     } else if (status === 'inactive' || status === 'expired') {
       updateData.trial_ends_at = null;
     } else if (status === 'suspended') {
@@ -1839,7 +1873,7 @@ class AdminService {
       result = data;
     }
 
-    // Log azione admin
+    // Log azione admin (communication log)
     await this.logCommunication({
       activityId,
       type: 'admin_action',
@@ -1848,7 +1882,10 @@ class AdminService {
         serviceCode,
         serviceName: service.name,
         previousStatus,
-        newStatus: status
+        newStatus: status,
+        paymentMethod: paymentMethod || null,
+        manualRenewDate: manualRenewDate || null,
+        paymentReference: paymentReference || null
       }
     });
 

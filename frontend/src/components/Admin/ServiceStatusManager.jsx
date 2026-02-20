@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, FileText, UtensilsCrossed, Monitor, Key, Check, X, Clock, Ban, Zap, AlertCircle, Pause, ExternalLink, Loader2, CreditCard } from 'lucide-react';
+import { Star, FileText, UtensilsCrossed, Monitor, Key, Check, X, Clock, Ban, Zap, AlertCircle, Pause, ExternalLink, Loader2, CreditCard, Landmark, Calendar } from 'lucide-react';
 import api from '../../services/api';
 
 const SERVICE_ICONS = {
@@ -22,6 +22,12 @@ const STATUS_CONFIG = {
   suspended: { label: 'SOSPESO', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', icon: Pause }
 };
 
+const PAYMENT_METHODS = {
+  stripe: { label: 'Stripe (automatico)', icon: CreditCard, color: 'purple' },
+  bonifico: { label: 'Bonifico (manuale)', icon: Landmark, color: 'amber' },
+  manual: { label: 'Manuale', icon: CreditCard, color: 'gray' }
+};
+
 export default function ServiceStatusManager({
   activityId,
   activityName,
@@ -32,17 +38,22 @@ export default function ServiceStatusManager({
   daysRemaining,
   onUpdate,
   onClose,
-  ownerId // ID del proprietario dell'attività per accesso admin
+  ownerId
 }) {
   const [newStatus, setNewStatus] = useState(effectiveStatus || 'inactive');
   const [billingCycle, setBillingCycle] = useState(subscription?.billingCycle || 'yearly');
   const [trialDays, setTrialDays] = useState(service.trialDays || 30);
   const [isFreePromo, setIsFreePromo] = useState(subscription?.isFreePromo || false);
+  const [paymentMethod, setPaymentMethod] = useState(subscription?.paymentMethod || 'stripe');
+  const [manualRenewDate, setManualRenewDate] = useState(
+    subscription?.manualRenewDate ? new Date(subscription.manualRenewDate).toISOString().split('T')[0] : ''
+  );
+  const [paymentReference, setPaymentReference] = useState(subscription?.paymentReference || '');
+  const [manualRenewNotes, setManualRenewNotes] = useState(subscription?.manualRenewNotes || '');
   const [loading, setLoading] = useState(false);
   const [accessingService, setAccessingService] = useState(false);
   const [error, setError] = useState(null);
 
-  // Gestione accesso admin al servizio
   const handleAdminAccess = async () => {
     if (!ownerId) {
       setError('Impossibile trovare il proprietario dell\'attività');
@@ -79,16 +90,38 @@ export default function ServiceStatusManager({
   const StatusIcon = statusConfig.icon;
 
   const handleUpdate = async () => {
+    // Validazione frontend: bonifico richiede data rinnovo
+    if (newStatus === 'pro' && paymentMethod === 'bonifico' && !manualRenewDate && !isFreePromo) {
+      setError('Data di rinnovo obbligatoria per pagamenti via bonifico');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      await onUpdate(activityId, service.code, {
+      const updateData = {
         status: newStatus,
         billingCycle,
         trialDays,
         isFreePromo: newStatus === 'pro' ? isFreePromo : false
-      });
+      };
+
+      // Aggiungi campi pagamento solo per PRO/TRIAL
+      if (newStatus === 'pro' || newStatus === 'trial') {
+        updateData.paymentMethod = paymentMethod;
+        if (manualRenewDate) {
+          updateData.manualRenewDate = new Date(manualRenewDate).toISOString();
+        }
+        if (paymentReference) {
+          updateData.paymentReference = paymentReference;
+        }
+        if (manualRenewNotes) {
+          updateData.manualRenewNotes = manualRenewNotes;
+        }
+      }
+
+      await onUpdate(activityId, service.code, updateData);
       onClose();
     } catch (err) {
       setError(err.message || 'Errore nell\'aggiornamento');
@@ -161,6 +194,22 @@ export default function ServiceStatusManager({
                   <span className="ml-2 font-medium">
                     {subscription.billingCycle === 'yearly' ? 'Annuale' : 'Mensile'}
                   </span>
+                </div>
+              )}
+              {subscription.paymentMethod && subscription.paymentMethod !== 'stripe' && (
+                <div>
+                  <span className="text-gray-500">Pagamento:</span>
+                  <span className={`ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+                    subscription.paymentMethod === 'bonifico' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {subscription.paymentMethod === 'bonifico' ? 'Bonifico' : 'Manuale'}
+                  </span>
+                </div>
+              )}
+              {subscription.paymentReference && (
+                <div>
+                  <span className="text-gray-500">Rif:</span>
+                  <span className="ml-2 font-medium text-xs">{subscription.paymentReference}</span>
                 </div>
               )}
             </div>
@@ -327,7 +376,7 @@ export default function ServiceStatusManager({
             </div>
           )}
 
-          {/* Billing Cycle */}
+          {/* Billing Cycle & Payment - PRO */}
           {newStatus === 'pro' && (
             <div className="space-y-4">
               {/* Free Promo Toggle */}
@@ -396,6 +445,105 @@ export default function ServiceStatusManager({
               {isFreePromo && (
                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
                   <span className="text-green-700 font-medium">€0 - PRO Gratuito Illimitato</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sezione Rinnovo e Pagamento - visibile per PRO e TRIAL (non per free promo) */}
+          {(newStatus === 'pro' || newStatus === 'trial') && !isFreePromo && (
+            <div className="space-y-4 pt-2 border-t">
+              <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Rinnovo e Pagamento
+              </h4>
+
+              {/* Payment Method Selector */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">
+                  Metodo Pagamento
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('stripe')}
+                    className={`p-3 rounded-lg border text-sm transition-colors flex items-center gap-2 ${
+                      paymentMethod === 'stripe'
+                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span className="font-medium">Stripe</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('bonifico')}
+                    className={`p-3 rounded-lg border text-sm transition-colors flex items-center gap-2 ${
+                      paymentMethod === 'bonifico'
+                        ? 'border-amber-500 bg-amber-50 text-amber-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    <Landmark className="w-4 h-4" />
+                    <span className="font-medium">Bonifico</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Manual Renew Date */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Data Prossimo Rinnovo
+                </label>
+                <input
+                  type="date"
+                  value={manualRenewDate}
+                  onChange={(e) => setManualRenewDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                />
+                {paymentMethod === 'stripe' && (
+                  <p className="text-xs text-gray-400 mt-1">Per Stripe la data viene gestita automaticamente. Compila solo se vuoi forzare una data specifica.</p>
+                )}
+              </div>
+
+              {/* Warning: bonifico senza data */}
+              {paymentMethod === 'bonifico' && !manualRenewDate && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-sm text-amber-800">
+                    <strong>Attenzione:</strong> Per i pagamenti via bonifico la data di rinnovo è obbligatoria.
+                  </p>
+                </div>
+              )}
+
+              {/* Payment Reference */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Riferimento Pagamento
+                </label>
+                <input
+                  type="text"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  placeholder="es. BONIF-2026-0234 o N. fattura"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                />
+              </div>
+
+              {/* Notes */}
+              {paymentMethod === 'bonifico' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Note Pagamento
+                  </label>
+                  <textarea
+                    value={manualRenewNotes}
+                    onChange={(e) => setManualRenewNotes(e.target.value)}
+                    placeholder="es. Bonifico ricevuto il 20/02/2026"
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm resize-none"
+                  />
                 </div>
               )}
             </div>

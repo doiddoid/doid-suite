@@ -99,16 +99,25 @@ function sanitizeLogData(data) {
 
 // Salva log admin su database
 async function saveAdminLog(logEntry) {
-  // Per ora salviamo solo su console
-  // In produzione, creare una tabella admin_logs e salvare qui
-
-  // Esempio di implementazione futura:
-  // await supabaseAdmin.from('admin_logs').insert({
-  //   admin_id: logEntry.adminId,
-  //   action: logEntry.action,
-  //   details: logEntry,
-  //   created_at: logEntry.timestamp
-  // });
+  try {
+    await supabaseAdmin.from('admin_logs').insert({
+      admin_user_id: logEntry.adminId,
+      action: logEntry.action,
+      target_type: logEntry.params?.activityId ? 'activity' : logEntry.params?.id ? 'user' : null,
+      target_id: logEntry.params?.activityId || logEntry.params?.id || null,
+      details: {
+        method: logEntry.method,
+        path: logEntry.path,
+        body: logEntry.body,
+        responseStatus: logEntry.responseStatus,
+        duration: logEntry.duration
+      },
+      ip_address: logEntry.ip || null
+    });
+  } catch (err) {
+    // Non blocca se la tabella non esiste ancora
+    console.error('Error saving admin log to DB:', err.message);
+  }
 }
 
 // Helper per verificare se un utente è super admin (usabile in altri contesti)

@@ -1572,12 +1572,16 @@ router.put('/activities/:activityId/services/:serviceCode',
   [
     param('activityId').isUUID().withMessage('ID attività non valido'),
     param('serviceCode').isString().trim().notEmpty().withMessage('Codice servizio richiesto'),
-    body('status').isIn(['inactive', 'free', 'trial', 'pro', 'active', 'expired', 'cancelled', 'suspended']).withMessage('Status non valido'),
+    body('status').isIn(['inactive', 'free', 'trial', 'pro', 'active', 'expired', 'cancelled', 'suspended', 'past_due']).withMessage('Status non valido'),
     body('billingCycle').optional().isIn(['monthly', 'yearly']).withMessage('Ciclo fatturazione non valido'),
     body('trialDays').optional().isInt({ min: 1, max: 90 }).withMessage('Giorni trial deve essere tra 1 e 90'),
     body('periodEndDate').optional().isISO8601().withMessage('Data fine periodo non valida'),
     body('cancelAtPeriodEnd').optional().isBoolean().withMessage('cancelAtPeriodEnd deve essere boolean'),
-    body('isFreePromo').optional().isBoolean().withMessage('isFreePromo deve essere boolean')
+    body('isFreePromo').optional().isBoolean().withMessage('isFreePromo deve essere boolean'),
+    body('paymentMethod').optional().isIn(['stripe', 'bonifico', 'manual']).withMessage('Metodo pagamento non valido'),
+    body('manualRenewDate').optional().isISO8601().withMessage('Data rinnovo manuale non valida'),
+    body('paymentReference').optional().trim(),
+    body('manualRenewNotes').optional().trim()
   ],
   validate,
   logAdminAction('update_activity_service'),

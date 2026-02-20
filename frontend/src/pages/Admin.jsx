@@ -777,22 +777,22 @@ export default function Admin() {
       suspended: 'bg-yellow-100 text-yellow-700 border-yellow-200',
       cancelled: 'bg-red-100 text-red-700 border-red-200',
       trial: 'bg-blue-100 text-blue-700 border-blue-200',
-      // Nuovi stati per servizi indipendenti
       inactive: 'bg-gray-100 text-gray-500 border-gray-200',
       free: 'bg-green-100 text-green-700 border-green-200',
       pro: 'bg-purple-100 text-purple-700 border-purple-200',
       expired: 'bg-orange-100 text-orange-700 border-orange-200',
+      past_due: 'bg-orange-100 text-orange-700 border-orange-200',
     };
     const labels = {
       active: 'Attivo',
       suspended: 'Sospeso',
       cancelled: 'Cancellato',
       trial: daysRemaining !== null ? `Trial • ${daysRemaining}g` : 'Trial',
-      // Nuovi stati per servizi indipendenti
       inactive: 'Non attivo',
       free: 'FREE',
       pro: 'PRO',
       expired: 'Scaduto',
+      past_due: 'In attesa',
     };
     const icons = {
       active: Check,
@@ -803,6 +803,7 @@ export default function Admin() {
       free: Check,
       pro: Zap,
       expired: AlertCircle,
+      past_due: CreditCard,
     };
     const IconComponent = icons[status];
     return (
@@ -1577,6 +1578,10 @@ export default function Admin() {
                                   {cachedServices.map((svc) => {
                                     const ServiceIcon = SERVICE_ICONS[svc.service?.icon] || Star;
                                     const serviceColor = svc.service?.color || '#6366f1';
+                                    const sub = svc.subscription;
+                                    const renewDate = sub?.manualRenewDate || sub?.currentPeriodEnd;
+                                    const isExpired = svc.effectiveStatus === 'expired';
+                                    const payMethod = sub?.paymentMethod;
                                     return (
                                       <button
                                         key={svc.service?.code}
@@ -1595,10 +1600,44 @@ export default function Admin() {
                                           <div className="p-2 rounded-lg" style={{ backgroundColor: `${serviceColor}15` }}>
                                             <ServiceIcon className="w-5 h-5" style={{ color: serviceColor }} />
                                           </div>
-                                          <div className="flex-1">
-                                            <p className="font-medium text-sm">{svc.service?.name}</p>
-                                            {svc.daysRemaining !== null && svc.effectiveStatus === 'trial' && (
-                                              <p className="text-xs text-gray-500">{svc.daysRemaining} giorni rimanenti</p>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                              <p className="font-medium text-sm">{svc.service?.name}</p>
+                                              {payMethod && payMethod !== 'stripe' && (
+                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                                  payMethod === 'bonifico' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                  {payMethod === 'bonifico' ? 'Bonifico' : 'Manuale'}
+                                                </span>
+                                              )}
+                                            </div>
+                                            {/* Data rinnovo/scadenza */}
+                                            {svc.effectiveStatus === 'pro' && renewDate && !sub?.isFreePromo && (
+                                              <p className={`text-xs flex items-center gap-1 ${
+                                                svc.daysRemaining !== null && svc.daysRemaining <= 7
+                                                  ? 'text-amber-600 font-medium'
+                                                  : 'text-teal-600'
+                                              }`}>
+                                                <Calendar className="w-3 h-3" />
+                                                Rinnovo: {new Date(renewDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                              </p>
+                                            )}
+                                            {svc.effectiveStatus === 'trial' && sub?.trialEndsAt && (
+                                              <p className={`text-xs flex items-center gap-1 ${
+                                                svc.daysRemaining !== null && svc.daysRemaining <= 7
+                                                  ? 'text-amber-600 font-medium'
+                                                  : 'text-gray-500'
+                                              }`}>
+                                                <Calendar className="w-3 h-3" />
+                                                Scade: {new Date(sub.trialEndsAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                {svc.daysRemaining !== null && ` (${svc.daysRemaining}g)`}
+                                              </p>
+                                            )}
+                                            {isExpired && renewDate && (
+                                              <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3" />
+                                                Scaduto il {new Date(renewDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                              </p>
                                             )}
                                           </div>
                                           {getStatusBadge(svc.effectiveStatus, svc.daysRemaining)}
