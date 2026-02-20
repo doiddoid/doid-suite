@@ -252,6 +252,15 @@ router.get('/:activityId/subscriptions/dashboard',
   asyncHandler(async (req, res) => {
     const services = await subscriptionService.getActivityServicesWithStatus(req.params.activityId);
 
+    // Super admin bypass: può accedere a tutti i servizi con subscription
+    if (req.user?.isSuperAdmin) {
+      services.forEach(s => {
+        if (s.subscription) {
+          s.canAccess = true;
+        }
+      });
+    }
+
     res.json({
       success: true,
       data: { services }
