@@ -764,42 +764,84 @@ class SubscriptionService {
    * Statistiche dashboard per attività
    */
   async getActivityDashboardStats(activityId) {
-    const { data: activeSubscriptions } = await supabaseAdmin
+    const now = new Date();
+
+    // Abbonamenti diretti con piani, date e codice servizio
+    const { data: subscriptions } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, status')
+      .select(`
+        id, service_id, status, billing_cycle, trial_ends_at, current_period_end,
+        plan:plans (code, price_monthly, price_yearly),
+        service:services (code)
+      `)
       .eq('activity_id', activityId)
       .in('status', ['active', 'trial']);
 
-    const { data: allServices } = await supabaseAdmin
-      .from('services')
-      .select('id')
-      .eq('is_active', true);
+    // Abbonamenti ereditati da pacchetti organizzazione
+    const packageSubscriptions = await this.getActivityPackageSubscriptions(activityId);
 
-    const { data: subscriptionsWithPlans } = await supabaseAdmin
-      .from('subscriptions')
-      .select(`
-        billing_cycle,
-        plan:plans (price_monthly, price_yearly)
-      `)
-      .eq('activity_id', activityId)
-      .eq('status', 'active');
-
+    let activeCount = 0;
+    let trialCount = 0;
     let monthlySpend = 0;
-    (subscriptionsWithPlans || []).forEach(sub => {
-      if (sub.plan) {
-        if (sub.billing_cycle === 'yearly') {
-          monthlySpend += parseFloat(sub.plan.price_yearly) / 12;
-        } else {
-          monthlySpend += parseFloat(sub.plan.price_monthly);
+    let nextExpiry = null;
+    const countedServiceCodes = new Set();
+
+    (subscriptions || []).forEach(sub => {
+      let isActive = false;
+
+      if (sub.status === 'trial') {
+        const trialEnd = new Date(sub.trial_ends_at);
+        isActive = now <= trialEnd;
+        if (isActive) {
+          trialCount++;
+          if (!nextExpiry || trialEnd < nextExpiry) {
+            nextExpiry = trialEnd;
+          }
+        }
+      } else if (sub.status === 'active') {
+        const periodEnd = new Date(sub.current_period_end);
+        isActive = now <= periodEnd;
+        if (isActive && sub.plan?.code !== 'free') {
+          if (!nextExpiry || periodEnd < nextExpiry) {
+            nextExpiry = periodEnd;
+          }
+        }
+      }
+
+      // Piani free sempre attivi
+      if (sub.plan?.code === 'free') {
+        isActive = true;
+      }
+
+      if (isActive) {
+        activeCount++;
+        if (sub.service?.code) countedServiceCodes.add(sub.service.code);
+
+        // Spesa mensile solo per abbonamenti attivi a pagamento (no trial, no free)
+        if (sub.status === 'active' && sub.plan && sub.plan.code !== 'free') {
+          if (sub.billing_cycle === 'yearly') {
+            monthlySpend += parseFloat(sub.plan.price_yearly) / 12;
+          } else {
+            monthlySpend += parseFloat(sub.plan.price_monthly);
+          }
         }
       }
     });
 
+    // Aggiungi servizi ereditati da pacchetti (solo se non già contati da abbonamento diretto)
+    packageSubscriptions.forEach((pkgSub, serviceCode) => {
+      if (countedServiceCodes.has(serviceCode)) return;
+      activeCount++;
+      if (pkgSub.status === 'trial') {
+        trialCount++;
+      }
+    });
+
     return {
-      activeServices: activeSubscriptions?.length || 0,
-      totalServices: allServices?.length || 0,
-      trialServices: activeSubscriptions?.filter(s => s.status === 'trial').length || 0,
-      monthlySpend: Math.round(monthlySpend * 100) / 100
+      activeServices: activeCount,
+      trialServices: trialCount,
+      monthlySpend: Math.round(monthlySpend * 100) / 100,
+      nextExpiry: nextExpiry ? nextExpiry.toISOString() : null
     };
   }
 
