@@ -19,6 +19,7 @@ import NewActivity from './pages/NewActivity';
 import ActivitySettings from './pages/ActivitySettings';
 import Admin from './pages/Admin';
 import MyServicesPage from './pages/MyServicesPage';
+import Guida from './pages/Guida';
 
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
               <Route path="/activities/new" element={<NewActivity />} />
               <Route path="/activities/:id/settings" element={<ActivitySettings />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/guida" element={<Guida />} />
             </Route>
 
             {/* Landing page for public, redirect to dashboard for authenticated */}

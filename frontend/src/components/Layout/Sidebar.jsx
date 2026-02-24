@@ -12,7 +12,7 @@ import {
   UtensilsCrossed,
   Monitor,
   Shield,
-  HelpCircle,
+  BookOpen,
   Sparkles,
   Check,
   ExternalLink,
@@ -306,7 +306,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         {/* Settings & Support */}
         <div className="space-y-1">
           <NavItem item={{ name: 'Impostazioni', path: '/settings', icon: Settings }} />
-          <NavItem item={{ name: 'Supporto', path: '/support', icon: HelpCircle }} />
+          <NavItem item={{ name: 'Guida', path: '/guida', icon: BookOpen }} />
         </div>
 
         {/* Admin Section - Only for superadmin */}
