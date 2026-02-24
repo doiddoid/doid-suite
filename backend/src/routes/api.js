@@ -4,7 +4,7 @@ import { verifyExternalToken } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import authService from '../services/authService.js';
-import { areServiceCodesEquivalent, normalizeServiceCodeShort, normalizeServiceCodeFull } from '../config/services.js';
+import { areServiceCodesEquivalent, normalizeServiceCodeShort } from '../config/services.js';
 
 const router = express.Router();
 
@@ -230,10 +230,8 @@ router.post('/sso/authenticate',
         });
       }
 
-      // Normalizza il service code per le query successive
+      // Normalizza il service code al formato breve (review, page, menu) usato nella tabella services
       const normalizedService = normalizeServiceCodeShort(requestedService);
-      // Normalizza al formato database (smart_review, smart_page, menu_digitale)
-      const dbServiceCode = normalizeServiceCodeFull(requestedService);
 
       // 3. Ottieni utente da Supabase Auth
       const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(decoded.userId);
@@ -311,7 +309,7 @@ router.post('/sso/authenticate',
             )
           `)
           .eq('activity_id', activity.id)
-          .eq('service.code', dbServiceCode)
+          .eq('service.code', normalizedService)
           .in('status', ['active', 'trial', 'suspended', 'past_due'])
           .single();
 

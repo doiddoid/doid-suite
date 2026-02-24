@@ -108,15 +108,15 @@ export const SERVICES = {
 export const ACTIVATABLE_SERVICES = ['review', 'page', 'menu'];
 export const CONTACT_REQUIRED_SERVICES = ['agent_ai', 'connect', 'display'];
 
-// Mappatura codici servizio: database <-> frontend
-// Il database usa smart_review, smart_page, menu_digitale
-// Il frontend config usa review, page, menu
+// Mappatura codici servizio: database <-> API esterne
+// Il database (tabella services) usa codici brevi: review, page, menu, display
+// Le API esterne e i servizi PHP usano codici lunghi: smart_review, smart_page, menu_digitale, display_suite
 export const SERVICE_CODE_MAP = {
-  // Database code -> Short code
+  // API/external code -> DB/short code
   'smart_review': 'review',
   'smart_page': 'page',
   'menu_digitale': 'menu',
-  // Short code -> Database code
+  // DB/short code -> API/external code
   'review': 'smart_review',
   'page': 'smart_page',
   'menu': 'menu_digitale',
