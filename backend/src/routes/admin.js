@@ -602,14 +602,15 @@ router.post('/organizations/:orgId/members',
   [
     param('orgId').isUUID().withMessage('ID organizzazione non valido'),
     body('email').isEmail().withMessage('Email non valida'),
-    body('role').optional().isIn(['owner', 'admin', 'manager', 'user']).withMessage('Ruolo non valido')
+    body('role').optional().isIn(['owner', 'admin', 'manager', 'user']).withMessage('Ruolo non valido'),
+    body('fullName').optional().isString().trim().withMessage('Nome non valido')
   ],
   validate,
   logAdminAction('admin_add_org_member'),
   asyncHandler(async (req, res) => {
     const member = await adminService.adminAddOrganizationMember(
       req.params.orgId,
-      { email: req.body.email, role: req.body.role }
+      { email: req.body.email, role: req.body.role, fullName: req.body.fullName }
     );
 
     res.status(201).json({
@@ -621,26 +622,27 @@ router.post('/organizations/:orgId/members',
 );
 
 // PUT /api/admin/organizations/:orgId/members/:memberId
-// Modifica ruolo di un membro dell'organizzazione
+// Modifica ruolo e/o nome di un membro dell'organizzazione
 router.put('/organizations/:orgId/members/:memberId',
   [
     param('orgId').isUUID().withMessage('ID organizzazione non valido'),
     param('memberId').isUUID().withMessage('ID membro non valido'),
-    body('role').isIn(['owner', 'admin', 'manager', 'user']).withMessage('Ruolo non valido')
+    body('role').isIn(['owner', 'admin', 'manager', 'user']).withMessage('Ruolo non valido'),
+    body('fullName').optional().isString().trim().withMessage('Nome non valido')
   ],
   validate,
-  logAdminAction('admin_update_org_member_role'),
+  logAdminAction('admin_update_org_member'),
   asyncHandler(async (req, res) => {
-    const result = await adminService.adminUpdateOrganizationMemberRole(
+    const result = await adminService.adminUpdateOrganizationMember(
       req.params.orgId,
       req.params.memberId,
-      req.body.role
+      { role: req.body.role, fullName: req.body.fullName }
     );
 
     res.json({
       success: true,
       data: result,
-      message: 'Ruolo aggiornato'
+      message: 'Membro aggiornato'
     });
   })
 );
@@ -673,14 +675,15 @@ router.post('/activities/:activityId/members',
   [
     param('activityId').isUUID().withMessage('ID attività non valido'),
     body('email').isEmail().withMessage('Email non valida'),
-    body('role').optional().isIn(['owner', 'admin', 'user']).withMessage('Ruolo non valido')
+    body('role').optional().isIn(['owner', 'admin', 'user']).withMessage('Ruolo non valido'),
+    body('fullName').optional().isString().trim().withMessage('Nome non valido')
   ],
   validate,
   logAdminAction('admin_add_activity_member'),
   asyncHandler(async (req, res) => {
     const member = await adminService.adminAddActivityMember(
       req.params.activityId,
-      { email: req.body.email, role: req.body.role }
+      { email: req.body.email, role: req.body.role, fullName: req.body.fullName }
     );
 
     res.status(201).json({
@@ -692,26 +695,27 @@ router.post('/activities/:activityId/members',
 );
 
 // PUT /api/admin/activities/:activityId/members/:memberId
-// Modifica ruolo di un membro dell'attività
+// Modifica ruolo e/o nome di un membro dell'attività
 router.put('/activities/:activityId/members/:memberId',
   [
     param('activityId').isUUID().withMessage('ID attività non valido'),
     param('memberId').isUUID().withMessage('ID membro non valido'),
-    body('role').isIn(['owner', 'admin', 'user']).withMessage('Ruolo non valido')
+    body('role').isIn(['owner', 'admin', 'user']).withMessage('Ruolo non valido'),
+    body('fullName').optional().isString().trim().withMessage('Nome non valido')
   ],
   validate,
-  logAdminAction('admin_update_activity_member_role'),
+  logAdminAction('admin_update_activity_member'),
   asyncHandler(async (req, res) => {
-    const result = await adminService.adminUpdateActivityMemberRole(
+    const result = await adminService.adminUpdateActivityMember(
       req.params.activityId,
       req.params.memberId,
-      req.body.role
+      { role: req.body.role, fullName: req.body.fullName }
     );
 
     res.json({
       success: true,
       data: result,
-      message: 'Ruolo aggiornato'
+      message: 'Membro aggiornato'
     });
   })
 );

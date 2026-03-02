@@ -3519,7 +3519,7 @@ class AdminService {
   /**
    * Aggiunge un membro a un'organizzazione (admin)
    */
-  async adminAddOrganizationMember(organizationId, { email, role }) {
+  async adminAddOrganizationMember(organizationId, { email, role, fullName }) {
     // Trova utente per email
     const { data: { users }, error: searchError } = await supabaseAdmin.auth.admin.listUsers();
     if (searchError) throw Errors.Internal('Errore nella ricerca utenti');
@@ -3537,6 +3537,13 @@ class AdminService {
 
     if (existing) throw Errors.Conflict('L\'utente è già membro dell\'organizzazione');
 
+    // Aggiorna il nome utente se fornito
+    if (fullName) {
+      await supabaseAdmin.auth.admin.updateUserById(user.id, {
+        user_metadata: { ...user.user_metadata, full_name: fullName }
+      });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('organization_users')
       .insert({
@@ -3550,23 +3557,23 @@ class AdminService {
     if (error) throw Errors.Internal('Errore nell\'aggiunta del membro');
 
     await this.logAdminAction('admin_add_org_member', 'organization', organizationId, {
-      userId: user.id, email, role: role || 'user'
+      userId: user.id, email, role: role || 'user', fullName
     });
 
     return {
       id: data.id,
       userId: user.id,
       email: user.email,
-      fullName: user.user_metadata?.full_name,
+      fullName: fullName || user.user_metadata?.full_name,
       role: data.role,
       joinedAt: data.created_at
     };
   }
 
   /**
-   * Modifica il ruolo di un membro in un'organizzazione (admin)
+   * Modifica ruolo e/o nome di un membro in un'organizzazione (admin)
    */
-  async adminUpdateOrganizationMemberRole(organizationId, memberId, newRole) {
+  async adminUpdateOrganizationMember(organizationId, memberId, { role: newRole, fullName }) {
     // Trova il membro
     const { data: member } = await supabaseAdmin
       .from('organization_users')
@@ -3590,6 +3597,7 @@ class AdminService {
       }
     }
 
+    // Aggiorna il ruolo
     const { data, error } = await supabaseAdmin
       .from('organization_users')
       .update({ role: newRole })
@@ -3597,13 +3605,24 @@ class AdminService {
       .select()
       .single();
 
-    if (error) throw Errors.Internal('Errore nell\'aggiornamento del ruolo');
+    if (error) throw Errors.Internal('Errore nell\'aggiornamento del membro');
 
-    await this.logAdminAction('admin_update_org_member_role', 'organization', organizationId, {
-      memberId, oldRole: member.role, newRole
+    // Aggiorna il nome utente se fornito
+    let updatedName = fullName;
+    if (fullName !== undefined) {
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(member.user_id);
+      if (userData?.user) {
+        await supabaseAdmin.auth.admin.updateUserById(member.user_id, {
+          user_metadata: { ...userData.user.user_metadata, full_name: fullName }
+        });
+      }
+    }
+
+    await this.logAdminAction('admin_update_org_member', 'organization', organizationId, {
+      memberId, oldRole: member.role, newRole, fullName
     });
 
-    return data;
+    return { ...data, fullName: updatedName };
   }
 
   /**
@@ -3649,7 +3668,7 @@ class AdminService {
   /**
    * Aggiunge un membro a un'attività (admin)
    */
-  async adminAddActivityMember(activityId, { email, role }) {
+  async adminAddActivityMember(activityId, { email, role, fullName }) {
     const { data: { users }, error: searchError } = await supabaseAdmin.auth.admin.listUsers();
     if (searchError) throw Errors.Internal('Errore nella ricerca utenti');
 
@@ -3666,6 +3685,13 @@ class AdminService {
 
     if (existing) throw Errors.Conflict('L\'utente è già membro dell\'attività');
 
+    // Aggiorna il nome utente se fornito
+    if (fullName) {
+      await supabaseAdmin.auth.admin.updateUserById(user.id, {
+        user_metadata: { ...user.user_metadata, full_name: fullName }
+      });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('activity_users')
       .insert({
@@ -3679,23 +3705,23 @@ class AdminService {
     if (error) throw Errors.Internal('Errore nell\'aggiunta del membro');
 
     await this.logAdminAction('admin_add_activity_member', 'activity', activityId, {
-      userId: user.id, email, role: role || 'user'
+      userId: user.id, email, role: role || 'user', fullName
     });
 
     return {
       id: data.id,
       userId: user.id,
       email: user.email,
-      fullName: user.user_metadata?.full_name,
+      fullName: fullName || user.user_metadata?.full_name,
       role: data.role,
       joinedAt: data.created_at
     };
   }
 
   /**
-   * Modifica il ruolo di un membro in un'attività (admin)
+   * Modifica ruolo e/o nome di un membro in un'attività (admin)
    */
-  async adminUpdateActivityMemberRole(activityId, memberId, newRole) {
+  async adminUpdateActivityMember(activityId, memberId, { role: newRole, fullName }) {
     const { data: member } = await supabaseAdmin
       .from('activity_users')
       .select('*')
@@ -3718,6 +3744,7 @@ class AdminService {
       }
     }
 
+    // Aggiorna il ruolo
     const { data, error } = await supabaseAdmin
       .from('activity_users')
       .update({ role: newRole })
@@ -3725,13 +3752,24 @@ class AdminService {
       .select()
       .single();
 
-    if (error) throw Errors.Internal('Errore nell\'aggiornamento del ruolo');
+    if (error) throw Errors.Internal('Errore nell\'aggiornamento del membro');
 
-    await this.logAdminAction('admin_update_activity_member_role', 'activity', activityId, {
-      memberId, oldRole: member.role, newRole
+    // Aggiorna il nome utente se fornito
+    let updatedName = fullName;
+    if (fullName !== undefined) {
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(member.user_id);
+      if (userData?.user) {
+        await supabaseAdmin.auth.admin.updateUserById(member.user_id, {
+          user_metadata: { ...userData.user.user_metadata, full_name: fullName }
+        });
+      }
+    }
+
+    await this.logAdminAction('admin_update_activity_member', 'activity', activityId, {
+      memberId, oldRole: member.role, newRole, fullName
     });
 
-    return data;
+    return { ...data, fullName: updatedName };
   }
 
   /**

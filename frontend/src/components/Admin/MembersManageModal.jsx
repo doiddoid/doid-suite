@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, UserPlus, X, Loader2, Check, AlertCircle, Trash2, ChevronDown, Shield, Crown, User } from 'lucide-react';
+import { Users, UserPlus, X, Loader2, Check, AlertCircle, Trash2, ChevronDown, Shield, Crown, User, Pencil } from 'lucide-react';
 import api from '../../services/api';
 
 const ROLE_CONFIG = {
@@ -20,9 +20,11 @@ export default function MembersManageModal({
   const [members, setMembers] = useState(initialMembers || []);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEmail, setNewEmail] = useState('');
+  const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('user');
   const [loading, setLoading] = useState(null); // 'add' | memberId
   const [editingRole, setEditingRole] = useState(null); // memberId
+  const [editingMember, setEditingMember] = useState(null); // { id, fullName, role }
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -48,14 +50,18 @@ export default function MembersManageModal({
     clearFeedback();
 
     try {
+      const payload = { email: newEmail.trim(), role: newRole };
+      if (newName.trim()) payload.fullName = newName.trim();
+
       const response = await api.request(basePath, {
         method: 'POST',
-        body: JSON.stringify({ email: newEmail.trim(), role: newRole })
+        body: JSON.stringify(payload)
       });
 
       if (response.success) {
         setMembers(prev => [...prev, response.data]);
         setNewEmail('');
+        setNewName('');
         setNewRole('user');
         setShowAddForm(false);
         setSuccess('Membro aggiunto con successo');
@@ -65,6 +71,34 @@ export default function MembersManageModal({
       }
     } catch (err) {
       setError(err.message || 'Errore nell\'aggiunta del membro');
+    }
+    setLoading(null);
+  };
+
+  const handleEditMember = async (memberId) => {
+    if (!editingMember) return;
+
+    setLoading(memberId);
+    clearFeedback();
+
+    try {
+      const response = await api.request(`${basePath}/${memberId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ role: editingMember.role, fullName: editingMember.fullName })
+      });
+
+      if (response.success) {
+        setMembers(prev => prev.map(m =>
+          m.id === memberId ? { ...m, role: editingMember.role, fullName: editingMember.fullName } : m
+        ));
+        setEditingMember(null);
+        setSuccess('Membro aggiornato');
+        if (onUpdate) onUpdate();
+      } else {
+        setError(response.error || 'Errore nell\'aggiornamento');
+      }
+    } catch (err) {
+      setError(err.message || 'Errore nell\'aggiornamento del membro');
     }
     setLoading(null);
   };
@@ -150,9 +184,61 @@ export default function MembersManageModal({
               const RoleIcon = roleConf.icon;
               const isOwner = member.role === 'owner';
               const isLastOwner = isOwner && ownerCount <= 1;
-              const isEditing = editingRole === member.id;
+              const isEditingR = editingRole === member.id;
+              const isEditingM = editingMember?.id === member.id;
               const isLoading = loading === member.id;
 
+              // ── Inline edit mode ──
+              if (isEditingM) {
+                return (
+                  <div key={member.id} className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-200 space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        value={editingMember.fullName}
+                        onChange={(e) => setEditingMember({ ...editingMember, fullName: e.target.value })}
+                        placeholder="Nome completo"
+                        className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        autoFocus
+                      />
+                      <select
+                        value={editingMember.role}
+                        onChange={(e) => setEditingMember({ ...editingMember, role: e.target.value })}
+                        disabled={isLastOwner}
+                        className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      >
+                        {availableRoles.map(r => (
+                          <option key={r} value={r} disabled={r === 'owner' && !isOwner}>
+                            {ROLE_CONFIG[r]?.label || r}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-500">{member.email}</p>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEditingMember(null)}
+                          className="px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          Annulla
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEditMember(member.id)}
+                          disabled={isLoading}
+                          className="px-2.5 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-1"
+                        >
+                          {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          Salva
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // ── Normal row ──
               return (
                 <div key={member.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl group">
                   {/* Avatar */}
@@ -167,7 +253,7 @@ export default function MembersManageModal({
                   </div>
 
                   {/* Role badge / edit */}
-                  {isEditing ? (
+                  {isEditingR ? (
                     <div className="relative">
                       <select
                         value={member.role}
@@ -200,6 +286,16 @@ export default function MembersManageModal({
                     </button>
                   )}
 
+                  {/* Edit button */}
+                  <button
+                    onClick={() => setEditingMember({ id: member.id, fullName: member.fullName || '', role: member.role })}
+                    disabled={isLoading}
+                    className="p-1.5 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                    title="Modifica membro"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+
                   {/* Remove button */}
                   {!isLastOwner && (
                     <button
@@ -226,11 +322,10 @@ export default function MembersManageModal({
           <form onSubmit={handleAddMember} className="p-4 border-t bg-indigo-50/50 space-y-3">
             <div className="flex gap-2">
               <input
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="Email utente..."
-                required
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Nome completo"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 autoFocus
               />
@@ -244,12 +339,20 @@ export default function MembersManageModal({
                 ))}
               </select>
             </div>
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="Email utente..."
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-500">L'utente deve già avere un account</p>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setShowAddForm(false); setNewEmail(''); clearFeedback(); }}
+                  onClick={() => { setShowAddForm(false); setNewEmail(''); setNewName(''); clearFeedback(); }}
                   className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Annulla
