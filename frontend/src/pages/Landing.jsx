@@ -137,8 +137,8 @@ const TrustBadges = () => (
       <span>Nessuna carta richiesta</span>
     </div>
     <div className="flex items-center gap-2">
-      <Check className="w-4 h-4 text-teal-500" />
-      <span>Registrazione gratuita</span>
+      <Clock className="w-4 h-4 text-teal-500" />
+      <span>Setup in 30 secondi</span>
     </div>
     <div className="flex items-center gap-2">
       <HeartHandshake className="w-4 h-4 text-teal-500" />
@@ -193,15 +193,20 @@ export default function Landing() {
 
           {/* H1 */}
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-            Un solo account.
-            <br />
-            <span className="text-teal-600">Tutti gli strumenti digitali per la tua attivita.</span>
+            Un solo account per tutta la tua presenza digitale
           </h1>
 
           {/* Subheadline */}
+          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-4">
+            Quanti strumenti stai usando per gestire la tua attività online?
+            <br />Uno per le recensioni, uno per i biglietti da visita, uno per il menu...
+          </p>
+          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-4">
+            doID Suite riunisce tutto in una sola dashboard italiana.
+            <br />Un solo login. Una sola fattura. Un solo supporto quando ne hai bisogno.
+          </p>
           <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-            doID Suite riunisce recensioni, biglietti da visita digitali, menu e display in un'unica dashboard.
-            <br />Attivi solo cio che ti serve, quando ti serve.
+            Attivi solo ciò che ti serve, quando ti serve. Senza costi nascosti, senza sprechi.
           </p>
 
           {/* CTA */}
@@ -228,15 +233,16 @@ export default function Landing() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
-                Basta password, abbonamenti e strumenti sparsi
+                Basta strumenti sparsi: gestisci tutto in un posto
               </h2>
               <p className="text-gray-600 mb-6 leading-relaxed">
-                Quanti servizi stai usando per gestire la presenza digitale della tua attivita?
-                Recensioni qui, biglietti da visita la, menu da un'altra parte...
+                Gestire la presenza digitale di un'attività non dovrebbe essere un lavoro a tempo pieno.
+                Eppure succede: ogni servizio ha la sua password, il suo pannello, la sua assistenza.
+                E alla fine si perde più tempo a gestire i tool che a usarli davvero.
               </p>
               <p className="text-gray-600 leading-relaxed">
-                Con doID Suite hai <strong className="text-gray-900">un'unica dashboard</strong> per tutto.
-                Un solo login, una sola fattura, un solo interlocutore per il supporto.
+                Ogni abbonamento separato pesa sul budget. Altrove paghi 250-500 € per un singolo servizio.
+                Con doID Suite parti da zero e aggiungi solo ciò che serve.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
@@ -299,10 +305,11 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              I servizi della Suite
+              I servizi di doID Suite: cosa puoi attivare
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Ogni servizio risolve un problema specifico. Attivali singolarmente o combinali per una gestione completa.
+              Ogni servizio risolve un problema specifico.
+              <br />Puoi attivarli uno alla volta o combinarli per una gestione completa della tua attività online.
             </p>
           </div>
 
@@ -445,8 +452,12 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Per chi è doID Suite?
+              Per chi è pensata doID Suite?
             </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              doID Suite nasce per chi gestisce un'attività e vuole semplificare la propria presenza
+              digitale senza diventare un esperto di tecnologia.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
@@ -523,8 +534,12 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Perche scegliere doID Suite
+              Perché scegliere doID Suite e non un tool straniero
             </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              La differenza è concreta. Non siamo un prodotto americano tradotto in italiano:
+              siamo nati qui, per le PMI italiane, e capiamo le tue esigenze.
+            </p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -569,7 +584,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-              Come funziona
+              Come funziona: operativo in 3 minuti
             </h2>
             <p className="text-gray-600">In 3 semplici step sei operativo</p>
           </div>
