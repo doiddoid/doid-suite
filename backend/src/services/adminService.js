@@ -730,10 +730,16 @@ class AdminService {
     });
     const activities = Array.from(activitiesMap.values());
 
-    // Ottieni servizi con stato per ogni attività
+    // Ottieni servizi con stato e conteggio utenti per ogni attività
     const activitiesWithServices = await Promise.all(
       (activities || []).map(async (a) => {
-        const services = await this.getActivityServicesWithStatus(a.id);
+        const [services, { count: membersCount }] = await Promise.all([
+          this.getActivityServicesWithStatus(a.id),
+          supabaseAdmin
+            .from('activity_users')
+            .select('*', { count: 'exact', head: true })
+            .eq('activity_id', a.id)
+        ]);
         return {
           id: a.id,
           name: a.name,
@@ -742,6 +748,7 @@ class AdminService {
           email: a.email,
           phone: a.phone,
           createdAt: a.created_at,
+          membersCount: membersCount || 0,
           services
         };
       })

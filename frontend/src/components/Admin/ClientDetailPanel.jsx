@@ -373,26 +373,32 @@ export default function ClientDetailPanel({
 
                 {/* ── Summary card (solo agenzie) ── */}
                 {isAgency && allServices.length > 0 && (() => {
+                  const orgNameLower = name.toLowerCase().trim();
+                  const clientActivities = activities.filter(a => a.name.toLowerCase().trim() !== orgNameLower);
                   const activeCount = allServices.filter(s => s.isActive && s.effectiveStatus !== 'expired').length;
                   const expiredCount = allServices.filter(s => s.effectiveStatus === 'expired').length;
-                  const inactiveCount = allServices.filter(s => !s.isActive && s.effectiveStatus !== 'expired').length;
+                  const totalMembers = activities.reduce((sum, a) => sum + (a.membersCount || 0), 0);
                   return (
-                    <div className="grid grid-cols-4 gap-2 mb-4">
-                      <div className="bg-teal-50 border border-teal-200 rounded-lg px-3 py-2 text-center">
-                        <p className="text-lg font-bold text-teal-700">{activities.length}</p>
-                        <p className="text-[10px] text-teal-600 font-medium">Attivit&agrave;</p>
+                    <div className="grid grid-cols-5 gap-2 mb-4">
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg px-2 py-2 text-center">
+                        <p className="text-lg font-bold text-purple-700">{clientActivities.length}</p>
+                        <p className="text-[10px] text-purple-600 font-medium">Clienti</p>
                       </div>
-                      <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-center">
+                      <div className="bg-teal-50 border border-teal-200 rounded-lg px-2 py-2 text-center">
+                        <p className="text-lg font-bold text-teal-700">{allServices.length}</p>
+                        <p className="text-[10px] text-teal-600 font-medium">Servizi</p>
+                      </div>
+                      <div className="bg-green-50 border border-green-200 rounded-lg px-2 py-2 text-center">
                         <p className="text-lg font-bold text-green-700">{activeCount}</p>
                         <p className="text-[10px] text-green-600 font-medium">Attivi</p>
                       </div>
-                      <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">
+                      <div className="bg-red-50 border border-red-200 rounded-lg px-2 py-2 text-center">
                         <p className="text-lg font-bold text-red-700">{expiredCount}</p>
                         <p className="text-[10px] text-red-600 font-medium">Scaduti</p>
                       </div>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-center">
-                        <p className="text-lg font-bold text-gray-500">{inactiveCount}</p>
-                        <p className="text-[10px] text-gray-500 font-medium">Inattivi</p>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg px-2 py-2 text-center">
+                        <p className="text-lg font-bold text-blue-700">{totalMembers}</p>
+                        <p className="text-[10px] text-blue-600 font-medium">Utenti</p>
                       </div>
                     </div>
                   );
@@ -417,130 +423,170 @@ export default function ClientDetailPanel({
                   </div>
                 ) : isAgency ? (
                   /* ── Vista raggruppata per attività (agenzie) ── */
-                  <div className="space-y-4">
-                    {activities.map((act) => {
+                  (() => {
+                    const orgNameLower = name.toLowerCase().trim();
+                    const agencyAct = activities.find(a => a.name.toLowerCase().trim() === orgNameLower);
+                    const clientActs = activities.filter(a => a.name.toLowerCase().trim() !== orgNameLower);
+
+                    // Componente card servizio riutilizzabile
+                    const ServiceCard = ({ svc, idx }) => {
+                      const service = svc.service;
+                      if (!service) return null;
+                      const ServiceIcon = SERVICE_ICONS?.[service.icon] || Star;
+                      const serviceColor = service.color || service.colorPrimary || '#6366f1';
+                      const status = svc.effectiveStatus || 'inactive';
+                      const svcIsActive = svc.isActive || status === 'expired';
+                      const svcIsExpired = status === 'expired';
+                      const svcIsTrial = status === 'trial';
+                      const svcIsUrgent = svcIsTrial && svc.daysRemaining !== null && svc.daysRemaining <= 7;
+                      const sub = svc.subscription;
+                      const renewDate = sub?.manualRenewDate || sub?.currentPeriodEnd;
+                      const payMethod = sub?.paymentMethod;
+                      const emoji = SERVICE_EMOJI[service.code] || '';
+
+                      return (
+                        <div
+                          key={`${svc.activityId}-${service.code || service.id}-${idx}`}
+                          onClick={() => onOpenServiceStatus(
+                            svc.activityId, svc.activityName, service, sub, status, svc.isActive, svc.daysRemaining
+                          )}
+                          className={`relative p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                            svcIsExpired ? 'border-red-200 bg-white'
+                              : svcIsUrgent ? 'border-amber-200 bg-white'
+                              : svcIsActive ? 'border-gray-200 bg-white hover:border-teal-300'
+                              : 'border-gray-100 bg-gray-50/50 opacity-50'
+                          }`}
+                        >
+                          {(svcIsUrgent || svcIsExpired) && (
+                            <div className={`absolute top-0 left-0 right-0 h-0.5 rounded-t-lg ${svcIsExpired ? 'bg-red-500' : 'bg-amber-500'}`} />
+                          )}
+                          <div className="flex justify-between items-start mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              {emoji ? <span className="text-base">{emoji}</span> : (
+                                <div className="p-1 rounded-md" style={{ backgroundColor: `${serviceColor}15` }}>
+                                  <ServiceIcon className="w-3.5 h-3.5" style={{ color: serviceColor }} />
+                                </div>
+                              )}
+                              <span className="font-bold text-xs text-gray-900">{service.name}</span>
+                            </div>
+                            <ServiceStatusBadge status={status} small />
+                          </div>
+                          {svcIsActive && renewDate && !sub?.isFreePromo && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                <Calendar className="w-3 h-3" /> {svcIsExpired ? 'Scaduto' : 'Rinnovo'}
+                              </span>
+                              <span className={`text-[10px] font-semibold ${svcIsExpired ? 'text-red-600' : 'text-gray-600'}`}>
+                                {new Date(renewDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              </span>
+                            </div>
+                          )}
+                          {svcIsTrial && sub?.trialEndsAt && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                <Calendar className="w-3 h-3" /> Scade
+                              </span>
+                              <span className={`text-[10px] font-semibold ${svcIsUrgent ? 'text-amber-600' : 'text-gray-600'}`}>
+                                {new Date(sub.trialEndsAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              </span>
+                            </div>
+                          )}
+                          {payMethod && <div className="mt-1"><PaymentBadge method={payMethod} /></div>}
+                          {svcIsTrial && svc.daysRemaining !== null && (
+                            <div className="mt-1.5">
+                              <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${svcIsUrgent ? 'bg-amber-500' : 'bg-teal-500'}`}
+                                  style={{ width: `${Math.max(5, Math.min(100, (svc.daysRemaining / 30) * 100))}%` }}
+                                />
+                              </div>
+                              <p className={`text-[9px] mt-0.5 ${svcIsUrgent ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
+                                {svc.daysRemaining}gg rimanenti
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    };
+
+                    // Componente blocco attività
+                    const ActivityBlock = ({ act, icon, iconBg }) => {
                       const actServices = allServices.filter(s => s.activityId === act.id);
                       if (actServices.length === 0) return null;
                       const actHasExpired = actServices.some(s => s.effectiveStatus === 'expired');
                       const actHasUrgent = actServices.some(s => s.effectiveStatus === 'trial' && s.daysRemaining !== null && s.daysRemaining <= 7);
                       return (
-                        <div key={act.id} className={`rounded-xl border ${
+                        <div className={`rounded-xl border ${
                           actHasExpired ? 'border-red-200' : actHasUrgent ? 'border-amber-200' : 'border-gray-200'
                         } overflow-hidden`}>
-                          {/* Header attività */}
                           <div className={`px-4 py-2.5 flex items-center gap-2.5 ${
                             actHasExpired ? 'bg-red-50/60' : actHasUrgent ? 'bg-amber-50/60' : 'bg-gray-50/80'
                           }`}>
-                            <div className="w-7 h-7 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                              <Store className="w-3.5 h-3.5" />
+                            <div className={`w-7 h-7 ${iconBg} rounded-lg flex items-center justify-center text-white flex-shrink-0`}>
+                              {icon}
                             </div>
                             <span className="font-semibold text-sm text-gray-900 truncate">{act.name}</span>
-                            <span className="text-[10px] text-gray-400 ml-auto flex-shrink-0">
-                              {actServices.filter(s => s.isActive && s.effectiveStatus !== 'expired').length}/{actServices.length} attivi
-                            </span>
+                            <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+                              {act.membersCount > 0 && (
+                                <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                                  <User className="w-3 h-3" /> {act.membersCount}
+                                </span>
+                              )}
+                              <span className="text-[10px] text-gray-400">
+                                {actServices.filter(s => s.isActive && s.effectiveStatus !== 'expired').length}/{actServices.length} attivi
+                              </span>
+                            </div>
                           </div>
-                          {/* Griglia servizi */}
                           <div className="grid grid-cols-2 gap-2 p-3">
-                            {actServices.map((svc, idx) => {
-                              const service = svc.service;
-                              if (!service) return null;
-                              const ServiceIcon = SERVICE_ICONS?.[service.icon] || Star;
-                              const serviceColor = service.color || service.colorPrimary || '#6366f1';
-                              const status = svc.effectiveStatus || 'inactive';
-                              const svcIsActive = svc.isActive || status === 'expired';
-                              const svcIsExpired = status === 'expired';
-                              const svcIsTrial = status === 'trial';
-                              const svcIsUrgent = svcIsTrial && svc.daysRemaining !== null && svc.daysRemaining <= 7;
-                              const sub = svc.subscription;
-                              const renewDate = sub?.manualRenewDate || sub?.currentPeriodEnd;
-                              const payMethod = sub?.paymentMethod;
-                              const emoji = SERVICE_EMOJI[service.code] || '';
-
-                              return (
-                                <div
-                                  key={`${svc.activityId}-${service.code || service.id}-${idx}`}
-                                  onClick={() => onOpenServiceStatus(
-                                    svc.activityId,
-                                    svc.activityName,
-                                    service,
-                                    sub,
-                                    status,
-                                    svc.isActive,
-                                    svc.daysRemaining
-                                  )}
-                                  className={`relative p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                                    svcIsExpired
-                                      ? 'border-red-200 bg-white'
-                                      : svcIsUrgent
-                                        ? 'border-amber-200 bg-white'
-                                        : svcIsActive
-                                          ? 'border-gray-200 bg-white hover:border-teal-300'
-                                          : 'border-gray-100 bg-gray-50/50 opacity-50'
-                                  }`}
-                                >
-                                  {(svcIsUrgent || svcIsExpired) && (
-                                    <div className={`absolute top-0 left-0 right-0 h-0.5 rounded-t-lg ${svcIsExpired ? 'bg-red-500' : 'bg-amber-500'}`} />
-                                  )}
-                                  <div className="flex justify-between items-start mb-1.5">
-                                    <div className="flex items-center gap-1.5">
-                                      {emoji ? (
-                                        <span className="text-base">{emoji}</span>
-                                      ) : (
-                                        <div className="p-1 rounded-md" style={{ backgroundColor: `${serviceColor}15` }}>
-                                          <ServiceIcon className="w-3.5 h-3.5" style={{ color: serviceColor }} />
-                                        </div>
-                                      )}
-                                      <span className="font-bold text-xs text-gray-900">{service.name}</span>
-                                    </div>
-                                    <ServiceStatusBadge status={status} small />
-                                  </div>
-
-                                  {svcIsActive && renewDate && !sub?.isFreePromo && (
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" />
-                                        {svcIsExpired ? 'Scaduto' : 'Rinnovo'}
-                                      </span>
-                                      <span className={`text-[10px] font-semibold ${svcIsExpired ? 'text-red-600' : 'text-gray-600'}`}>
-                                        {new Date(renewDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                      </span>
-                                    </div>
-                                  )}
-
-                                  {svcIsTrial && sub?.trialEndsAt && (
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" /> Scade
-                                      </span>
-                                      <span className={`text-[10px] font-semibold ${svcIsUrgent ? 'text-amber-600' : 'text-gray-600'}`}>
-                                        {new Date(sub.trialEndsAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                      </span>
-                                    </div>
-                                  )}
-
-                                  {payMethod && <div className="mt-1"><PaymentBadge method={payMethod} /></div>}
-
-                                  {svcIsTrial && svc.daysRemaining !== null && (
-                                    <div className="mt-1.5">
-                                      <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
-                                        <div
-                                          className={`h-full rounded-full ${svcIsUrgent ? 'bg-amber-500' : 'bg-teal-500'}`}
-                                          style={{ width: `${Math.max(5, Math.min(100, (svc.daysRemaining / 30) * 100))}%` }}
-                                        />
-                                      </div>
-                                      <p className={`text-[9px] mt-0.5 ${svcIsUrgent ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
-                                        {svc.daysRemaining}gg rimanenti
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                            {actServices.map((svc, idx) => (
+                              <ServiceCard key={`${svc.activityId}-${svc.service?.code || idx}`} svc={svc} idx={idx} />
+                            ))}
                           </div>
                         </div>
                       );
-                    })}
-                  </div>
+                    };
+
+                    return (
+                      <div className="space-y-5">
+                        {/* Sezione Agenzia */}
+                        {agencyAct && allServices.some(s => s.activityId === agencyAct.id) && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Building2 className="w-4 h-4 text-purple-500" />
+                              <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">Agenzia</span>
+                            </div>
+                            <ActivityBlock
+                              act={agencyAct}
+                              icon={<Briefcase className="w-3.5 h-3.5" />}
+                              iconBg="bg-gradient-to-br from-purple-500 to-purple-700"
+                            />
+                          </div>
+                        )}
+
+                        {/* Sezione Clienti gestiti */}
+                        {clientActs.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <User className="w-4 h-4 text-amber-500" />
+                              <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">
+                                Clienti gestiti ({clientActs.length})
+                              </span>
+                            </div>
+                            <div className="space-y-3">
+                              {clientActs.map(act => (
+                                <ActivityBlock
+                                  key={act.id}
+                                  act={act}
+                                  icon={<Store className="w-3.5 h-3.5" />}
+                                  iconBg="bg-gradient-to-br from-amber-400 to-orange-500"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
                 ) : (
                   /* ── Vista standard (attività singole / org non-agency) ── */
                   <div className="grid grid-cols-2 gap-2.5">
