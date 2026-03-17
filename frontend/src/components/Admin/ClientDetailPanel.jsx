@@ -371,6 +371,33 @@ export default function ClientDetailPanel({
                   </button>
                 </div>
 
+                {/* ── Summary card (solo agenzie) ── */}
+                {isAgency && allServices.length > 0 && (() => {
+                  const activeCount = allServices.filter(s => s.isActive && s.effectiveStatus !== 'expired').length;
+                  const expiredCount = allServices.filter(s => s.effectiveStatus === 'expired').length;
+                  const inactiveCount = allServices.filter(s => !s.isActive && s.effectiveStatus !== 'expired').length;
+                  return (
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      <div className="bg-teal-50 border border-teal-200 rounded-lg px-3 py-2 text-center">
+                        <p className="text-lg font-bold text-teal-700">{activities.length}</p>
+                        <p className="text-[10px] text-teal-600 font-medium">Attivit&agrave;</p>
+                      </div>
+                      <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-center">
+                        <p className="text-lg font-bold text-green-700">{activeCount}</p>
+                        <p className="text-[10px] text-green-600 font-medium">Attivi</p>
+                      </div>
+                      <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">
+                        <p className="text-lg font-bold text-red-700">{expiredCount}</p>
+                        <p className="text-[10px] text-red-600 font-medium">Scaduti</p>
+                      </div>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-center">
+                        <p className="text-lg font-bold text-gray-500">{inactiveCount}</p>
+                        <p className="text-[10px] text-gray-500 font-medium">Inattivi</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {allServices.length === 0 ? (
                   <div className="text-center py-12">
                     <Star className="w-10 h-10 text-gray-200 mx-auto mb-3" />
@@ -388,7 +415,134 @@ export default function ClientDetailPanel({
                       Carica servizi disponibili
                     </button>
                   </div>
+                ) : isAgency ? (
+                  /* ── Vista raggruppata per attività (agenzie) ── */
+                  <div className="space-y-4">
+                    {activities.map((act) => {
+                      const actServices = allServices.filter(s => s.activityId === act.id);
+                      if (actServices.length === 0) return null;
+                      const actHasExpired = actServices.some(s => s.effectiveStatus === 'expired');
+                      const actHasUrgent = actServices.some(s => s.effectiveStatus === 'trial' && s.daysRemaining !== null && s.daysRemaining <= 7);
+                      return (
+                        <div key={act.id} className={`rounded-xl border ${
+                          actHasExpired ? 'border-red-200' : actHasUrgent ? 'border-amber-200' : 'border-gray-200'
+                        } overflow-hidden`}>
+                          {/* Header attività */}
+                          <div className={`px-4 py-2.5 flex items-center gap-2.5 ${
+                            actHasExpired ? 'bg-red-50/60' : actHasUrgent ? 'bg-amber-50/60' : 'bg-gray-50/80'
+                          }`}>
+                            <div className="w-7 h-7 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white flex-shrink-0">
+                              <Store className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-semibold text-sm text-gray-900 truncate">{act.name}</span>
+                            <span className="text-[10px] text-gray-400 ml-auto flex-shrink-0">
+                              {actServices.filter(s => s.isActive && s.effectiveStatus !== 'expired').length}/{actServices.length} attivi
+                            </span>
+                          </div>
+                          {/* Griglia servizi */}
+                          <div className="grid grid-cols-2 gap-2 p-3">
+                            {actServices.map((svc, idx) => {
+                              const service = svc.service;
+                              if (!service) return null;
+                              const ServiceIcon = SERVICE_ICONS?.[service.icon] || Star;
+                              const serviceColor = service.color || service.colorPrimary || '#6366f1';
+                              const status = svc.effectiveStatus || 'inactive';
+                              const svcIsActive = svc.isActive || status === 'expired';
+                              const svcIsExpired = status === 'expired';
+                              const svcIsTrial = status === 'trial';
+                              const svcIsUrgent = svcIsTrial && svc.daysRemaining !== null && svc.daysRemaining <= 7;
+                              const sub = svc.subscription;
+                              const renewDate = sub?.manualRenewDate || sub?.currentPeriodEnd;
+                              const payMethod = sub?.paymentMethod;
+                              const emoji = SERVICE_EMOJI[service.code] || '';
+
+                              return (
+                                <div
+                                  key={`${svc.activityId}-${service.code || service.id}-${idx}`}
+                                  onClick={() => onOpenServiceStatus(
+                                    svc.activityId,
+                                    svc.activityName,
+                                    service,
+                                    sub,
+                                    status,
+                                    svc.isActive,
+                                    svc.daysRemaining
+                                  )}
+                                  className={`relative p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+                                    svcIsExpired
+                                      ? 'border-red-200 bg-white'
+                                      : svcIsUrgent
+                                        ? 'border-amber-200 bg-white'
+                                        : svcIsActive
+                                          ? 'border-gray-200 bg-white hover:border-teal-300'
+                                          : 'border-gray-100 bg-gray-50/50 opacity-50'
+                                  }`}
+                                >
+                                  {(svcIsUrgent || svcIsExpired) && (
+                                    <div className={`absolute top-0 left-0 right-0 h-0.5 rounded-t-lg ${svcIsExpired ? 'bg-red-500' : 'bg-amber-500'}`} />
+                                  )}
+                                  <div className="flex justify-between items-start mb-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      {emoji ? (
+                                        <span className="text-base">{emoji}</span>
+                                      ) : (
+                                        <div className="p-1 rounded-md" style={{ backgroundColor: `${serviceColor}15` }}>
+                                          <ServiceIcon className="w-3.5 h-3.5" style={{ color: serviceColor }} />
+                                        </div>
+                                      )}
+                                      <span className="font-bold text-xs text-gray-900">{service.name}</span>
+                                    </div>
+                                    <ServiceStatusBadge status={status} small />
+                                  </div>
+
+                                  {svcIsActive && renewDate && !sub?.isFreePromo && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" />
+                                        {svcIsExpired ? 'Scaduto' : 'Rinnovo'}
+                                      </span>
+                                      <span className={`text-[10px] font-semibold ${svcIsExpired ? 'text-red-600' : 'text-gray-600'}`}>
+                                        {new Date(renewDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {svcIsTrial && sub?.trialEndsAt && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" /> Scade
+                                      </span>
+                                      <span className={`text-[10px] font-semibold ${svcIsUrgent ? 'text-amber-600' : 'text-gray-600'}`}>
+                                        {new Date(sub.trialEndsAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {payMethod && <div className="mt-1"><PaymentBadge method={payMethod} /></div>}
+
+                                  {svcIsTrial && svc.daysRemaining !== null && (
+                                    <div className="mt-1.5">
+                                      <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                                        <div
+                                          className={`h-full rounded-full ${svcIsUrgent ? 'bg-amber-500' : 'bg-teal-500'}`}
+                                          style={{ width: `${Math.max(5, Math.min(100, (svc.daysRemaining / 30) * 100))}%` }}
+                                        />
+                                      </div>
+                                      <p className={`text-[9px] mt-0.5 ${svcIsUrgent ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
+                                        {svc.daysRemaining}gg rimanenti
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
+                  /* ── Vista standard (attività singole / org non-agency) ── */
                   <div className="grid grid-cols-2 gap-2.5">
                     {allServices.map((svc, idx) => {
                       const service = svc.service;
@@ -427,12 +581,10 @@ export default function ClientDetailPanel({
                                   : 'border-gray-100 bg-gray-50/50 opacity-50'
                           }`}
                         >
-                          {/* Barra superiore colorata per urgenti/scaduti */}
                           {(isUrgent || isExpired) && (
                             <div className={`absolute top-0 left-0 right-0 h-0.5 rounded-t-xl ${isExpired ? 'bg-red-500' : 'bg-amber-500'}`} />
                           )}
 
-                          {/* Header card: emoji + nome + badge stato */}
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex items-center gap-2">
                               {emoji ? (
@@ -447,7 +599,6 @@ export default function ClientDetailPanel({
                             <ServiceStatusBadge status={status} small />
                           </div>
 
-                          {/* Data rinnovo */}
                           {isActive && renewDate && !sub?.isFreePromo && (
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-[10px] text-gray-400 flex items-center gap-1">
@@ -460,7 +611,6 @@ export default function ClientDetailPanel({
                             </div>
                           )}
 
-                          {/* Trial scadenza */}
                           {isTrial && sub?.trialEndsAt && (
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-[10px] text-gray-400 flex items-center gap-1">
@@ -472,10 +622,8 @@ export default function ClientDetailPanel({
                             </div>
                           )}
 
-                          {/* Badge pagamento */}
                           {payMethod && <PaymentBadge method={payMethod} />}
 
-                          {/* Progress bar trial */}
                           {isTrial && svc.daysRemaining !== null && (
                             <div className="mt-2">
                               <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
@@ -488,13 +636,6 @@ export default function ClientDetailPanel({
                                 {svc.daysRemaining}gg rimanenti
                               </p>
                             </div>
-                          )}
-
-                          {/* Nome attività (per org con multiple attività) */}
-                          {isOrg && isAgency && svc.activityName && (
-                            <p className="text-[9px] text-gray-400 mt-1.5 truncate border-t border-gray-100 pt-1">
-                              {svc.activityName}
-                            </p>
                           )}
                         </div>
                       );
