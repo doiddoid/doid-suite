@@ -401,11 +401,11 @@ export default function Admin() {
     }
   };
 
-  // Toggle espansione organizzazione
+  // Toggle espansione organizzazione (gerarchia o attività)
   const toggleOrgExpansion = (org) => {
     const newExpanded = !expandedOrgs[org.id];
     setExpandedOrgs(prev => ({ ...prev, [org.id]: newExpanded }));
-    if (newExpanded && org.accountType === 'agency') {
+    if (newExpanded && (org.accountType === 'agency' || org.activitiesCount > 0)) {
       fetchExpandedOrgDetails(org.id);
     }
   };
@@ -497,6 +497,32 @@ export default function Admin() {
   const filteredOrganizations = filterItems(organizations, ['name', 'email']).filter(org =>
     clientTypeFilter === 'all' || org.accountType === clientTypeFilter
   );
+
+  // Costruisce struttura gerarchica: agencies con children, e clienti diretti (single)
+  const buildHierarchy = (flatList) => {
+    const map = {};
+    const agencies = [];
+    const direct = [];
+
+    // Prima passata: popola la mappa
+    flatList.forEach(o => { map[o.id] = { ...o, children: [] }; });
+
+    // Seconda passata: costruisce l'albero
+    flatList.forEach(o => {
+      if (o.accountType === 'agency') {
+        agencies.push(map[o.id]);
+      } else if (!o.parentOrgId || !map[o.parentOrgId]) {
+        // Senza padre valido = diretto (include orfani)
+        direct.push(map[o.id]);
+      } else {
+        map[o.parentOrgId].children.push(map[o.id]);
+      }
+    });
+
+    return { agencies, direct };
+  };
+
+  const hierarchy = buildHierarchy(filteredOrganizations);
   const filteredActivities = filterItems(activities, ['name', 'email', 'organization.name']);
   const filteredPackages = filterItems(packages, ['name', 'code', 'description']);
 
@@ -541,7 +567,7 @@ export default function Admin() {
       if (type === 'user') {
         setFormData({ email: '', password: '', fullName: '', emailConfirm: true });
       } else if (type === 'organization') {
-        setFormData({ name: '', email: '', accountType: 'single', maxActivities: 1, ownerId: '' });
+        setFormData({ name: '', email: '', accountType: 'single', parentOrgId: '', maxActivities: 1, ownerId: '' });
       } else if (type === 'activity') {
         setFormData({ name: '', email: '', organizationId: '', ownerId: '' });
       } else if (type === 'package') {
@@ -1088,172 +1114,411 @@ export default function Admin() {
                         <p>Nessun cliente trovato</p>
                       </div>
                     ) : (
-                      filteredOrganizations.map((org) => (
-                        <div key={org.id} className="border-b last:border-b-0">
-                          {/* Riga Organizzazione */}
-                          <div
-                            className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
-                              selectedItem?.id === org.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {/* Chevron per espandere (solo se agenzia con attività) */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleOrgExpansion(org);
-                                }}
-                                className={`p-1 rounded hover:bg-gray-200 transition-colors ${org.accountType !== 'agency' || !org.activitiesCount ? 'invisible' : ''}`}
-                              >
-                                {expandedOrgs[org.id] ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                              </button>
-
-                              {/* Icona */}
-                              <div
-                                onClick={() => {
-                                  setSelectedItem({ ...org, type: 'organization' });
-                                  fetchItemDetails('organization', org.id);
-                                }}
-                                className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                                  org.accountType === 'agency'
-                                    ? 'bg-gradient-to-br from-purple-400 to-pink-500'
-                                    : 'bg-gradient-to-br from-green-400 to-teal-500'
-                                } text-white`}
-                              >
-                                {org.accountType === 'agency' ? <Briefcase className="w-5 h-5" /> : <User className="w-5 h-5" />}
-                              </div>
-
-                              {/* Info */}
-                              <div
-                                className="flex-1 min-w-0"
-                                onClick={() => {
-                                  setSelectedItem({ ...org, type: 'organization' });
-                                  fetchItemDetails('organization', org.id);
-                                }}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <p className="font-medium text-gray-900 truncate">{org.name}</p>
-                                  {org.accountType === 'agency' && (
-                                    <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded font-medium">Agenzia</span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-500 truncate">{org.email || 'Nessuna email'}</p>
-                              </div>
-
-                              {/* Icone servizi attivi */}
-                              {(() => {
-                                const orgData = expandedOrgDetails[org.id] || (selectedItem?.id === org.id ? itemDetails : null);
-                                const subscriptions = (orgData?.subscriptions || []);
-                                if (subscriptions.length === 0) return null;
-
-                                // Raggruppa per servizio (evita duplicati)
-                                const serviceMap = new Map();
-                                subscriptions.forEach(sub => {
-                                  if (sub.plan?.service) {
-                                    serviceMap.set(sub.plan.service.code, sub.plan.service);
-                                  }
-                                });
-
-                                return (
-                                  <div className="flex items-center gap-1">
-                                    {Array.from(serviceMap.values()).slice(0, 4).map((service) => {
-                                      const ServiceIcon = SERVICE_ICONS[service.icon] || Star;
-                                      return (
-                                        <div
-                                          key={service.code}
-                                          className="w-6 h-6 rounded flex items-center justify-center"
-                                          style={{ backgroundColor: `${service.color}20` }}
-                                          title={service.name}
-                                        >
-                                          <ServiceIcon className="w-3.5 h-3.5" style={{ color: service.color }} />
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                );
-                              })()}
-
-                              {/* Status e contatori */}
-                              <div className="text-right">
-                                {getStatusBadge(org.status)}
-                                <p className="text-xs text-gray-400 mt-1">
-                                  {org.activitiesCount || 0} attività
-                                </p>
-                              </div>
-
-                              {/* Azioni rapide */}
-                              <div className="flex gap-1">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleImpersonate('organization', org.id);
-                                  }}
-                                  disabled={impersonating}
-                                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                  title="Accedi come owner"
-                                >
-                                  {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                                </button>
-                              </div>
+                      <>
+                        {/* ── SEZIONE AGENZIE ── */}
+                        {hierarchy.agencies.length > 0 && (
+                          <>
+                            <div className="px-4 py-2 bg-gray-50 border-b">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Agenzie ({hierarchy.agencies.length})</span>
                             </div>
-                          </div>
+                            {hierarchy.agencies.map((agency) => (
+                              <div key={agency.id}>
+                                {/* Riga Agenzia — Livello 1 */}
+                                <div
+                                  className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
+                                    selectedItem?.id === agency.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {/* Toggle expand — visibile se ha children o attività */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleOrgExpansion(agency);
+                                      }}
+                                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${
+                                        !agency.children?.length && !agency.activitiesCount ? 'invisible' : ''
+                                      }`}
+                                    >
+                                      {expandedOrgs[agency.id] ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                    </button>
 
-                          {/* Attività espanse (per agenzie) */}
-                          {expandedOrgs[org.id] && org.accountType === 'agency' && (() => {
-                            // Usa i dettagli espansi o quelli dell'item selezionato
-                            const orgData = expandedOrgDetails[org.id] || (selectedItem?.id === org.id ? itemDetails : null);
-                            const activities = orgData?.activities || [];
+                                    {/* Avatar teal */}
+                                    <div
+                                      onClick={() => {
+                                        setSelectedItem({ ...agency, type: 'organization' });
+                                        fetchItemDetails('organization', agency.id);
+                                      }}
+                                      className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
+                                      style={{ backgroundColor: '#2EBAA3' }}
+                                    >
+                                      <Briefcase className="w-5 h-5" />
+                                    </div>
 
-                            if (!orgData) {
-                              return (
-                                <div className="bg-gray-50 border-t pl-14 pr-4 py-3">
-                                  <div className="flex items-center gap-2 text-gray-500">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span className="text-sm">Caricamento...</span>
-                                  </div>
-                                </div>
-                              );
-                            }
+                                    {/* Info */}
+                                    <div
+                                      className="flex-1 min-w-0"
+                                      onClick={() => {
+                                        setSelectedItem({ ...agency, type: 'organization' });
+                                        fetchItemDetails('organization', agency.id);
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-medium text-gray-900 truncate">{agency.name}</p>
+                                        <span className="px-1.5 py-0.5 bg-teal-100 text-teal-700 text-xs rounded font-medium">Agenzia</span>
+                                      </div>
+                                      <p className="text-sm text-gray-500 truncate">{agency.email || 'Nessuna email'}</p>
+                                    </div>
 
-                            return (
-                              <div className="bg-gray-50 border-t">
-                                {activities.map((act) => (
-                                  <div
-                                    key={act.id}
-                                    onClick={() => {
-                                      setSelectedItem({ ...act, type: 'activity', organizationName: org.name });
-                                      fetchItemDetails('activity', act.id);
-                                    }}
-                                    className={`pl-14 pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
-                                      selectedItem?.id === act.id && selectedItem?.type === 'activity' ? 'bg-indigo-50' : ''
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white">
-                                        <Store className="w-4 h-4" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-gray-800 text-sm">{act.name}</p>
-                                        <p className="text-xs text-gray-500">
-                                          {act.owner?.email || 'Nessun owner'}
-                                        </p>
-                                      </div>
-                                      <div className="text-right">
-                                        {getStatusBadge(act.status)}
-                                      </div>
+                                    {/* Status e contatori */}
+                                    <div className="text-right">
+                                      {getStatusBadge(agency.status)}
+                                      <p className="text-xs text-gray-400 mt-1">
+                                        {agency.children?.length || 0} clienti · {agency.activitiesCount || 0} attività
+                                      </p>
+                                    </div>
+
+                                    {/* Azioni rapide */}
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleImpersonate('organization', agency.id);
+                                        }}
+                                        disabled={impersonating}
+                                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                        title="Accedi come owner"
+                                      >
+                                        {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                                      </button>
                                     </div>
                                   </div>
-                                ))}
-                                {activities.length === 0 && (
-                                  <div className="pl-14 pr-4 py-3 text-sm text-gray-500 italic">
-                                    Nessuna attività
+                                </div>
+
+                                {/* Clienti L2 — visibili solo se expanded */}
+                                {expandedOrgs[agency.id] && agency.children?.length > 0 && (
+                                  <div className="bg-gray-50 border-t">
+                                    {agency.children.map((client) => (
+                                      <div key={client.id}>
+                                        {/* Riga Cliente L2 */}
+                                        <div
+                                          className={`pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
+                                            selectedItem?.id === client.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
+                                          }`}
+                                          style={{ paddingLeft: '28px' }}
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            {/* Toggle per sotto-sedi L3 */}
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setExpandedOrgs(prev => ({ ...prev, [client.id]: !prev[client.id] }));
+                                              }}
+                                              className={`p-1 rounded hover:bg-gray-200 transition-colors ${
+                                                !client.children?.length ? 'invisible' : ''
+                                              }`}
+                                            >
+                                              {expandedOrgs[client.id] ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                            </button>
+
+                                            {/* Avatar blue */}
+                                            <div
+                                              onClick={() => {
+                                                setSelectedItem({ ...client, type: 'organization' });
+                                                fetchItemDetails('organization', client.id);
+                                              }}
+                                              className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
+                                              style={{ backgroundColor: '#3B82F6' }}
+                                            >
+                                              <Building2 className="w-4 h-4" />
+                                            </div>
+
+                                            <div
+                                              className="flex-1 min-w-0"
+                                              onClick={() => {
+                                                setSelectedItem({ ...client, type: 'organization' });
+                                                fetchItemDetails('organization', client.id);
+                                              }}
+                                            >
+                                              <div className="flex items-center gap-2">
+                                                <p className="font-medium text-gray-800 text-sm truncate">{client.name}</p>
+                                                {client.children?.length > 0 && (
+                                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded font-medium">
+                                                    {client.children.length} sedi
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <p className="text-xs text-gray-500 truncate">{client.email || 'Nessuna email'}</p>
+                                            </div>
+
+                                            <div className="text-right">
+                                              {getStatusBadge(client.status)}
+                                            </div>
+
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleImpersonate('organization', client.id);
+                                              }}
+                                              disabled={impersonating}
+                                              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                              title="Accedi come owner"
+                                            >
+                                              {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        {/* Sotto-sedi L3 — visibili solo se expanded */}
+                                        {expandedOrgs[client.id] && client.children?.map((sub) => (
+                                          <div
+                                            key={sub.id}
+                                            className={`pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
+                                              selectedItem?.id === sub.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
+                                            }`}
+                                            style={{ paddingLeft: '44px' }}
+                                            onClick={() => {
+                                              setSelectedItem({ ...sub, type: 'organization' });
+                                              fetchItemDetails('organization', sub.id);
+                                            }}
+                                          >
+                                            <div className="flex items-center gap-3">
+                                              {/* Spacer per allineamento (nessun toggle per L3) */}
+                                              <div className="w-7" />
+
+                                              {/* Avatar amber */}
+                                              <div
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
+                                                style={{ backgroundColor: '#F59E0B' }}
+                                              >
+                                                <MapPin className="w-4 h-4" />
+                                              </div>
+
+                                              <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-gray-800 text-sm truncate">{sub.name}</p>
+                                                <p className="text-xs text-gray-500 truncate">{sub.email || 'Nessuna email'}</p>
+                                              </div>
+
+                                              <div className="text-right">
+                                                {getStatusBadge(sub.status)}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
+
+                                {/* Attività espanse (per agenzie senza children gerarchici) */}
+                                {expandedOrgs[agency.id] && !agency.children?.length && (() => {
+                                  const orgData = expandedOrgDetails[agency.id] || (selectedItem?.id === agency.id ? itemDetails : null);
+                                  const agencyActivities = orgData?.activities || [];
+
+                                  if (!orgData) {
+                                    return (
+                                      <div className="bg-gray-50 border-t pl-14 pr-4 py-3">
+                                        <div className="flex items-center gap-2 text-gray-500">
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                          <span className="text-sm">Caricamento...</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
+                                  return agencyActivities.length > 0 ? (
+                                    <div className="bg-gray-50 border-t">
+                                      {agencyActivities.map((act) => (
+                                        <div
+                                          key={act.id}
+                                          onClick={() => {
+                                            setSelectedItem({ ...act, type: 'activity', organizationName: agency.name });
+                                            fetchItemDetails('activity', act.id);
+                                          }}
+                                          className={`pl-14 pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
+                                            selectedItem?.id === act.id && selectedItem?.type === 'activity' ? 'bg-indigo-50' : ''
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white">
+                                              <Store className="w-4 h-4" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="font-medium text-gray-800 text-sm">{act.name}</p>
+                                              <p className="text-xs text-gray-500">{act.owner?.email || 'Nessun owner'}</p>
+                                            </div>
+                                            <div className="text-right">
+                                              {getStatusBadge(act.status)}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : null;
+                                })()}
                               </div>
-                            );
-                          })()}
-                        </div>
-                      ))
+                            ))}
+                          </>
+                        )}
+
+                        {/* ── SEZIONE CLIENTI DIRETTI ── */}
+                        {hierarchy.direct.length > 0 && (
+                          <>
+                            <div className="px-4 py-2 bg-gray-50 border-b">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Clienti diretti ({hierarchy.direct.length})</span>
+                            </div>
+                            {hierarchy.direct.map((org) => (
+                              <div key={org.id} className="border-b last:border-b-0">
+                                <div
+                                  className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
+                                    selectedItem?.id === org.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {/* Chevron per espandere attività */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleOrgExpansion(org);
+                                      }}
+                                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${!org.activitiesCount ? 'invisible' : ''}`}
+                                    >
+                                      {expandedOrgs[org.id] ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+                                    </button>
+
+                                    {/* Avatar green/teal */}
+                                    <div
+                                      onClick={() => {
+                                        setSelectedItem({ ...org, type: 'organization' });
+                                        fetchItemDetails('organization', org.id);
+                                      }}
+                                      className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-green-400 to-teal-500 text-white"
+                                    >
+                                      <User className="w-5 h-5" />
+                                    </div>
+
+                                    {/* Info */}
+                                    <div
+                                      className="flex-1 min-w-0"
+                                      onClick={() => {
+                                        setSelectedItem({ ...org, type: 'organization' });
+                                        fetchItemDetails('organization', org.id);
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-medium text-gray-900 truncate">{org.name}</p>
+                                      </div>
+                                      <p className="text-sm text-gray-500 truncate">{org.email || 'Nessuna email'}</p>
+                                    </div>
+
+                                    {/* Icone servizi attivi */}
+                                    {(() => {
+                                      const orgData = expandedOrgDetails[org.id] || (selectedItem?.id === org.id ? itemDetails : null);
+                                      const subscriptions = (orgData?.subscriptions || []);
+                                      if (subscriptions.length === 0) return null;
+
+                                      const serviceMap = new Map();
+                                      subscriptions.forEach(sub => {
+                                        if (sub.plan?.service) {
+                                          serviceMap.set(sub.plan.service.code, sub.plan.service);
+                                        }
+                                      });
+
+                                      return (
+                                        <div className="flex items-center gap-1">
+                                          {Array.from(serviceMap.values()).slice(0, 4).map((service) => {
+                                            const ServiceIcon = SERVICE_ICONS[service.icon] || Star;
+                                            return (
+                                              <div
+                                                key={service.code}
+                                                className="w-6 h-6 rounded flex items-center justify-center"
+                                                style={{ backgroundColor: `${service.color}20` }}
+                                                title={service.name}
+                                              >
+                                                <ServiceIcon className="w-3.5 h-3.5" style={{ color: service.color }} />
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      );
+                                    })()}
+
+                                    {/* Status e contatori */}
+                                    <div className="text-right">
+                                      {getStatusBadge(org.status)}
+                                      <p className="text-xs text-gray-400 mt-1">
+                                        {org.activitiesCount || 0} attività
+                                      </p>
+                                    </div>
+
+                                    {/* Azioni rapide */}
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleImpersonate('organization', org.id);
+                                        }}
+                                        disabled={impersonating}
+                                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                        title="Accedi come owner"
+                                      >
+                                        {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Attività espanse */}
+                                {expandedOrgs[org.id] && (() => {
+                                  const orgData = expandedOrgDetails[org.id] || (selectedItem?.id === org.id ? itemDetails : null);
+                                  const orgActivities = orgData?.activities || [];
+
+                                  if (!orgData) {
+                                    return (
+                                      <div className="bg-gray-50 border-t pl-14 pr-4 py-3">
+                                        <div className="flex items-center gap-2 text-gray-500">
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                          <span className="text-sm">Caricamento...</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
+                                  return orgActivities.length > 0 ? (
+                                    <div className="bg-gray-50 border-t">
+                                      {orgActivities.map((act) => (
+                                        <div
+                                          key={act.id}
+                                          onClick={() => {
+                                            setSelectedItem({ ...act, type: 'activity', organizationName: org.name });
+                                            fetchItemDetails('activity', act.id);
+                                          }}
+                                          className={`pl-14 pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
+                                            selectedItem?.id === act.id && selectedItem?.type === 'activity' ? 'bg-indigo-50' : ''
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white">
+                                              <Store className="w-4 h-4" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="font-medium text-gray-800 text-sm">{act.name}</p>
+                                              <p className="text-xs text-gray-500">{act.owner?.email || 'Nessun owner'}</p>
+                                            </div>
+                                            <div className="text-right">
+                                              {getStatusBadge(act.status)}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : null;
+                                })()}
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1266,6 +1531,7 @@ export default function Admin() {
                       itemDetails={itemDetails}
                       loadingDetails={loadingDetails}
                       activityServices={activityServices}
+                      allOrganizations={organizations}
                       onClose={() => { setSelectedItem(null); setItemDetails(null); }}
                       onOpenServiceStatus={openServiceStatusModal}
                       onOpenOrgAssign={(data) => setOrgAssignModal(data)}
@@ -1276,6 +1542,10 @@ export default function Admin() {
                       getStatusBadge={getStatusBadge}
                       onImpersonate={handleImpersonate}
                       impersonating={impersonating}
+                      onSelectOrg={(org) => {
+                        setSelectedItem({ ...org, type: 'organization' });
+                        fetchItemDetails('organization', org.id);
+                      }}
                       onOpenEdit={(type, item) => openModal(type, 'edit', item)}
                       onRefreshDetails={() => {
                         if (selectedItem?.type === 'organization') {
@@ -2116,18 +2386,54 @@ export default function Admin() {
                   )}
                   <FormField label="Tipo Account">
                     <div className="grid grid-cols-2 gap-3">
-                      <label className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.accountType === 'single' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'} ${modalMode === 'edit' ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        <input type="radio" name="accountType" value="single" checked={formData.accountType === 'single'} onChange={(e) => setFormData({ ...formData, accountType: e.target.value })} disabled={modalMode === 'edit'} className="sr-only" />
-                        <Building2 className={`w-6 h-6 ${formData.accountType === 'single' ? 'text-indigo-600' : 'text-gray-400'}`} />
-                        <div><p className="font-medium">Singolo</p><p className="text-xs text-gray-500">1 attività</p></div>
-                      </label>
-                      <label className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${formData.accountType === 'agency' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'} ${modalMode === 'edit' ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        <input type="radio" name="accountType" value="agency" checked={formData.accountType === 'agency'} onChange={(e) => setFormData({ ...formData, accountType: e.target.value })} disabled={modalMode === 'edit'} className="sr-only" />
-                        <Briefcase className={`w-6 h-6 ${formData.accountType === 'agency' ? 'text-purple-600' : 'text-gray-400'}`} />
-                        <div><p className="font-medium">Agenzia</p><p className="text-xs text-gray-500">Multi attività</p></div>
-                      </label>
+                      {[
+                        { value: 'single', label: 'Singolo', desc: 'Cliente diretto', icon: User, borderColor: '#6366f1', bgColor: '#eef2ff', textColor: '#4f46e5' },
+                        { value: 'agency', label: 'Agenzia', desc: 'Multi attività', icon: Briefcase, borderColor: '#2EBAA3', bgColor: '#f0fdfa', textColor: '#2EBAA3' },
+                        { value: 'client', label: 'Cliente', desc: 'Di un\'agenzia', icon: Building2, borderColor: '#3B82F6', bgColor: '#eff6ff', textColor: '#3B82F6' },
+                        { value: 'sub', label: 'Sotto-sede', desc: 'Di un cliente', icon: MapPin, borderColor: '#F59E0B', bgColor: '#fffbeb', textColor: '#F59E0B' },
+                      ].map(({ value, label, desc, icon: Icon, borderColor, bgColor, textColor }) => (
+                        <label key={value} className="flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all"
+                          style={formData.accountType === value
+                            ? { borderColor, backgroundColor: bgColor }
+                            : { borderColor: '#e5e7eb' }
+                          }
+                        >
+                          <input type="radio" name="accountType" value={value} checked={formData.accountType === value}
+                            onChange={(e) => {
+                              const newType = e.target.value;
+                              const updates = { ...formData, accountType: newType };
+                              if (newType === 'single' || newType === 'agency') updates.parentOrgId = '';
+                              setFormData(updates);
+                            }} className="sr-only" />
+                          <Icon className="w-5 h-5" style={{ color: formData.accountType === value ? textColor : '#9ca3af' }} />
+                          <div><p className="font-medium text-sm">{label}</p><p className="text-xs text-gray-500">{desc}</p></div>
+                        </label>
+                      ))}
                     </div>
                   </FormField>
+
+                  {/* Organizzazione padre — visibile solo per client e sub */}
+                  {(formData.accountType === 'client' || formData.accountType === 'sub') && (
+                    <FormField label="Organizzazione padre" required hint={formData.accountType === 'client' ? 'Seleziona l\'agenzia' : 'Seleziona il cliente'}>
+                      <select
+                        required
+                        value={formData.parentOrgId || ''}
+                        onChange={(e) => setFormData({ ...formData, parentOrgId: e.target.value })}
+                        className="input-field"
+                      >
+                        <option value="">Seleziona...</option>
+                        {formData.accountType === 'client'
+                          ? organizations.filter(o => o.accountType === 'agency').map(o => (
+                              <option key={o.id} value={o.id}>{o.name}</option>
+                            ))
+                          : organizations.filter(o => o.accountType === 'client').map(o => (
+                              <option key={o.id} value={o.id}>{o.name}</option>
+                            ))
+                        }
+                      </select>
+                    </FormField>
+                  )}
+
                   <FormField label="Max Attività" hint="-1 per illimitate">
                     <input type="number" min={-1} value={formData.maxActivities ?? 1} onChange={(e) => setFormData({ ...formData, maxActivities: parseInt(e.target.value) })} className="input-field" />
                   </FormField>

@@ -3,7 +3,8 @@ import {
   X, Building2, Key, Mail, Phone, Hash, MapPin,
   Calendar, AlertCircle, Edit2, Check, Clock, Zap,
   Star, Loader2, RefreshCw, Trash2, LogIn, Store,
-  UserPlus, Link2, Unlink2, Briefcase, User, ExternalLink
+  UserPlus, Link2, Unlink2, Briefcase, User, ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -53,6 +54,7 @@ export default function ClientDetailPanel({
   itemDetails,
   loadingDetails,
   activityServices,
+  allOrganizations,
   onClose,
   onOpenServiceStatus,
   onOpenOrgAssign,
@@ -63,6 +65,7 @@ export default function ClientDetailPanel({
   getStatusBadge,
   onImpersonate,
   impersonating,
+  onSelectOrg,
   onOpenEdit,
   onRefreshDetails,
 }) {
@@ -96,6 +99,23 @@ export default function ClientDetailPanel({
 
   const isOrg = selectedItem.type === 'organization';
   const isAgency = isOrg && selectedItem.accountType === 'agency';
+  const isClient = isOrg && selectedItem.accountType === 'client';
+  const isSub = isOrg && selectedItem.accountType === 'sub';
+
+  // Costruisci breadcrumb risalendo parent_org_id
+  const getAncestors = () => {
+    if (!isOrg || !allOrganizations?.length) return [];
+    const ancestors = [];
+    let currentId = selectedItem.parentOrgId;
+    while (currentId) {
+      const parent = allOrganizations.find(o => o.id === currentId);
+      if (!parent) break;
+      ancestors.unshift(parent);
+      currentId = parent.parentOrgId;
+    }
+    return ancestors;
+  };
+  const ancestors = getAncestors();
   const name = itemDetails?.name || selectedItem.name || '';
   const email = itemDetails?.email || selectedItem.email || '';
   const phone = itemDetails?.phone || selectedItem.phone || '';
@@ -159,12 +179,13 @@ export default function ClientDetailPanel({
     }
   }, [selectedItem?.id, activities.length]);
 
-  // ─── Tab config ───────────────────────────────────────────
+  // ─── Tab config (condizionale per tipo org) ──────────────
+  const hierarchyChildren = selectedItem.children || [];
   const tabs = [
     { key: 'servizi', label: 'Servizi', count: activeServices.length },
     { key: 'dati', label: 'Dati' },
     { key: 'membri', label: 'Membri', count: members.length },
-    ...(isAgency ? [{ key: 'clienti', label: 'Clienti gestiti', count: activities.length }] : []),
+    ...(isAgency ? [{ key: 'clienti', label: 'Clienti gestiti', count: hierarchyChildren.length || activities.length }] : []),
   ];
 
   // ─── Helpers ──────────────────────────────────────────────
@@ -196,15 +217,34 @@ export default function ClientDetailPanel({
 
       {/* ═══ HEADER CLIENTE ═══ */}
       <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50/80 px-5 py-4">
+        {/* Breadcrumb */}
+        {ancestors.length > 0 && (
+          <div className="flex items-center gap-1 mb-2 text-xs text-gray-400">
+            {ancestors.map((anc, i) => (
+              <span key={anc.id} className="flex items-center gap-1">
+                <button
+                  onClick={() => onSelectOrg && onSelectOrg(anc)}
+                  className="hover:text-teal-600 hover:underline transition-colors"
+                >
+                  {anc.name}
+                </button>
+                <ChevronRight className="w-3 h-3" />
+              </span>
+            ))}
+            <span className="text-gray-600 font-medium">{name}</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            {/* Avatar */}
-            <div className={`w-11 h-11 rounded-[10px] flex items-center justify-center text-white font-extrabold text-base ${
-              isAgency
-                ? 'bg-gradient-to-br from-purple-500 to-purple-700'
-                : 'bg-gradient-to-br from-teal-500 to-teal-700'
-            }`}>
-              {isAgency ? <Briefcase className="w-5 h-5" /> : name.charAt(0).toUpperCase()}
+            {/* Avatar — colore per tipo */}
+            <div
+              className={`w-11 h-11 rounded-[10px] flex items-center justify-center text-white font-extrabold text-base ${
+                !isAgency && !isClient && !isSub ? 'bg-gradient-to-br from-teal-500 to-teal-700' : ''
+              }`}
+              style={(isAgency || isClient || isSub) ? { backgroundColor: isAgency ? '#2EBAA3' : isClient ? '#3B82F6' : '#F59E0B' } : undefined}
+            >
+              {isAgency ? <Briefcase className="w-5 h-5" /> : isClient ? <Building2 className="w-5 h-5" /> : isSub ? <MapPin className="w-5 h-5" /> : name.charAt(0).toUpperCase()}
             </div>
 
             {/* Nome + badge + contatti */}
@@ -212,7 +252,13 @@ export default function ClientDetailPanel({
               <div className="flex items-center gap-2">
                 <span className="font-bold text-base text-gray-900">{name}</span>
                 {isAgency && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700 tracking-wide">AGENZIA</span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-100 text-teal-700 tracking-wide">AGENZIA</span>
+                )}
+                {isClient && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 tracking-wide">CLIENTE</span>
+                )}
+                {isSub && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 tracking-wide">SEDE</span>
                 )}
               </div>
               <div className="flex items-center gap-3 mt-0.5">
@@ -238,8 +284,8 @@ export default function ClientDetailPanel({
 
           {/* Action buttons */}
           <div className="flex items-center gap-1.5">
-            {/* Impersonate (solo org) */}
-            {isOrg && (
+            {/* Impersonate (solo org, non per sotto-sedi) */}
+            {isOrg && !isSub && (
               <button
                 onClick={() => onImpersonate('organization', selectedItem.id)}
                 disabled={impersonating}
@@ -890,7 +936,7 @@ export default function ClientDetailPanel({
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-sm font-bold text-gray-900">
-                    Clienti gestiti ({activities.length})
+                    Clienti gestiti ({hierarchyChildren.length || activities.length})
                   </span>
                   <button
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-[11px] font-semibold hover:bg-purple-700 transition-colors"
@@ -899,12 +945,73 @@ export default function ClientDetailPanel({
                   </button>
                 </div>
 
-                {activities.length === 0 ? (
+                {/* Vista gerarchica dei children (client -> sub) */}
+                {hierarchyChildren.length > 0 ? (
+                  <div className="space-y-2">
+                    {hierarchyChildren.map((client) => (
+                      <div key={client.id}>
+                        {/* Riga Cliente L2 */}
+                        <div
+                          onClick={() => onSelectOrg && onSelectOrg(client)}
+                          className="flex items-center justify-between p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs"
+                              style={{ backgroundColor: '#3B82F6' }}
+                            >
+                              <Building2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-sm text-gray-900">{client.name}</div>
+                              <div className="text-[11px] text-gray-500">
+                                {client.email || ''}
+                                {client.children?.length > 0 && (
+                                  <span className="ml-2 text-blue-600 font-medium">{client.children.length} sedi</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-400">{client.activitiesCount || 0} att.</span>
+                            <ChevronRight className="w-4 h-4 text-gray-300" />
+                          </div>
+                        </div>
+
+                        {/* Sotto-sedi L3 */}
+                        {client.children?.length > 0 && (
+                          <div className="ml-6 mt-1 space-y-1">
+                            {client.children.map((sub) => (
+                              <div
+                                key={sub.id}
+                                onClick={() => onSelectOrg && onSelectOrg(sub)}
+                                className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-md flex items-center justify-center text-white"
+                                    style={{ backgroundColor: '#F59E0B' }}
+                                  >
+                                    <MapPin className="w-3.5 h-3.5" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-xs text-gray-800">{sub.name}</div>
+                                    <div className="text-[10px] text-gray-400">{sub.email || ''}</div>
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : activities.length === 0 ? (
                   <div className="text-center py-12">
                     <Store className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                    <p className="text-sm text-gray-400">Nessuna attività associata</p>
+                    <p className="text-sm text-gray-400">Nessun cliente associato</p>
                   </div>
                 ) : (
+                  /* Fallback: mostra attività se non ci sono children gerarchici */
                   <div className="space-y-2">
                     {activities.map((act) => {
                       const actServices = activityServices[act.id] || act.services || [];
