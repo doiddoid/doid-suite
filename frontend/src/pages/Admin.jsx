@@ -1128,6 +1128,10 @@ export default function Admin() {
                                   className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
                                     selectedItem?.id === agency.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
                                   }`}
+                                  onClick={() => {
+                                    setSelectedItem({ ...agency, type: 'organization' });
+                                    fetchItemDetails('organization', agency.id);
+                                  }}
                                 >
                                   <div className="flex items-center gap-3">
                                     {/* Toggle expand — visibile se ha children o attività */}
@@ -1145,10 +1149,6 @@ export default function Admin() {
 
                                     {/* Avatar teal */}
                                     <div
-                                      onClick={() => {
-                                        setSelectedItem({ ...agency, type: 'organization' });
-                                        fetchItemDetails('organization', agency.id);
-                                      }}
                                       className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
                                       style={{ backgroundColor: '#2EBAA3' }}
                                     >
@@ -1156,13 +1156,7 @@ export default function Admin() {
                                     </div>
 
                                     {/* Info */}
-                                    <div
-                                      className="flex-1 min-w-0"
-                                      onClick={() => {
-                                        setSelectedItem({ ...agency, type: 'organization' });
-                                        fetchItemDetails('organization', agency.id);
-                                      }}
-                                    >
+                                    <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2">
                                         <p className="font-medium text-gray-900 truncate">{agency.name}</p>
                                         <span className="px-1.5 py-0.5 bg-teal-100 text-teal-700 text-xs rounded font-medium">Agenzia</span>
@@ -1373,6 +1367,10 @@ export default function Admin() {
                                   className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${
                                     selectedItem?.id === org.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
                                   }`}
+                                  onClick={() => {
+                                    setSelectedItem({ ...org, type: 'organization' });
+                                    fetchItemDetails('organization', org.id);
+                                  }}
                                 >
                                   <div className="flex items-center gap-3">
                                     {/* Chevron per espandere attività */}
@@ -1387,24 +1385,12 @@ export default function Admin() {
                                     </button>
 
                                     {/* Avatar green/teal */}
-                                    <div
-                                      onClick={() => {
-                                        setSelectedItem({ ...org, type: 'organization' });
-                                        fetchItemDetails('organization', org.id);
-                                      }}
-                                      className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-green-400 to-teal-500 text-white"
-                                    >
+                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-green-400 to-teal-500 text-white">
                                       <User className="w-5 h-5" />
                                     </div>
 
                                     {/* Info */}
-                                    <div
-                                      className="flex-1 min-w-0"
-                                      onClick={() => {
-                                        setSelectedItem({ ...org, type: 'organization' });
-                                        fetchItemDetails('organization', org.id);
-                                      }}
-                                    >
+                                    <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2">
                                         <p className="font-medium text-gray-900 truncate">{org.name}</p>
                                       </div>
