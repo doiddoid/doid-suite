@@ -1,11 +1,23 @@
-import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff, Loader2, AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import api from '../services/api.js';
+
+// Service display names for contextual banner
+const SERVICE_NAMES = {
+  menu: 'Smart Menu',
+  review: 'Smart Review',
+  page: 'Smart Page',
+  smart_review: 'Smart Review',
+  smart_page: 'Smart Page',
+  menu_digitale: 'Smart Menu',
+};
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -15,6 +27,20 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Read redirect params from URL (set by subdomain login redirect)
+  const redirectService = searchParams.get('redirect');
+  const returnUrl = searchParams.get('return_url');
+  const serviceName = useMemo(() => {
+    if (!redirectService) return null;
+    return SERVICE_NAMES[redirectService] || redirectService;
+  }, [redirectService]);
+
+  // Store redirect params in sessionStorage for persistence across page interactions
+  if (redirectService && returnUrl) {
+    sessionStorage.setItem('sso_redirect_service', redirectService);
+    sessionStorage.setItem('sso_return_url', returnUrl);
+  }
 
   const from = location.state?.from?.pathname || '/dashboard';
 
@@ -37,9 +63,41 @@ export default function Login() {
           replace: true,
           state: { migratedFrom: result.migratedFrom, required: true }
         });
-      } else {
-        navigate(from, { replace: true });
+        setLoading(false);
+        return;
       }
+
+      // Check for SSO redirect params (reverse SSO flow from subdomain)
+      const storedService = sessionStorage.getItem('sso_redirect_service') || redirectService;
+      const storedReturnUrl = sessionStorage.getItem('sso_return_url') || returnUrl;
+
+      if (storedService && storedReturnUrl) {
+        try {
+          // Generate SSO token for the target service
+          const tokenResponse = await api.getSsoRedirectToken(storedService);
+
+          if (tokenResponse.success && tokenResponse.data?.token) {
+            // Clean up sessionStorage
+            sessionStorage.removeItem('sso_redirect_service');
+            sessionStorage.removeItem('sso_return_url');
+
+            // Build redirect URL with token
+            const decodedReturnUrl = decodeURIComponent(storedReturnUrl);
+            const separator = decodedReturnUrl.includes('?') ? '&' : '?';
+            window.location.href = `${decodedReturnUrl}${separator}token=${tokenResponse.data.token}`;
+            return;
+          }
+        } catch (err) {
+          console.error('SSO redirect token error:', err);
+          // Fall through to normal navigation if token generation fails
+        }
+
+        // Clean up even on failure
+        sessionStorage.removeItem('sso_redirect_service');
+        sessionStorage.removeItem('sso_return_url');
+      }
+
+      navigate(from, { replace: true });
     } else {
       setError(result.error);
     }
@@ -61,6 +119,16 @@ export default function Login() {
           </div>
           <p className="text-gray-500 mt-3">Accedi al tuo account</p>
         </div>
+
+        {/* Service redirect banner */}
+        {serviceName && (
+          <div className="mb-4 p-4 bg-primary-50 border border-primary-100 rounded-xl flex items-center gap-3">
+            <ArrowRight className="w-5 h-5 text-primary-600 flex-shrink-0" />
+            <p className="text-sm text-primary-700">
+              Accedi al tuo account DOID Suite per continuare su <strong>{serviceName}</strong>
+            </p>
+          </div>
+        )}
 
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">

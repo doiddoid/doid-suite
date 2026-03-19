@@ -3,6 +3,9 @@ import { body, validationResult } from 'express-validator';
 import authService from '../services/authService.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { supabaseAdmin } from '../config/supabase.js';
+import { SERVICES, normalizeServiceCodeShort, ACTIVATABLE_SERVICES } from '../config/services.js';
+import subscriptionService from '../services/subscriptionService.js';
 
 const router = express.Router();
 
@@ -274,5 +277,103 @@ if (process.env.NODE_ENV === 'development') {
     })
   );
 }
+
+// POST /api/auth/sso-redirect-token
+// Generates an SSO token for redirecting to an external service after login.
+// Used by the reverse SSO flow: subdomain/login → Suite login → subdomain/callback
+router.post('/sso-redirect-token',
+  authenticate,
+  [
+    body('service').trim().notEmpty().withMessage('Codice servizio richiesto')
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { service } = req.body;
+    const userId = req.user.id;
+
+    // Normalize service code
+    const serviceCode = normalizeServiceCodeShort(service);
+
+    if (!ACTIVATABLE_SERVICES.includes(serviceCode)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Codice servizio non valido'
+      });
+    }
+
+    // Find the user's activities
+    const { data: activityUsers, error: auError } = await supabaseAdmin
+      .from('activity_users')
+      .select('activity_id, role')
+      .eq('user_id', userId);
+
+    if (auError || !activityUsers?.length) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nessuna attività trovata per questo utente'
+      });
+    }
+
+    // Find the first activity with an active subscription for the requested service
+    let selectedActivity = null;
+    let selectedRole = 'user';
+
+    for (const au of activityUsers) {
+      const services = await subscriptionService.getActivityServicesWithStatus(au.activity_id);
+      const match = services.find(s => s.service.code === serviceCode && (s.canAccess || s.isActive));
+
+      if (match) {
+        // Get activity details
+        const { data: activity } = await supabaseAdmin
+          .from('activities')
+          .select('id, organization_id, name')
+          .eq('id', au.activity_id)
+          .single();
+
+        if (activity) {
+          selectedActivity = activity;
+          selectedRole = au.role;
+          break;
+        }
+      }
+    }
+
+    // If no activity with active subscription, try the first activity anyway
+    // (the service callback will handle license validation)
+    if (!selectedActivity) {
+      const { data: firstActivity } = await supabaseAdmin
+        .from('activities')
+        .select('id, organization_id, name')
+        .eq('id', activityUsers[0].activity_id)
+        .single();
+
+      if (firstActivity) {
+        selectedActivity = firstActivity;
+        selectedRole = activityUsers[0].role;
+      }
+    }
+
+    if (!selectedActivity) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nessuna attività trovata'
+      });
+    }
+
+    // Generate the external token (same format as Suite→service SSO)
+    const token = authService.generateExternalToken({
+      userId,
+      organizationId: selectedActivity.organization_id,
+      activityId: selectedActivity.id,
+      service: serviceCode,
+      role: selectedRole
+    });
+
+    res.json({
+      success: true,
+      data: { token }
+    });
+  })
+);
 
 export default router;

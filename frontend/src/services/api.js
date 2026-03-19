@@ -148,6 +148,13 @@ class ApiService {
     return response;
   }
 
+  async getSsoRedirectToken(service) {
+    return this.request('/auth/sso-redirect-token', {
+      method: 'POST',
+      body: JSON.stringify({ service }),
+    });
+  }
+
   async logout() {
     try {
       await this.request('/auth/logout', { method: 'POST' });
