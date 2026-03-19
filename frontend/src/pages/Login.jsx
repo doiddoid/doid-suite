@@ -72,29 +72,56 @@ export default function Login() {
       const storedReturnUrl = sessionStorage.getItem('sso_return_url') || returnUrl;
 
       if (storedService && storedReturnUrl) {
+        let ssoRedirectDone = false;
         try {
-          // Generate SSO token for the target service
           const tokenResponse = await api.getSsoRedirectToken(storedService);
 
           if (tokenResponse.success && tokenResponse.data?.token) {
-            // Clean up sessionStorage
             sessionStorage.removeItem('sso_redirect_service');
             sessionStorage.removeItem('sso_return_url');
 
-            // Build redirect URL with token
             const decodedReturnUrl = decodeURIComponent(storedReturnUrl);
             const separator = decodedReturnUrl.includes('?') ? '&' : '?';
-            window.location.href = `${decodedReturnUrl}${separator}token=${tokenResponse.data.token}`;
+            const redirectTo = `${decodedReturnUrl}${separator}token=${tokenResponse.data.token}`;
+            window.location.href = redirectTo;
+            ssoRedirectDone = true;
             return;
+          } else {
+            console.warn('SSO token response:', tokenResponse);
           }
         } catch (err) {
           console.error('SSO redirect token error:', err);
-          // Fall through to normal navigation if token generation fails
         }
 
-        // Clean up even on failure
         sessionStorage.removeItem('sso_redirect_service');
         sessionStorage.removeItem('sso_return_url');
+
+        if (!ssoRedirectDone) {
+          // Fallback: redirect diretto al callback senza token generato dal backend
+          // Usa il token Supabase dell'utente per autenticarsi
+          const accessToken = localStorage.getItem('token');
+          if (accessToken) {
+            const decodedReturnUrl = decodeURIComponent(storedReturnUrl);
+            const separator = decodedReturnUrl.includes('?') ? '&' : '?';
+            // Genera token via endpoint esistente delle attività
+            try {
+              const userResp = await api.getCurrentUser();
+              if (userResp.success && userResp.data?.organizations?.[0]) {
+                const org = userResp.data.organizations[0];
+                if (org.activities?.[0]) {
+                  const activityId = org.activities[0].id;
+                  const serviceAccessResp = await api.request(`/activities/${activityId}/services/${storedService}/access`);
+                  if (serviceAccessResp.success && serviceAccessResp.data?.token) {
+                    window.location.href = `${decodedReturnUrl}${separator}token=${serviceAccessResp.data.token}`;
+                    return;
+                  }
+                }
+              }
+            } catch (fallbackErr) {
+              console.error('SSO fallback error:', fallbackErr);
+            }
+          }
+        }
       }
 
       navigate(from, { replace: true });
