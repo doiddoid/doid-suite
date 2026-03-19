@@ -139,7 +139,7 @@ router.get('/organization/:uuid',
       `)
       .eq('organization_id', uuid)
       .eq('plan.service.code', req.externalAuth.service)
-      .in('status', ['active', 'trial'])
+      .in('status', ['active', 'trial', 'free'])
       .single();
 
     res.json({
@@ -310,7 +310,7 @@ router.post('/sso/authenticate',
           `)
           .eq('activity_id', activity.id)
           .eq('service.code', normalizedService)
-          .in('status', ['active', 'trial', 'suspended', 'past_due'])
+          .in('status', ['active', 'trial', 'free', 'suspended', 'past_due'])
           .single();
 
         if (sub) {
@@ -321,6 +321,9 @@ router.post('/sso/authenticate',
 
           // Super admin bypass: accesso sempre valido
           if (isAdminAccess) {
+            licenseValid = true;
+          } else if (sub.status === 'free') {
+            // Free plan: always valid, no expiration
             licenseValid = true;
           } else if (sub.status === 'suspended' || sub.status === 'past_due') {
             // Suspended/past_due: dati mantenuti ma licenza non valida per utenti normali
@@ -370,7 +373,7 @@ router.post('/sso/authenticate',
             )
           `)
           .eq('organization_id', organization.id)
-          .in('status', ['active', 'trial']);
+          .in('status', ['active', 'trial', 'free']);
 
         if (orgPackages) {
           for (const pkg of orgPackages) {
@@ -457,7 +460,7 @@ router.post('/sso/authenticate',
             )
           `)
           .eq('activity_id', activity.id)
-          .in('status', ['active', 'trial']);
+          .in('status', ['active', 'trial', 'free']);
 
         if (subs) {
           userSubscriptions = subs.map(s => ({
