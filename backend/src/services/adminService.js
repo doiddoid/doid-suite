@@ -727,7 +727,7 @@ class AdminService {
 
       userActivities = (activityUsers || [])
         .map(au => au.activity)
-        .filter(a => a && a.status === 'active');
+        .filter(a => a && a.status === 'active' && (!a.organization_id || a.organization_id === organizationId));
     }
 
     // 3. Unisci e deduplica le attività (usando Map per evitare duplicati)
