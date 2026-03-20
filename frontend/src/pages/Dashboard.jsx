@@ -126,21 +126,25 @@ export default function Dashboard() {
     }
   };
 
-  // Lista unificata: servizi attivi prima, poi gli altri per sortOrder
-  const allServices = useMemo(() => {
-    return services
-      .filter(s => s.service.isActive !== false)
-      .sort((a, b) => {
-        // Prima i servizi con subscription attiva
-        const aHasSub = a.isActive ? 1 : 0;
-        const bHasSub = b.isActive ? 1 : 0;
-        if (aHasSub !== bHasSub) return bHasSub - aHasSub;
-        return (a.service.sortOrder || 0) - (b.service.sortOrder || 0);
-      });
+  // Separa servizi attivi da quelli non ancora attivati
+  const { myServices, availableServices } = useMemo(() => {
+    const filtered = services.filter(s => s.service.isActive !== false);
+
+    // "I tuoi servizi attivi": quelli con subscription attiva (active, trial, free)
+    const mine = filtered
+      .filter(s => s.subscription && s.isActive)
+      .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
+
+    // "Scopri gli altri servizi": tutti gli altri (mai attivati, scaduti, cancellati)
+    const available = filtered
+      .filter(s => !s.subscription || !s.isActive)
+      .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
+
+    return { myServices: mine, availableServices: available };
   }, [services]);
 
   // Calcola se mostrare welcome banner (solo se non ha MAI attivato servizi)
-  const hasMyServices = allServices.some(s => s.subscription);
+  const hasMyServices = myServices.length > 0;
   const showWelcomeBanner = !loading && !hasMyServices && services.length > 0;
 
   // Nessuna attività selezionata
@@ -227,17 +231,33 @@ export default function Dashboard() {
       {/* Stats */}
       <DashboardStats stats={stats} />
 
-      {/* Tutti i servizi in un'unica griglia */}
-      {allServices.length > 0 && (
-        <div id="services-section" className="mb-6">
+      {/* I tuoi servizi attivi */}
+      {myServices.length > 0 && (
+        <div id="my-services-section" className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">I tuoi servizi attivi</h2>
+          <ServicesGrid
+            services={myServices}
+            onAccessService={handleAccessService}
+            onActivateTrialService={handleActivateTrial}
+            onChoosePlanService={handleChoosePlan}
+            onConfigureService={handleConfigureService}
+            onRequestInfoService={handleRequestInfo}
+            loading={loading}
+          />
+        </div>
+      )}
+
+      {/* Scopri gli altri servizi */}
+      {availableServices.length > 0 && (
+        <div id="available-services-section" className="mb-6">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">I tuoi servizi</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Scopri gli altri servizi</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Gestisci e scopri i servizi digitali doID
+              Potenzia la tua attività con i servizi digitali doID
             </p>
           </div>
           <ServicesGrid
-            services={allServices}
+            services={availableServices}
             onAccessService={handleAccessService}
             onActivateTrialService={handleActivateTrial}
             onChoosePlanService={handleChoosePlan}
