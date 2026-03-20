@@ -2586,4 +2586,134 @@ router.post('/organizations/:id/restore',
   })
 );
 
+// ==================== ACTIVITY PRODUCTS ====================
+
+// GET /api/admin/activities/:activityId/products
+// Lista prodotti acquistati per un'attività
+router.get('/activities/:activityId/products',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido')
+  ],
+  validate,
+  asyncHandler(async (req, res) => {
+    const { data, error } = await supabaseAdmin
+      .from('activity_products')
+      .select('*')
+      .eq('activity_id', req.params.activityId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: data || []
+    });
+  })
+);
+
+// POST /api/admin/activities/:activityId/products
+// Aggiungi prodotto acquistato
+router.post('/activities/:activityId/products',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    body('productType').isIn(['card', 'stand', 'adesivo', 'altro']).withMessage('Tipo prodotto non valido'),
+    body('quantity').optional().isInt({ min: 1 }).withMessage('Quantità deve essere >= 1'),
+    body('productName').optional().trim(),
+    body('purchaseDate').optional().isISO8601().withMessage('Data non valida'),
+    body('notes').optional().trim()
+  ],
+  validate,
+  logAdminAction('add_activity_product'),
+  asyncHandler(async (req, res) => {
+    const { productType, quantity = 1, productName, purchaseDate, notes } = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from('activity_products')
+      .insert({
+        activity_id: req.params.activityId,
+        product_type: productType,
+        product_name: productName || null,
+        quantity,
+        purchase_date: purchaseDate || null,
+        notes: notes || null,
+        created_by: req.user.id
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({
+      success: true,
+      data,
+      message: 'Prodotto aggiunto'
+    });
+  })
+);
+
+// PUT /api/admin/activities/:activityId/products/:productId
+// Modifica prodotto
+router.put('/activities/:activityId/products/:productId',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    param('productId').isUUID().withMessage('ID prodotto non valido'),
+    body('productType').optional().isIn(['card', 'stand', 'adesivo', 'altro']),
+    body('quantity').optional().isInt({ min: 1 }),
+    body('productName').optional().trim(),
+    body('purchaseDate').optional().isISO8601(),
+    body('notes').optional().trim()
+  ],
+  validate,
+  logAdminAction('update_activity_product'),
+  asyncHandler(async (req, res) => {
+    const updates = {};
+    if (req.body.productType) updates.product_type = req.body.productType;
+    if (req.body.quantity) updates.quantity = req.body.quantity;
+    if (req.body.productName !== undefined) updates.product_name = req.body.productName || null;
+    if (req.body.purchaseDate !== undefined) updates.purchase_date = req.body.purchaseDate || null;
+    if (req.body.notes !== undefined) updates.notes = req.body.notes || null;
+
+    const { data, error } = await supabaseAdmin
+      .from('activity_products')
+      .update(updates)
+      .eq('id', req.params.productId)
+      .eq('activity_id', req.params.activityId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data,
+      message: 'Prodotto aggiornato'
+    });
+  })
+);
+
+// DELETE /api/admin/activities/:activityId/products/:productId
+// Rimuovi prodotto
+router.delete('/activities/:activityId/products/:productId',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    param('productId').isUUID().withMessage('ID prodotto non valido')
+  ],
+  validate,
+  logAdminAction('delete_activity_product'),
+  asyncHandler(async (req, res) => {
+    const { error } = await supabaseAdmin
+      .from('activity_products')
+      .delete()
+      .eq('id', req.params.productId)
+      .eq('activity_id', req.params.activityId);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Prodotto rimosso'
+    });
+  })
+);
+
 export default router;

@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
-import { X, Check, Loader2 } from 'lucide-react';
+import { X, Check, Loader2, Lock } from 'lucide-react';
 import api from '../../services/api';
 
-export default function PlanModal({ service, onClose, onActivate }) {
+export default function PlanModal({ service, hasPhysicalProduct = false, onClose, onActivate }) {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [billingCycle, setBillingCycle] = useState('monthly');
+
+  // Il piano Free per review e page richiede almeno un prodotto fisico
+  const requiresProduct = ['review', 'page'].includes(service.code);
+  const isFreeLocked = (plan) => requiresProduct && plan.code === 'free' && !hasPhysicalProduct;
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -115,47 +119,66 @@ export default function PlanModal({ service, onClose, onActivate }) {
               </div>
             ) : (
               <div className="grid md:grid-cols-3 gap-4">
-                {plans.map((plan) => (
-                  <div
-                    key={plan.id}
-                    onClick={() => setSelectedPlan(plan)}
-                    className={`relative rounded-xl border-2 p-6 cursor-pointer transition-all ${
-                      selectedPlan?.id === plan.id
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {plan.code === 'pro' && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <span className="bg-primary-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                          Popolare
+                {plans.map((plan) => {
+                  const locked = isFreeLocked(plan);
+                  return (
+                    <div
+                      key={plan.id}
+                      onClick={() => !locked && setSelectedPlan(plan)}
+                      className={`relative rounded-xl border-2 p-6 transition-all ${
+                        locked
+                          ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-70'
+                          : selectedPlan?.id === plan.id
+                            ? 'border-primary-500 bg-primary-50 cursor-pointer'
+                            : 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                      }`}
+                    >
+                      {plan.code === 'pro' && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                          <span className="bg-primary-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                            Popolare
+                          </span>
+                        </div>
+                      )}
+
+                      {locked && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                          <span className="bg-amber-500 text-white text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1">
+                            <Lock className="w-3 h-3" /> Richiede prodotto
+                          </span>
+                        </div>
+                      )}
+
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {plan.name}
+                      </h3>
+
+                      <div className="mb-4">
+                        <span className="text-3xl font-bold text-gray-900">
+                          {getPrice(plan)}
                         </span>
+                        {plan.priceMonthly > 0 && (
+                          <span className="text-gray-500 text-sm">{getPeriod()}</span>
+                        )}
                       </div>
-                    )}
 
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      {plan.name}
-                    </h3>
+                      <ul className="space-y-2">
+                        {plan.features.map((feature, index) => (
+                          <li key={index} className="flex items-start text-sm text-gray-600">
+                            <Check className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
 
-                    <div className="mb-4">
-                      <span className="text-3xl font-bold text-gray-900">
-                        {getPrice(plan)}
-                      </span>
-                      {plan.priceMonthly > 0 && (
-                        <span className="text-gray-500 text-sm">{getPeriod()}</span>
+                      {locked && (
+                        <p className="mt-3 text-xs text-amber-600 leading-relaxed">
+                          Acquista una Card o uno Stand NFC per sbloccare il piano gratuito.
+                        </p>
                       )}
                     </div>
-
-                    <ul className="space-y-2">
-                      {plan.features.map((feature, index) => (
-                        <li key={index} className="flex items-start text-sm text-gray-600">
-                          <Check className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

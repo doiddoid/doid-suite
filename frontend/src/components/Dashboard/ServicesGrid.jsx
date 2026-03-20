@@ -84,6 +84,7 @@ export default function ServicesGrid({
           isActive={item.isActive}
           canAccess={item.canAccess}
           hasLinkedAccount={item.hasLinkedAccount !== false}
+          hasPhysicalProduct={item.hasPhysicalProduct || false}
           discount={getDiscount(item.service, item.isActive)}
           onAccess={() => onAccessService?.(item.service.code)}
           onActivateTrial={() => onActivateTrialService?.(item.service.code)}

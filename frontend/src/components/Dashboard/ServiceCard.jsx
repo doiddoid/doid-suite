@@ -65,6 +65,7 @@ export default function ServiceCard({
   isActive,
   canAccess,
   hasLinkedAccount = true,
+  hasPhysicalProduct = false,
   discount = 0,
   onAccess,
   onActivateTrial,
@@ -415,6 +416,30 @@ export default function ServiceCard({
             <span>{buttonConfig.secondaryAction.label}</span>
             <buttonConfig.secondaryAction.icon className="w-4 h-4" />
           </a>
+        )}
+
+        {/* Banner Free plan con prodotto fisico (solo review e page) */}
+        {['review', 'page'].includes(service.code) && !canAccess && !hasPhysicalProduct && (isTrialExpired || subscription?.status === 'expired' || subscription?.status === 'canceled') && (
+          <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+            <p className="text-[11px] text-amber-700 leading-relaxed">
+              <span className="font-semibold">Acquista una Card o uno Stand NFC</span> per sbloccare il piano Free, oppure passa a Pro.
+            </p>
+            <a
+              href="https://wa.me/393480890477?text=Ciao%2C%20vorrei%20acquistare%20una%20Card%20o%20Stand%20NFC"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 mt-1.5 text-[11px] font-semibold text-amber-800 hover:text-amber-900"
+            >
+              Contattaci per acquistare →
+            </a>
+          </div>
+        )}
+        {['review', 'page'].includes(service.code) && hasPhysicalProduct && !canAccess && (isTrialExpired || subscription?.status === 'expired' || subscription?.status === 'canceled') && (
+          <div className="mt-2 p-2.5 rounded-lg bg-green-50 border border-green-200">
+            <p className="text-[11px] text-green-700 font-medium">
+              ✅ Piano Free disponibile — scegli il piano per continuare
+            </p>
+          </div>
         )}
       </div>
     </div>

@@ -586,6 +586,14 @@ class SubscriptionService {
       .select('service_code, external_account_id, linked_at')
       .eq('activity_id', activityId);
 
+    // Verifica se l'attività ha prodotti fisici acquistati (card/stand/adesivo)
+    const { count: productsCount } = await supabaseAdmin
+      .from('activity_products')
+      .select('id', { count: 'exact', head: true })
+      .eq('activity_id', activityId);
+
+    const hasPhysicalProduct = (productsCount || 0) > 0;
+
     const serviceAccountMap = new Map();
     (serviceAccounts || []).forEach(account => {
       serviceAccountMap.set(account.service_code, account);
@@ -682,6 +690,7 @@ class SubscriptionService {
         canAccess,
         inherited,
         hasLinkedAccount,
+        hasPhysicalProduct,
         linkedAccount: linkedAccount ? {
           externalAccountId: linkedAccount.external_account_id,
           linkedAt: linkedAccount.linked_at

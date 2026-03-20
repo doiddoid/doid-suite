@@ -4,7 +4,7 @@ import {
   Calendar, AlertCircle, Edit2, Check, Clock, Zap,
   Star, Loader2, RefreshCw, Trash2, LogIn, Store,
   UserPlus, Link2, Unlink2, Briefcase, User, ExternalLink,
-  ChevronRight
+  ChevronRight, Package, Plus
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -73,6 +73,16 @@ export default function ClientDetailPanel({
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // ─── Prodotti state ─────────────────────────────────────
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState({
+    productType: 'card', quantity: 1, productName: '', purchaseDate: '', notes: ''
+  });
+  const [savingProduct, setSavingProduct] = useState(false);
 
   // Reset tab e edit mode quando cambia l'item selezionato
   useEffect(() => {
@@ -183,10 +193,108 @@ export default function ClientDetailPanel({
   const hierarchyChildren = selectedItem.children || [];
   const tabs = [
     { key: 'servizi', label: 'Servizi', count: activeServices.length },
+    { key: 'prodotti', label: 'Prodotti', count: products.length || null },
     { key: 'dati', label: 'Dati' },
     { key: 'membri', label: 'Membri', count: members.length },
     ...(isAgency ? [{ key: 'clienti', label: 'Clienti gestiti', count: hierarchyChildren.length || activities.length }] : []),
   ];
+
+  // ─── Product helpers ─────────────────────────────────────
+  const PRODUCT_TYPES = [
+    { value: 'card', label: 'Card NFC', emoji: '💳' },
+    { value: 'stand', label: 'Stand NFC', emoji: '🪧' },
+    { value: 'adesivo', label: 'Adesivo NFC', emoji: '🏷️' },
+    { value: 'altro', label: 'Altro', emoji: '📦' },
+  ];
+
+  const getProductEmoji = (type) => PRODUCT_TYPES.find(p => p.value === type)?.emoji || '📦';
+  const getProductLabel = (type) => PRODUCT_TYPES.find(p => p.value === type)?.label || type;
+
+  // Determina l'activityId per i prodotti (per org usa prima attività)
+  const productActivityId = isOrg ? activities[0]?.id : selectedItem?.id;
+
+  const fetchProducts = async () => {
+    if (!productActivityId) return;
+    setLoadingProducts(true);
+    try {
+      const actIds = isOrg ? activities.map(a => a.id) : [selectedItem.id];
+      const allProds = [];
+      for (const aid of actIds) {
+        const res = await api.request(`/admin/activities/${aid}/products`);
+        if (res.success && res.data) {
+          const actName = isOrg ? activities.find(a => a.id === aid)?.name : name;
+          res.data.forEach(p => allProds.push({ ...p, activityName: actName }));
+        }
+      }
+      setProducts(allProds);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // Carica prodotti quando si apre il tab
+  useEffect(() => {
+    if (activeTab === 'prodotti') {
+      fetchProducts();
+    }
+  }, [activeTab, selectedItem?.id]);
+
+  const resetProductForm = () => {
+    setProductForm({ productType: 'card', quantity: 1, productName: '', purchaseDate: '', notes: '' });
+    setEditingProduct(null);
+    setShowAddProduct(false);
+  };
+
+  const handleSaveProduct = async () => {
+    const targetActivityId = isOrg ? activities[0]?.id : selectedItem?.id;
+    if (!targetActivityId) return;
+    setSavingProduct(true);
+    try {
+      if (editingProduct) {
+        await api.request(`/admin/activities/${editingProduct.activity_id}/products/${editingProduct.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(productForm),
+        });
+      } else {
+        await api.request(`/admin/activities/${targetActivityId}/products`, {
+          method: 'POST',
+          body: JSON.stringify(productForm),
+        });
+      }
+      resetProductForm();
+      fetchProducts();
+    } catch (err) {
+      console.error('Error saving product:', err);
+    } finally {
+      setSavingProduct(false);
+    }
+  };
+
+  const handleDeleteProduct = async (product) => {
+    if (!confirm('Rimuovere questo prodotto?')) return;
+    try {
+      await api.request(`/admin/activities/${product.activity_id}/products/${product.id}`, {
+        method: 'DELETE',
+      });
+      fetchProducts();
+    } catch (err) {
+      console.error('Error deleting product:', err);
+    }
+  };
+
+  const startEditProduct = (product) => {
+    setProductForm({
+      productType: product.product_type,
+      quantity: product.quantity,
+      productName: product.product_name || '',
+      purchaseDate: product.purchase_date || '',
+      notes: product.notes || '',
+    });
+    setEditingProduct(product);
+    setShowAddProduct(true);
+  };
 
   // ─── Helpers ──────────────────────────────────────────────
   const getOwner = () => members.find(m => m.role === 'owner');
@@ -926,6 +1034,229 @@ export default function ClientDetailPanel({
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ─── TAB PRODOTTI ─── */}
+            {activeTab === 'prodotti' && (
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-sm font-bold text-gray-900">
+                    Prodotti acquistati {products.length > 0 && `(${products.length})`}
+                  </span>
+                  <button
+                    onClick={() => { resetProductForm(); setShowAddProduct(true); }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-500 text-white text-[11px] font-semibold hover:bg-teal-600 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" /> Aggiungi
+                  </button>
+                </div>
+
+                {/* Form aggiunta/modifica */}
+                {showAddProduct && (
+                  <div className="mb-4 border border-teal-200 rounded-xl p-4 bg-teal-50/50">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-xs font-bold text-gray-700">
+                        {editingProduct ? 'Modifica prodotto' : 'Nuovo prodotto'}
+                      </span>
+                      <button onClick={resetProductForm} className="text-gray-400 hover:text-gray-600">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tipo</label>
+                        <select
+                          value={productForm.productType}
+                          onChange={e => setProductForm({ ...productForm, productType: e.target.value })}
+                          className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-xs outline-none focus:border-teal-400"
+                        >
+                          {PRODUCT_TYPES.map(t => (
+                            <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Quantità</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={productForm.quantity}
+                          onChange={e => setProductForm({ ...productForm, quantity: parseInt(e.target.value) || 1 })}
+                          className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-xs outline-none focus:border-teal-400"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Nome/Descrizione (opzionale)</label>
+                        <input
+                          value={productForm.productName}
+                          onChange={e => setProductForm({ ...productForm, productName: e.target.value })}
+                          placeholder="Es. Stand in legno personalizzato"
+                          className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-xs outline-none focus:border-teal-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Data acquisto</label>
+                        <input
+                          type="date"
+                          value={productForm.purchaseDate}
+                          onChange={e => setProductForm({ ...productForm, purchaseDate: e.target.value })}
+                          className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-xs outline-none focus:border-teal-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Note</label>
+                        <input
+                          value={productForm.notes}
+                          onChange={e => setProductForm({ ...productForm, notes: e.target.value })}
+                          placeholder="Es. venduto via telefono"
+                          className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-xs outline-none focus:border-teal-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Selezione attività (solo per organizzazioni con più attività) */}
+                    {isOrg && activities.length > 1 && !editingProduct && (
+                      <div className="mt-3">
+                        <label className="block text-[10px] font-semibold text-gray-500 mb-1">Attività destinataria</label>
+                        <select
+                          id="product-activity-select"
+                          defaultValue={activities[0]?.id}
+                          className="w-full px-2 py-1.5 rounded-md border border-gray-200 text-xs outline-none focus:border-teal-400"
+                        >
+                          {activities.map(act => (
+                            <option key={act.id} value={act.id}>{act.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end mt-3 gap-2">
+                      <button
+                        onClick={resetProductForm}
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-500 hover:bg-gray-50"
+                      >
+                        Annulla
+                      </button>
+                      <button
+                        onClick={async () => {
+                          // Per org con più attività, usa il select
+                          let targetId = isOrg ? activities[0]?.id : selectedItem?.id;
+                          if (isOrg && activities.length > 1 && !editingProduct) {
+                            const sel = document.getElementById('product-activity-select');
+                            if (sel) targetId = sel.value;
+                          }
+                          if (editingProduct) targetId = editingProduct.activity_id;
+                          if (!targetId) return;
+
+                          setSavingProduct(true);
+                          try {
+                            if (editingProduct) {
+                              await api.request(`/admin/activities/${targetId}/products/${editingProduct.id}`, {
+                                method: 'PUT',
+                                body: JSON.stringify(productForm),
+                              });
+                            } else {
+                              await api.request(`/admin/activities/${targetId}/products`, {
+                                method: 'POST',
+                                body: JSON.stringify(productForm),
+                              });
+                            }
+                            resetProductForm();
+                            fetchProducts();
+                          } catch (err) {
+                            console.error('Error saving product:', err);
+                          } finally {
+                            setSavingProduct(false);
+                          }
+                        }}
+                        disabled={savingProduct}
+                        className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-teal-500 text-white text-xs font-semibold hover:bg-teal-600 disabled:opacity-50"
+                      >
+                        {savingProduct ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                        {editingProduct ? 'Aggiorna' : 'Salva'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lista prodotti */}
+                {loadingProducts ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-teal-500" />
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                    <p className="text-sm text-gray-400">Nessun prodotto registrato</p>
+                    <p className="text-xs text-gray-300 mt-1">
+                      Aggiungi card, stand o adesivi acquistati dal cliente
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {products.map((product) => (
+                      <div key={product.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-lg">
+                            {getProductEmoji(product.product_type)}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-sm text-gray-900">
+                              {product.product_name || getProductLabel(product.product_type)}
+                              <span className="ml-1.5 text-xs text-gray-400">×{product.quantity}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                              {product.purchase_date && (
+                                <span>
+                                  {new Date(product.purchase_date).toLocaleDateString('it-IT')}
+                                </span>
+                              )}
+                              {isOrg && product.activityName && (
+                                <span className="text-teal-600 font-medium">{product.activityName}</span>
+                              )}
+                              {product.notes && (
+                                <span className="italic text-gray-400">{product.notes}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => startEditProduct(product)}
+                            className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center text-gray-400 hover:text-teal-600 hover:border-teal-300 transition-colors"
+                            title="Modifica"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(product)}
+                            className="w-7 h-7 rounded-md border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-600 hover:border-red-300 transition-colors"
+                            title="Rimuovi"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Info Free plan */}
+                {products.length > 0 && (
+                  <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                    <p className="text-xs text-blue-700 font-medium">
+                      ✅ Questo cliente può attivare il piano Free per Smart Review e Smart Page
+                    </p>
+                  </div>
+                )}
+                {products.length === 0 && !loadingProducts && (
+                  <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                    <p className="text-xs text-amber-700 font-medium">
+                      ⚠️ Senza prodotti, il piano Free per Review e Page non è disponibile per questo cliente
+                    </p>
                   </div>
                 )}
               </div>
