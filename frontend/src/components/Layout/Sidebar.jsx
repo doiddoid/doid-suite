@@ -50,9 +50,9 @@ export default function Sidebar({ collapsed, onToggle }) {
       try {
         const result = await getServicesDashboard(currentActivity.id);
         if (result.success) {
-          // Filter only active or trial services
+          // Filter only active, trial, or free services
           const active = result.data.filter(s =>
-            s.subscription?.status === 'active' || s.subscription?.status === 'trial'
+            s.subscription?.status === 'active' || s.subscription?.status === 'trial' || s.subscription?.status === 'free'
           );
           setActiveServices(active);
         }
@@ -77,11 +77,11 @@ export default function Sidebar({ collapsed, onToggle }) {
       path: '/dashboard',
       icon: LayoutDashboard
     },
-    {
-      name: 'I Miei Servizi',
-      path: '/servizi',
-      icon: Layers
-    },
+    // {
+    //   name: 'I Miei Servizi',
+    //   path: '/servizi',
+    //   icon: Layers
+    // },
     {
       name: 'Attività',
       path: '/activities',
