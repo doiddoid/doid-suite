@@ -126,18 +126,23 @@ export default function Dashboard() {
     }
   };
 
-  // Separa servizi attivi da quelli non ancora attivati
+  // Separa servizi "miei" (con subscription, anche scaduta) da quelli mai provati
   const { myServices, availableServices } = useMemo(() => {
     const filtered = services.filter(s => s.service.isActive !== false);
 
-    // "I tuoi servizi attivi": quelli con subscription attiva (active, trial, free)
+    // "I tuoi servizi": tutti quelli con subscription (attivi, scaduti, cancellati, trial)
     const mine = filtered
-      .filter(s => s.subscription && s.isActive)
-      .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
+      .filter(s => s.subscription)
+      .sort((a, b) => {
+        // Prima i servizi attivi, poi gli scaduti
+        if (a.isActive && !b.isActive) return -1;
+        if (!a.isActive && b.isActive) return 1;
+        return (a.service.sortOrder || 0) - (b.service.sortOrder || 0);
+      });
 
-    // "Scopri gli altri servizi": tutti gli altri (mai attivati, scaduti, cancellati)
+    // "Scopri gli altri servizi": quelli mai attivati (nessuna subscription)
     const available = filtered
-      .filter(s => !s.subscription || !s.isActive)
+      .filter(s => !s.subscription)
       .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
 
     return { myServices: mine, availableServices: available };
