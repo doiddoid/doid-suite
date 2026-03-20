@@ -126,31 +126,21 @@ export default function Dashboard() {
     }
   };
 
-  // Separa servizi "tuoi" (con subscription) da quelli disponibili (mai attivati)
-  const { myServices, availableServices } = useMemo(() => {
-    const filtered = services.filter(s => s.service.isActive !== false);
-
-    // "I tuoi servizi": tutti quelli con una subscription (attiva, free, trial, scaduta, sospesa, etc.)
-    // Include: active, trial, free, expired, canceled, past_due, suspended
-    const mine = filtered
-      .filter(s => s.subscription !== null && s.subscription !== undefined)
+  // Lista unificata: servizi attivi prima, poi gli altri per sortOrder
+  const allServices = useMemo(() => {
+    return services
+      .filter(s => s.service.isActive !== false)
       .sort((a, b) => {
-        // Prima i servizi attivi, poi gli altri per sortOrder
-        if (a.isActive && !b.isActive) return -1;
-        if (!a.isActive && b.isActive) return 1;
+        // Prima i servizi con subscription attiva
+        const aHasSub = a.isActive ? 1 : 0;
+        const bHasSub = b.isActive ? 1 : 0;
+        if (aHasSub !== bHasSub) return bHasSub - aHasSub;
         return (a.service.sortOrder || 0) - (b.service.sortOrder || 0);
       });
-
-    // "Scopri altri servizi": quelli senza subscription (mai attivati)
-    const available = filtered
-      .filter(s => s.subscription === null || s.subscription === undefined)
-      .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
-
-    return { myServices: mine, availableServices: available };
   }, [services]);
 
   // Calcola se mostrare welcome banner (solo se non ha MAI attivato servizi)
-  const hasMyServices = myServices.length > 0;
+  const hasMyServices = allServices.some(s => s.subscription);
   const showWelcomeBanner = !loading && !hasMyServices && services.length > 0;
 
   // Nessuna attività selezionata
@@ -237,33 +227,17 @@ export default function Dashboard() {
       {/* Stats */}
       <DashboardStats stats={stats} />
 
-      {/* I tuoi servizi (attivati, free, trial, scaduti, sospesi) */}
-      {myServices.length > 0 && (
-        <div id="my-services-section" className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">I tuoi servizi</h2>
-          <ServicesGrid
-            services={myServices}
-            onAccessService={handleAccessService}
-            onActivateTrialService={handleActivateTrial}
-            onChoosePlanService={handleChoosePlan}
-            onConfigureService={handleConfigureService}
-            onRequestInfoService={handleRequestInfo}
-            loading={loading}
-          />
-        </div>
-      )}
-
-      {/* Servizi Disponibili */}
-      {availableServices.length > 0 && (
-        <div id="available-services-section" className="mb-6">
+      {/* Tutti i servizi in un'unica griglia */}
+      {allServices.length > 0 && (
+        <div id="services-section" className="mb-6">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Scopri gli altri servizi</h2>
+            <h2 className="text-lg font-semibold text-gray-900">I tuoi servizi</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Potenzia la tua attività con i servizi digitali doID
+              Gestisci e scopri i servizi digitali doID
             </p>
           </div>
           <ServicesGrid
-            services={availableServices}
+            services={allServices}
             onAccessService={handleAccessService}
             onActivateTrialService={handleActivateTrial}
             onChoosePlanService={handleChoosePlan}
