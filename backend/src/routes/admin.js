@@ -2617,15 +2617,16 @@ router.post('/activities/:activityId/products',
   [
     param('activityId').isUUID().withMessage('ID attività non valido'),
     body('productType').isIn(['card', 'stand', 'adesivo', 'altro']).withMessage('Tipo prodotto non valido'),
-    body('quantity').optional().isInt({ min: 1 }).withMessage('Quantità deve essere >= 1'),
-    body('productName').optional().trim(),
-    body('purchaseDate').optional().isISO8601().withMessage('Data non valida'),
-    body('notes').optional().trim()
+    body('quantity').optional().toInt(),
+    body('productName').optional({ values: 'falsy' }).trim(),
+    body('purchaseDate').optional({ values: 'falsy' }).isISO8601().withMessage('Data non valida'),
+    body('notes').optional({ values: 'falsy' }).trim()
   ],
   validate,
   logAdminAction('add_activity_product'),
   asyncHandler(async (req, res) => {
-    const { productType, quantity = 1, productName, purchaseDate, notes } = req.body;
+    const { productType, productName, purchaseDate, notes } = req.body;
+    const quantity = parseInt(req.body.quantity) || 1;
 
     const { data, error } = await supabaseAdmin
       .from('activity_products')
@@ -2658,10 +2659,10 @@ router.put('/activities/:activityId/products/:productId',
     param('activityId').isUUID().withMessage('ID attività non valido'),
     param('productId').isUUID().withMessage('ID prodotto non valido'),
     body('productType').optional().isIn(['card', 'stand', 'adesivo', 'altro']),
-    body('quantity').optional().isInt({ min: 1 }),
-    body('productName').optional().trim(),
-    body('purchaseDate').optional().isISO8601(),
-    body('notes').optional().trim()
+    body('quantity').optional().toInt(),
+    body('productName').optional({ values: 'falsy' }).trim(),
+    body('purchaseDate').optional({ values: 'falsy' }).isISO8601(),
+    body('notes').optional({ values: 'falsy' }).trim()
   ],
   validate,
   logAdminAction('update_activity_product'),
