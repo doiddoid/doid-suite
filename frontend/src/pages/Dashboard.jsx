@@ -237,8 +237,8 @@ export default function Dashboard() {
       {/* Stats */}
       <DashboardStats stats={stats} />
 
-      {/* I tuoi servizi — nascosto temporaneamente, sezione non utilizzata */}
-      {/* {myServices.length > 0 && (
+      {/* I tuoi servizi (attivati, free, trial, scaduti, sospesi) */}
+      {myServices.length > 0 && (
         <div id="my-services-section" className="mb-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">I tuoi servizi</h2>
           <ServicesGrid
@@ -251,7 +251,7 @@ export default function Dashboard() {
             loading={loading}
           />
         </div>
-      )} */}
+      )}
 
       {/* Servizi Disponibili */}
       {availableServices.length > 0 && (

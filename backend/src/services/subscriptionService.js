@@ -587,12 +587,21 @@ class SubscriptionService {
       .eq('activity_id', activityId);
 
     // Verifica se l'attività ha prodotti fisici acquistati (card/stand/adesivo)
-    const { count: productsCount } = await supabaseAdmin
-      .from('activity_products')
-      .select('id', { count: 'exact', head: true })
-      .eq('activity_id', activityId);
+    let hasPhysicalProduct = false;
+    try {
+      const { count: productsCount, error: productsError } = await supabaseAdmin
+        .from('activity_products')
+        .select('id', { count: 'exact', head: true })
+        .eq('activity_id', activityId);
 
-    const hasPhysicalProduct = (productsCount || 0) > 0;
+      if (!productsError) {
+        hasPhysicalProduct = (productsCount || 0) > 0;
+      } else {
+        console.error('[PRODUCTS] Error checking products:', productsError.message);
+      }
+    } catch (e) {
+      console.error('[PRODUCTS] Exception checking products:', e.message);
+    }
 
     const serviceAccountMap = new Map();
     (serviceAccounts || []).forEach(account => {
