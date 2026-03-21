@@ -446,7 +446,8 @@ router.post('/sso/authenticate',
           }));
       }
 
-      // 9b. Aggiungi attività ereditate tramite organizzazione (agency)
+      // 9b. Aggiungi attività ereditate tramite organizzazione (solo per owner dell'org)
+      // I membri non-owner vedono solo le attività a cui sono direttamente assegnati
       const directActivityIds = new Set(userActivities.map(a => a.id));
       const { data: orgMemberships } = await supabaseAdmin
         .from('organization_users')
@@ -455,6 +456,8 @@ router.post('/sso/authenticate',
 
       if (orgMemberships && orgMemberships.length > 0) {
         for (const membership of orgMemberships) {
+          if (membership.role !== 'owner') continue;
+
           const { data: orgActivities } = await supabaseAdmin
             .from('activities')
             .select('id, name, slug, status, organization_id')

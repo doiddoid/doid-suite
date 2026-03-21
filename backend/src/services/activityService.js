@@ -312,7 +312,8 @@ class ActivityService {
 
     const directActivityIds = new Set(directActivities.map(a => a.id));
 
-    // 2. Attività ereditate tramite organizzazione (agency)
+    // 2. Attività ereditate tramite organizzazione (solo per owner dell'org)
+    // I membri non-owner vedono solo le attività a cui sono direttamente assegnati
     const { data: orgMemberships } = await supabaseAdmin
       .from('organization_users')
       .select('organization_id, role')
@@ -320,6 +321,8 @@ class ActivityService {
 
     if (orgMemberships && orgMemberships.length > 0) {
       for (const membership of orgMemberships) {
+        if (membership.role !== 'owner') continue;
+
         const { data: orgActivities } = await supabaseAdmin
           .from('activities')
           .select('id, name, slug, email, phone, vat_number, address, city, logo_url, status, created_at, updated_at')
