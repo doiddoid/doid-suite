@@ -419,7 +419,7 @@ router.post('/sso/authenticate',
         role: decoded.role
       });
 
-      // 9. Ottieni tutte le attività dell'utente per la sidebar
+      // 9. Ottieni tutte le attività dell'utente per la sidebar (dirette + ereditate da org)
       let userActivities = [];
       const { data: activityUsers } = await supabaseAdmin
         .from('activity_users')
@@ -444,6 +444,37 @@ router.post('/sso/authenticate',
             slug: au.activity.slug,
             role: au.role
           }));
+      }
+
+      // 9b. Aggiungi attività ereditate tramite organizzazione (agency)
+      const directActivityIds = new Set(userActivities.map(a => a.id));
+      const { data: orgMemberships } = await supabaseAdmin
+        .from('organization_users')
+        .select('organization_id, role')
+        .eq('user_id', user.id);
+
+      if (orgMemberships && orgMemberships.length > 0) {
+        for (const membership of orgMemberships) {
+          const { data: orgActivities } = await supabaseAdmin
+            .from('activities')
+            .select('id, name, slug, status, organization_id')
+            .eq('organization_id', membership.organization_id)
+            .eq('status', 'active');
+
+          if (orgActivities) {
+            for (const act of orgActivities) {
+              if (!directActivityIds.has(act.id)) {
+                userActivities.push({
+                  id: act.id,
+                  name: act.name,
+                  slug: act.slug,
+                  role: membership.role
+                });
+                directActivityIds.add(act.id);
+              }
+            }
+          }
+        }
       }
 
       // 10. Ottieni gli abbonamenti attivi dell'utente per tutti i servizi

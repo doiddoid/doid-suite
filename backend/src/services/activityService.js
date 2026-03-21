@@ -275,9 +275,10 @@ class ActivityService {
   }
 
   /**
-   * Ottieni le attività di un utente
+   * Ottieni le attività di un utente (dirette + ereditate da organizzazione)
    */
   async getUserActivities(userId) {
+    // 1. Attività dirette da activity_users
     const { data, error } = await supabaseAdmin
       .from('activity_users')
       .select(`
@@ -305,9 +306,39 @@ class ActivityService {
       throw Errors.Internal('Errore nel recupero delle attività');
     }
 
-    return data
+    const directActivities = data
       .filter(item => item.activity && item.activity.status === 'active')
       .map(item => this.formatActivity(item.activity, item.role));
+
+    const directActivityIds = new Set(directActivities.map(a => a.id));
+
+    // 2. Attività ereditate tramite organizzazione (agency)
+    const { data: orgMemberships } = await supabaseAdmin
+      .from('organization_users')
+      .select('organization_id, role')
+      .eq('user_id', userId);
+
+    if (orgMemberships && orgMemberships.length > 0) {
+      for (const membership of orgMemberships) {
+        const { data: orgActivities } = await supabaseAdmin
+          .from('activities')
+          .select('id, name, slug, email, phone, vat_number, address, city, logo_url, status, created_at, updated_at')
+          .eq('organization_id', membership.organization_id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: true });
+
+        if (orgActivities) {
+          for (const activity of orgActivities) {
+            if (!directActivityIds.has(activity.id)) {
+              directActivities.push(this.formatActivity(activity, membership.role));
+              directActivityIds.add(activity.id);
+            }
+          }
+        }
+      }
+    }
+
+    return directActivities;
   }
 
   /**

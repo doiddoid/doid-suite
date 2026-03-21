@@ -1087,6 +1087,33 @@ class AdminService {
       }
     }
 
+    // Aggiungi automaticamente l'owner dell'organizzazione a activity_users (se non già presente)
+    const { data: orgOwner } = await supabaseAdmin
+      .from('organization_users')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+      .eq('role', 'owner')
+      .single();
+
+    if (orgOwner) {
+      const { data: existingEntry } = await supabaseAdmin
+        .from('activity_users')
+        .select('id')
+        .eq('activity_id', activity.id)
+        .eq('user_id', orgOwner.user_id)
+        .single();
+
+      if (!existingEntry) {
+        await supabaseAdmin
+          .from('activity_users')
+          .insert({
+            activity_id: activity.id,
+            user_id: orgOwner.user_id,
+            role: 'owner'
+          });
+      }
+    }
+
     return activity;
   }
 
