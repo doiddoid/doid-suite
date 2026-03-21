@@ -2454,6 +2454,41 @@ router.get('/activities-deleted',
   })
 );
 
+// DELETE /api/admin/activities/:id
+// Soft-delete di un'attività (status → cancelled, cancella subscriptions)
+router.delete('/activities/:id',
+  [
+    param('id').isUUID().withMessage('ID attività non valido')
+  ],
+  validate,
+  logAdminAction('delete_activity'),
+  asyncHandler(async (req, res) => {
+    const activityId = req.params.id;
+
+    // Cancella subscriptions
+    await supabaseAdmin
+      .from('subscriptions')
+      .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+      .eq('activity_id', activityId)
+      .in('status', ['active', 'trial', 'free']);
+
+    // Soft-delete attività
+    const { error } = await supabaseAdmin
+      .from('activities')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', activityId);
+
+    if (error) {
+      return res.status(500).json({ success: false, error: 'Errore nell\'eliminazione: ' + error.message });
+    }
+
+    res.json({
+      success: true,
+      message: 'Attività eliminata (soft delete)'
+    });
+  })
+);
+
 // DELETE /api/admin/activities/:id/permanent
 // Elimina definitivamente un'attività (hard delete)
 router.delete('/activities/:id/permanent',
@@ -2483,6 +2518,31 @@ router.delete('/activities-deleted/all',
       success: true,
       data: result,
       message: `${result.deletedCount} attività eliminate definitivamente`
+    });
+  })
+);
+
+// DELETE /api/admin/menu-restaurants/:id
+// Soft-delete di un ristorante/menu (set deleted_at + is_published=false)
+router.delete('/menu-restaurants/:id',
+  [
+    param('id').isUUID().withMessage('ID ristorante non valido')
+  ],
+  validate,
+  logAdminAction('delete_menu_restaurant'),
+  asyncHandler(async (req, res) => {
+    const { error } = await supabaseAdmin
+      .from('menu_restaurants')
+      .update({ deleted_at: new Date().toISOString(), is_published: false })
+      .eq('id', req.params.id);
+
+    if (error) {
+      return res.status(500).json({ success: false, error: 'Errore nell\'eliminazione del ristorante: ' + error.message });
+    }
+
+    res.json({
+      success: true,
+      message: 'Menu/ristorante eliminato con successo'
     });
   })
 );

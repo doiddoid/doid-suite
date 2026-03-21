@@ -197,6 +197,7 @@ export default function ClientDetailPanel({
     { key: 'dati', label: 'Dati' },
     { key: 'membri', label: 'Membri', count: members.length },
     ...(isAgency ? [{ key: 'clienti', label: 'Clienti gestiti', count: hierarchyChildren.length || activities.length }] : []),
+    { key: 'elimina', label: '🗑️' },
   ];
 
   // ─── Product helpers ─────────────────────────────────────
@@ -281,6 +282,36 @@ export default function ClientDetailPanel({
       fetchProducts();
     } catch (err) {
       console.error('Error deleting product:', err);
+    }
+  };
+
+  const handleDeleteItem = async () => {
+    const itemName = selectedItem?.name || 'questo elemento';
+    const typeLabel = isOrg ? 'organizzazione' : 'attività';
+    if (!confirm(`Eliminare ${typeLabel} "${itemName}"? Le subscriptions attive verranno cancellate.`)) return;
+    try {
+      const endpoint = isOrg
+        ? `/admin/organizations/${selectedItem.id}`
+        : `/admin/activities/${selectedItem.id}`;
+      await api.request(endpoint, { method: 'DELETE' });
+      onClose();
+      if (onRefreshDetails) onRefreshDetails();
+    } catch (err) {
+      alert('Errore: ' + (err.message || 'Eliminazione fallita'));
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    const owner = getOwner();
+    if (!owner) return;
+    if (!confirm(`Eliminare DEFINITIVAMENTE l'utente "${owner.fullName || owner.email}"? Questa azione non può essere annullata.`)) return;
+    if (!confirm('Sei davvero sicuro? L\'utente verrà rimosso da Supabase Auth.')) return;
+    try {
+      await api.request(`/admin/users/${owner.userId}`, { method: 'DELETE' });
+      onClose();
+      if (onRefreshDetails) onRefreshDetails();
+    } catch (err) {
+      alert('Errore: ' + (err.message || 'Eliminazione fallita'));
     }
   };
 
@@ -445,6 +476,14 @@ export default function ClientDetailPanel({
               title="Credenziali"
             >
               <Key className="w-4 h-4" />
+            </button>
+            {/* Elimina attività/organizzazione */}
+            <button
+              onClick={handleDeleteItem}
+              className="w-8 h-8 rounded-lg border border-red-200 bg-white flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 hover:border-red-400 transition-colors"
+              title={`Elimina ${isOrg ? 'organizzazione' : 'attività'}`}
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
             {/* Chiudi */}
             <button
@@ -1034,6 +1073,59 @@ export default function ClientDetailPanel({
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ─── TAB ELIMINA ─── */}
+            {activeTab === 'elimina' && (
+              <div>
+                <div className="mb-4">
+                  <span className="text-sm font-bold text-red-600">Zona pericolosa</span>
+                  <p className="text-xs text-gray-500 mt-1">Le azioni in questa sezione sono irreversibili o difficili da annullare.</p>
+                </div>
+
+                {/* Elimina attività/organizzazione */}
+                <div className="border border-red-200 rounded-xl p-4 mb-3 bg-red-50/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Elimina {isOrg ? 'organizzazione' : 'attività'}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {isOrg
+                          ? 'Cancella l\'organizzazione, tutte le attività e le subscriptions associate.'
+                          : 'Cancella l\'attività e le subscriptions associate. Potrà essere ripristinata dal tab "Eliminati".'
+                        }
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleDeleteItem}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors flex-shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Elimina
+                    </button>
+                  </div>
+                </div>
+
+                {/* Elimina utente (solo se c'è un owner) */}
+                {getOwner() && (
+                  <div className="border border-red-200 rounded-xl p-4 bg-red-50/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">Elimina utente</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Rimuove definitivamente l'utente <strong>{getOwner()?.fullName || getOwner()?.email}</strong> da Supabase Auth. Non può essere annullato.
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleDeleteUser}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-700 text-white text-xs font-semibold hover:bg-red-800 transition-colors flex-shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Elimina utente
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
