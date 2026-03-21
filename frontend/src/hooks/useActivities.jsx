@@ -313,18 +313,17 @@ export function ActivityProvider({ children }) {
   // ==================== EXTERNAL ACCESS ====================
 
   /**
-   * Accedi a un servizio esterno (SSO)
-   * Genera token e reindirizza all'app esterna
+   * Accedi a un servizio esterno via deep-link JWT (60s)
+   * Genera token short-lived e apre il servizio in una nuova tab
    */
   const accessService = useCallback(async (serviceCode, activityId = currentActivity?.id) => {
     if (!activityId) return { success: false, error: 'Nessuna attività selezionata' };
 
     try {
-      const response = await activitiesApi.generateAccessToken(activityId, serviceCode);
+      const response = await activitiesApi.getDeepLinkToken(activityId, serviceCode);
       if (response.success) {
-        // Apri l'app esterna in una nuova tab
-        const { redirectUrl } = response.data;
-        window.open(redirectUrl, '_blank', 'noopener,noreferrer');
+        const { url } = response.data;
+        window.open(url, '_blank', 'noopener,noreferrer');
         return { success: true };
       }
       return { success: false, error: response.error };

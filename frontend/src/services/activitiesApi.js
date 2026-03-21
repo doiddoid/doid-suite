@@ -172,6 +172,14 @@ class ActivitiesApiService {
     });
   }
 
+  /**
+   * Genera token deep-link per navigazione diretta Suite → Servizio (60s)
+   * Ritorna { token, url }
+   */
+  async getDeepLinkToken(activityId, serviceCode) {
+    return api.request(`/services/deep-link-token?activity_id=${activityId}&service=${serviceCode}`);
+  }
+
   // ==================== PAYMENTS / INVOICES ====================
 
   /**
