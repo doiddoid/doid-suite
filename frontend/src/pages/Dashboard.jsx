@@ -1,32 +1,40 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2, Building2, Plus, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useActivities } from '../hooks/useActivities';
-import { DashboardStats, ServicesGrid, WelcomeBanner, ContactModal } from '../components/Dashboard';
+import { ServiceList, ClientGrid, ContactModal } from '../components/Dashboard';
 import { PlanModal } from '../components/Services';
 import { CONTACT_REQUIRED_SERVICES } from '../config/services';
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const {
     currentActivity,
     activities,
     loading: activitiesLoading,
+    switchActivity,
     getServicesDashboard,
-    getSubscriptionStats,
     activateTrial,
     activateSubscription,
     accessService
   } = useActivities();
 
   const [services, setServices] = useState([]);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [contactService, setContactService] = useState(null);
 
-  // Carica servizi e statistiche
+  // Vista corrente: "client" (per cliente) o "service" (per servizio, solo agenzia)
+  const [currentView, setCurrentView] = useState('client');
+
+  // Cache servizi per tutte le attività (per ClientGrid)
+  const [allServicesMap, setAllServicesMap] = useState({});
+
+  // Euristica tipo account: ≥2 attività = agenzia
+  // TODO: sostituire con campo esplicito da Supabase (es. user.is_agency) quando disponibile
+  const isAgency = activities.length >= 2;
+
+  // Carica servizi per attività corrente
   const loadDashboardData = useCallback(async () => {
     if (!currentActivity?.id) {
       setLoading(false);
@@ -37,122 +45,71 @@ export default function Dashboard() {
     setError(null);
 
     try {
-      // Carica servizi e stats in parallelo
-      const [servicesResult, statsResult] = await Promise.all([
-        getServicesDashboard(),
-        getSubscriptionStats()
-      ]);
-
-      if (servicesResult.success) {
-        setServices(servicesResult.data || []);
+      const result = await getServicesDashboard();
+      if (result.success) {
+        setServices(result.data || []);
+        setAllServicesMap(prev => ({ ...prev, [currentActivity.id]: result.data }));
       } else {
-        setError(servicesResult.error);
-      }
-
-      if (statsResult.success) {
-        setStats(statsResult.data);
+        setError(result.error);
       }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [currentActivity?.id, getServicesDashboard, getSubscriptionStats]);
+  }, [currentActivity?.id, getServicesDashboard]);
 
-  // Ricarica dati quando cambia l'attività
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
 
+  // Carica servizi per tutte le attività (per vista "Per servizio")
+  useEffect(() => {
+    if (!isAgency) return;
+
+    const loadAllServices = async () => {
+      for (const activity of activities) {
+        if (allServicesMap[activity.id]) continue;
+        try {
+          const result = await getServicesDashboard(activity.id);
+          if (result.success) {
+            setAllServicesMap(prev => ({ ...prev, [activity.id]: result.data }));
+          }
+        } catch {
+          // silently skip
+        }
+      }
+    };
+
+    loadAllServices();
+  }, [isAgency, activities, getServicesDashboard]);
+
   // Handlers
-  const handleAccessService = async (serviceCode) => {
-    const result = await accessService(serviceCode);
+  const handleOpenService = async (activityId, serviceCode) => {
+    const result = await accessService(serviceCode, activityId);
     if (!result.success) {
-      alert(result.error || 'Errore nell\'accesso al servizio');
+      alert(result.error || 'Impossibile aprire il servizio. Riprova.');
     }
-    // Se success, il redirect è già stato fatto in accessService
   };
 
   const handleActivateTrial = async (serviceCode) => {
     const result = await activateTrial(serviceCode);
     if (result.success) {
-      // Ricarica dashboard
       loadDashboardData();
     } else {
       alert(result.error || 'Errore nell\'attivazione del trial');
     }
   };
 
-  const handleChoosePlan = (serviceCode) => {
-    const service = services.find(s => s.service.code === serviceCode);
-    if (service) {
-      setSelectedService(service);
+  const handleSelectActivityFromGrid = (activityId) => {
+    const activity = activities.find(a => a.id === activityId);
+    if (activity) {
+      switchActivity(activity);
+      setCurrentView('client');
     }
   };
 
-  const handleConfigureService = async (serviceCode) => {
-    // Per configurare/riconfigurare un servizio, usa lo stesso flusso di accesso
-    // che genererà il token SSO e permetterà di creare/collegare l'account
-    const result = await accessService(serviceCode);
-    if (!result.success) {
-      alert(result.error || 'Errore nell\'accesso al servizio per la configurazione');
-    }
-  };
-
-  const handleRequestInfo = (serviceCode) => {
-    // Cerca prima nei servizi API, poi nei contact_required statici
-    const apiService = services.find(s => s.service.code === serviceCode);
-    if (apiService) {
-      setContactService(apiService.service);
-    } else if (CONTACT_REQUIRED_SERVICES[serviceCode]) {
-      setContactService(CONTACT_REQUIRED_SERVICES[serviceCode]);
-    }
-  };
-
-  const handleSubscribe = async (planCode, billingCycle) => {
-    if (!selectedService) return;
-
-    const result = await activateSubscription(
-      selectedService.service.code,
-      planCode,
-      billingCycle
-    );
-
-    if (result.success) {
-      setSelectedService(null);
-      loadDashboardData();
-    } else {
-      alert(result.error || 'Errore nell\'attivazione dell\'abbonamento');
-    }
-  };
-
-  // Separa servizi "miei" (con subscription, anche scaduta) da quelli mai provati
-  const { myServices, availableServices } = useMemo(() => {
-    const filtered = services.filter(s => s.service.isActive !== false);
-
-    // "I tuoi servizi": tutti quelli con subscription (attivi, scaduti, cancellati, trial)
-    const mine = filtered
-      .filter(s => s.subscription)
-      .sort((a, b) => {
-        // Prima i servizi attivi, poi gli scaduti
-        if (a.isActive && !b.isActive) return -1;
-        if (!a.isActive && b.isActive) return 1;
-        return (a.service.sortOrder || 0) - (b.service.sortOrder || 0);
-      });
-
-    // "Scopri gli altri servizi": quelli mai attivati (nessuna subscription)
-    const available = filtered
-      .filter(s => !s.subscription)
-      .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
-
-    return { myServices: mine, availableServices: available };
-  }, [services]);
-
-  // Calcola se mostrare welcome banner (solo se non ha MAI attivato servizi)
-  const hasMyServices = myServices.length > 0;
-  const showWelcomeBanner = !loading && !hasMyServices && services.length > 0;
-
-  // Nessuna attività selezionata
+  // Nessuna attività
   if (!activitiesLoading && !currentActivity) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -179,19 +136,19 @@ export default function Dashboard() {
     );
   }
 
-  // Loading state
-  if (loading || activitiesLoading) {
+  // Loading
+  if (activitiesLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-500">Caricamento servizi...</p>
+          <p className="text-gray-500">Caricamento...</p>
         </div>
       </div>
     );
   }
 
-  // Error state
+  // Error
   if (error) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -199,14 +156,9 @@ export default function Dashboard() {
           <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="w-8 h-8 text-red-500" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Errore nel caricamento
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Errore nel caricamento</h2>
           <p className="text-gray-500 mb-6">{error}</p>
-          <button
-            onClick={loadDashboardData}
-            className="btn-primary inline-flex items-center"
-          >
+          <button onClick={loadDashboardData} className="btn-primary inline-flex items-center">
             <RefreshCw className="w-4 h-4 mr-2" />
             Riprova
           </button>
@@ -217,60 +169,70 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in">
-      {/* Welcome Banner */}
-      <WelcomeBanner
-        activityName={currentActivity?.name}
-        show={showWelcomeBanner}
-      />
+      {/* Topbar */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {currentView === 'client'
+              ? (currentActivity?.name || 'Dashboard')
+              : 'Panoramica clienti'
+            }
+          </h1>
+          <p className="text-gray-500 mt-1">
+            {currentView === 'client'
+              ? 'Gestisci i servizi doID per questa attività'
+              : `${activities.length} clienti nella tua agenzia`
+            }
+          </p>
+        </div>
 
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {currentActivity?.name || 'Dashboard'}
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Gestisci i tuoi servizi doID da un'unica dashboard
-        </p>
+        {/* Toggle vista (solo agenzia) */}
+        {isAgency && (
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setCurrentView('client')}
+              className={`
+                px-4 py-2 text-sm font-medium rounded-md transition-all
+                ${currentView === 'client'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+                }
+              `}
+            >
+              Per cliente
+            </button>
+            <button
+              onClick={() => setCurrentView('service')}
+              className={`
+                px-4 py-2 text-sm font-medium rounded-md transition-all
+                ${currentView === 'service'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+                }
+              `}
+            >
+              Per servizio
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Stats */}
-      <DashboardStats stats={stats} />
-
-      {/* I tuoi servizi attivi */}
-      {myServices.length > 0 && (
-        <div id="my-services-section" className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">I tuoi servizi attivi</h2>
-          <ServicesGrid
-            services={myServices}
-            onAccessService={handleAccessService}
-            onActivateTrialService={handleActivateTrial}
-            onChoosePlanService={handleChoosePlan}
-            onConfigureService={handleConfigureService}
-            onRequestInfoService={handleRequestInfo}
-            loading={loading}
-          />
-        </div>
-      )}
-
-      {/* Scopri gli altri servizi */}
-      {availableServices.length > 0 && (
-        <div id="available-services-section" className="mb-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Scopri gli altri servizi</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Potenzia la tua attività con i servizi digitali doID
-            </p>
-          </div>
-          <ServicesGrid
-            services={availableServices}
-            onAccessService={handleAccessService}
-            onActivateTrialService={handleActivateTrial}
-            onChoosePlanService={handleChoosePlan}
-            onConfigureService={handleConfigureService}
-            onRequestInfoService={handleRequestInfo}
-            loading={loading}
-          />
-        </div>
+      {/* Content */}
+      {currentView === 'client' ? (
+        <ServiceList
+          services={services}
+          onOpenService={handleOpenService}
+          onActivateTrial={handleActivateTrial}
+          activityId={currentActivity?.id}
+          loading={loading}
+        />
+      ) : (
+        <ClientGrid
+          activities={activities}
+          currentActivityId={currentActivity?.id}
+          onSelectActivity={handleSelectActivityFromGrid}
+          servicesMap={allServicesMap}
+        />
       )}
 
       {/* Plan Modal */}
@@ -279,7 +241,19 @@ export default function Dashboard() {
           service={selectedService.service}
           hasPhysicalProduct={selectedService.hasPhysicalProduct || false}
           onClose={() => setSelectedService(null)}
-          onActivate={handleSubscribe}
+          onActivate={async (planCode, billingCycle) => {
+            const result = await activateSubscription(
+              selectedService.service.code,
+              planCode,
+              billingCycle
+            );
+            if (result.success) {
+              setSelectedService(null);
+              loadDashboardData();
+            } else {
+              alert(result.error || 'Errore nell\'attivazione dell\'abbonamento');
+            }
+          }}
         />
       )}
 

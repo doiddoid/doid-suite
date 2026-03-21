@@ -6,7 +6,6 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Star,
   FileText,
   UtensilsCrossed,
@@ -14,13 +13,44 @@ import {
   Shield,
   BookOpen,
   Sparkles,
-  Check,
   ExternalLink,
   Loader2,
-  Layers
+  Plus
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useActivities } from '../../hooks/useActivities';
+
+// Colori fissi per avatar (derivati deterministicamente dal nome)
+const AVATAR_COLORS = [
+  { bg: 'bg-teal-100', text: 'text-teal-700' },
+  { bg: 'bg-blue-100', text: 'text-blue-700' },
+  { bg: 'bg-amber-100', text: 'text-amber-700' },
+  { bg: 'bg-purple-100', text: 'text-purple-700' },
+  { bg: 'bg-rose-100', text: 'text-rose-700' },
+];
+
+function getAvatarColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.substring(0, 2).toUpperCase();
+}
+
+// Service icons and colors mapping
+const serviceConfig = {
+  review: { icon: Star, color: 'text-yellow-500', bgColor: 'bg-yellow-50' },
+  page: { icon: FileText, color: 'text-blue-500', bgColor: 'bg-blue-50' },
+  menu: { icon: UtensilsCrossed, color: 'text-green-500', bgColor: 'bg-green-50' },
+  display: { icon: Monitor, color: 'text-purple-500', bgColor: 'bg-purple-50' }
+};
 
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
@@ -28,16 +58,12 @@ export default function Sidebar({ collapsed, onToggle }) {
   const { currentActivity, activities, switchActivity, getServicesDashboard, accessService } = useActivities();
 
   const [activeServices, setActiveServices] = useState([]);
-  const [activityDropdownOpen, setActivityDropdownOpen] = useState(false);
   const [accessingService, setAccessingService] = useState(null);
+  const [allServicesMap, setAllServicesMap] = useState({});
 
-  // Service icons and colors mapping
-  const serviceConfig = {
-    review: { icon: Star, color: 'text-yellow-500', bgColor: 'bg-yellow-50' },
-    page: { icon: FileText, color: 'text-blue-500', bgColor: 'bg-blue-50' },
-    menu: { icon: UtensilsCrossed, color: 'text-green-500', bgColor: 'bg-green-50' },
-    display: { icon: Monitor, color: 'text-purple-500', bgColor: 'bg-purple-50' }
-  };
+  // Euristica tipo account: ≥2 attività = agenzia
+  // TODO: sostituire con campo esplicito da Supabase (es. user.is_agency) quando disponibile
+  const isAgency = activities.length >= 2;
 
   // Load active services when activity changes
   useEffect(() => {
@@ -50,11 +76,16 @@ export default function Sidebar({ collapsed, onToggle }) {
       try {
         const result = await getServicesDashboard(currentActivity.id);
         if (result.success) {
-          // Filter only active, trial, or free services
           const active = result.data.filter(s =>
             s.subscription?.status === 'active' || s.subscription?.status === 'trial' || s.subscription?.status === 'free'
           );
           setActiveServices(active);
+
+          // Cache all services per activity for status dots
+          setAllServicesMap(prev => ({
+            ...prev,
+            [currentActivity.id]: result.data
+          }));
         }
       } catch (err) {
         console.error('Error loading services:', err);
@@ -64,6 +95,46 @@ export default function Sidebar({ collapsed, onToggle }) {
     loadActiveServices();
   }, [currentActivity?.id, getServicesDashboard]);
 
+  // Load services for all activities (for agency status dots)
+  useEffect(() => {
+    if (!isAgency) return;
+
+    const loadAllActivitiesServices = async () => {
+      for (const activity of activities) {
+        if (allServicesMap[activity.id]) continue;
+        try {
+          const result = await getServicesDashboard(activity.id);
+          if (result.success) {
+            setAllServicesMap(prev => ({ ...prev, [activity.id]: result.data }));
+          }
+        } catch (err) {
+          // silently skip
+        }
+      }
+    };
+
+    loadAllActivitiesServices();
+  }, [isAgency, activities, getServicesDashboard]);
+
+  // Calcola colore pallino stato per un'attività (solo agenzia)
+  const getStatusDotColor = (activityId) => {
+    const services = allServicesMap[activityId];
+    if (!services) return 'bg-gray-300';
+
+    const activeOnes = services.filter(s =>
+      s.subscription?.status === 'active' || s.subscription?.status === 'trial' || s.subscription?.status === 'free'
+    );
+
+    if (activeOnes.length === 0) return 'bg-red-400';
+
+    const hasTrialOrFree = activeOnes.some(s =>
+      s.subscription?.status === 'trial' || s.subscription?.status === 'free'
+    );
+    if (hasTrialOrFree) return 'bg-amber-400';
+
+    return 'bg-green-400';
+  };
+
   const isActive = (path) => {
     if (path === '/dashboard') {
       return location.pathname === '/dashboard' || location.pathname === '/';
@@ -72,31 +143,13 @@ export default function Sidebar({ collapsed, onToggle }) {
   };
 
   const mainNavItems = [
-    {
-      name: 'Dashboard',
-      path: '/dashboard',
-      icon: LayoutDashboard
-    },
-    // {
-    //   name: 'I Miei Servizi',
-    //   path: '/servizi',
-    //   icon: Layers
-    // },
-    {
-      name: 'Attività',
-      path: '/activities',
-      icon: Building2
-    }
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Attività', path: '/activities', icon: Building2 }
   ];
 
-  // Single admin link - the Admin page has internal tabs
-  const adminNavItem = {
-    name: 'Pannello Admin',
-    path: '/admin',
-    icon: Shield
-  };
+  const adminNavItem = { name: 'Pannello Admin', path: '/admin', icon: Shield };
 
-  const NavItem = ({ item, showLabel = true }) => {
+  const NavItem = ({ item }) => {
     const Icon = item.icon;
     const active = isActive(item.path);
 
@@ -107,36 +160,27 @@ export default function Sidebar({ collapsed, onToggle }) {
           flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group
           ${active
             ? 'bg-teal-50 text-teal-700 font-medium'
-            : item.highlight
-              ? 'text-amber-700 hover:bg-amber-50'
-              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
           }
           ${collapsed ? 'justify-center' : ''}
         `}
         title={collapsed ? item.name : undefined}
       >
-        <Icon className={`w-5 h-5 flex-shrink-0 ${item.color || ''} ${active ? 'text-teal-600' : ''}`} />
-        {showLabel && !collapsed && (
-          <span className="truncate">{item.name}</span>
-        )}
-        {active && !collapsed && (
-          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-500" />
-        )}
+        <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-teal-600' : ''}`} />
+        {!collapsed && <span className="truncate">{item.name}</span>}
+        {active && !collapsed && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-500" />}
       </Link>
     );
   };
 
   const handleAccessService = async (serviceCode) => {
     if (accessingService) return;
-
     setAccessingService(serviceCode);
     try {
       const result = await accessService(serviceCode);
       if (!result.success) {
         console.error('Error accessing service:', result.error);
       }
-    } catch (err) {
-      console.error('Error accessing service:', err);
     } finally {
       setAccessingService(null);
     }
@@ -170,10 +214,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             <span className="truncate flex-1 text-left">{service.service.name}</span>
             <span className={`
               text-[10px] font-semibold px-1.5 py-0.5 rounded
-              ${isTrialStatus
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-amber-100 text-amber-700'
-              }
+              ${isTrialStatus ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}
             `}>
               {isTrialStatus ? 'TRIAL' : 'PRO'}
             </span>
@@ -184,11 +225,6 @@ export default function Sidebar({ collapsed, onToggle }) {
     );
   };
 
-  const handleSwitchActivity = (activity) => {
-    switchActivity(activity);
-    setActivityDropdownOpen(false);
-  };
-
   return (
     <aside
       className={`
@@ -197,7 +233,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         ${collapsed ? 'w-[72px]' : 'w-64'}
       `}
     >
-      {/* Logo - NEW DESIGN */}
+      {/* Logo */}
       <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? 'justify-center px-2' : 'px-4'}`}>
         <Link to="/dashboard" className="flex items-center gap-2.5">
           <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
@@ -212,61 +248,70 @@ export default function Sidebar({ collapsed, onToggle }) {
         </Link>
       </div>
 
-      {/* Activity Switcher */}
-      {!collapsed && currentActivity && (
-        <div className="px-3 py-3 border-b border-gray-100">
+      {/* Client/Activity List */}
+      {!collapsed && (
+        <div className="px-3 py-3 border-b border-gray-100 max-h-[280px] overflow-y-auto">
           <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2 px-1">
-            Attività corrente
+            {isAgency ? 'Clienti' : 'Le tue attività'}
           </p>
-          <div className="relative">
-            <button
-              onClick={() => setActivityDropdownOpen(!activityDropdownOpen)}
-              className="w-full flex items-center justify-between gap-2 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-150 rounded-lg px-3 py-2.5 transition-all"
-            >
-              <span className="text-sm font-medium text-gray-900 truncate">
-                {currentActivity.name}
-              </span>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${activityDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Activity Dropdown */}
-            {activityDropdownOpen && activities.length > 1 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 max-h-60 overflow-y-auto">
-                {activities.map((activity) => (
-                  <button
-                    key={activity.id}
-                    onClick={() => handleSwitchActivity(activity)}
-                    className={`
-                      w-full flex items-center gap-2 px-3 py-2 text-sm text-left
-                      ${activity.id === currentActivity.id
-                        ? 'bg-teal-50 text-teal-700'
-                        : 'text-gray-700 hover:bg-gray-50'
-                      }
-                    `}
-                  >
-                    {activity.id === currentActivity.id && (
-                      <Check className="w-4 h-4 text-teal-600" />
-                    )}
-                    <span className={activity.id === currentActivity.id ? '' : 'ml-6'}>
-                      {activity.name}
+          <div className="space-y-0.5">
+            {activities.map((activity) => {
+              const selected = activity.id === currentActivity?.id;
+              const avatarColor = getAvatarColor(activity.name || '');
+              return (
+                <button
+                  key={activity.id}
+                  onClick={() => switchActivity(activity)}
+                  className={`
+                    w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all text-left
+                    ${selected
+                      ? 'bg-teal-50 font-medium'
+                      : 'hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  {/* Avatar */}
+                  <div className={`w-8 h-8 rounded-lg ${avatarColor.bg} flex items-center justify-center flex-shrink-0`}>
+                    <span className={`text-xs font-bold ${avatarColor.text}`}>
+                      {getInitials(activity.name)}
                     </span>
-                  </button>
-                ))}
-              </div>
-            )}
+                  </div>
+                  {/* Name */}
+                  <span className={`text-sm truncate flex-1 ${selected ? 'text-teal-700' : 'text-gray-700'}`}>
+                    {activity.name}
+                  </span>
+                  {/* Status dot (solo agenzia) */}
+                  {isAgency && (
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusDotColor(activity.id)}`} />
+                  )}
+                </button>
+              );
+            })}
           </div>
+          {/* Aggiungi */}
+          <Link
+            to="/activities/new"
+            className="flex items-center gap-2.5 px-2.5 py-2 mt-1 rounded-lg text-gray-400 hover:text-teal-600 hover:bg-teal-50 transition-all"
+          >
+            <div className="w-8 h-8 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+              <Plus className="w-4 h-4" />
+            </div>
+            <span className="text-sm">
+              {isAgency ? '+ Aggiungi cliente' : '+ Aggiungi sede'}
+            </span>
+          </Link>
         </div>
       )}
 
-      {/* Collapsed Activity Badge */}
+      {/* Collapsed: show current activity avatar */}
       {collapsed && currentActivity && (
         <div className="px-2 py-3 border-b border-gray-100">
           <div
-            className="w-10 h-10 mx-auto bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center"
+            className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center ${getAvatarColor(currentActivity.name || '').bg}`}
             title={currentActivity.name}
           >
-            <span className="text-white font-bold text-sm">
-              {currentActivity.name.charAt(0).toUpperCase()}
+            <span className={`font-bold text-sm ${getAvatarColor(currentActivity.name || '').text}`}>
+              {getInitials(currentActivity.name)}
             </span>
           </div>
         </div>
@@ -274,7 +319,6 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       {/* Main Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        {/* Main Section */}
         <div className="space-y-1">
           {!collapsed && (
             <p className="px-3 mb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
@@ -286,7 +330,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           ))}
         </div>
 
-        {/* Active Services Section - Only if user has active services */}
+        {/* Active Services */}
         {activeServices.length > 0 && (
           <div className="mt-6 space-y-1">
             {!collapsed && (
@@ -300,16 +344,14 @@ export default function Sidebar({ collapsed, onToggle }) {
           </div>
         )}
 
-        {/* Divider before bottom items */}
         <div className="my-4 border-t border-gray-100" />
 
-        {/* Settings & Support */}
         <div className="space-y-1">
           <NavItem item={{ name: 'Impostazioni', path: '/settings', icon: Settings }} />
           <NavItem item={{ name: 'Guida', path: '/guida', icon: BookOpen }} />
         </div>
 
-        {/* Admin Section - Only for superadmin */}
+        {/* Admin Section */}
         {user?.isSuperAdmin && (
           <div className="mt-6 space-y-1">
             {!collapsed && (
