@@ -1,17 +1,15 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Building2, Plus, Users, Settings, Trash2, AlertCircle, Check, ChevronRight, Loader2 } from 'lucide-react';
 import { useActivities } from '../hooks/useActivities';
-import MembersManageModal from '../components/Admin/MembersManageModal';
 
 export default function Activities() {
-  const [membersModal, setMembersModal] = useState(null); // { activityId, activityName, members }
+  const navigate = useNavigate();
   const {
     activities,
     currentActivity,
     switchActivity,
     deleteActivity,
-    getMembers,
     loading
   } = useActivities();
 
@@ -161,14 +159,7 @@ export default function Activities() {
                 {/* Quick Actions */}
                 <div className="mt-4 pt-4 border-t border-gray-100 flex items-center space-x-4">
                   <button
-                    onClick={async () => {
-                      const result = await getMembers(activity.id);
-                      setMembersModal({
-                        activityId: activity.id,
-                        activityName: activity.name,
-                        members: result.success ? (result.data?.members || []) : []
-                      });
-                    }}
+                    onClick={() => navigate(`/activities/${activity.id}/settings`)}
                     className="flex items-center text-sm text-gray-600 hover:text-gray-900"
                   >
                     <Users className="w-4 h-4 mr-1.5" />
@@ -215,22 +206,6 @@ export default function Activities() {
             </div>
           ))}
         </div>
-      )}
-      {/* Members Modal */}
-      {membersModal && (
-        <MembersManageModal
-          entityType="activity"
-          entityId={membersModal.activityId}
-          entityName={membersModal.activityName}
-          members={membersModal.members}
-          onUpdate={async () => {
-            const result = await getMembers(membersModal.activityId);
-            if (result.success) {
-              setMembersModal(prev => prev ? { ...prev, members: result.data?.members || [] } : null);
-            }
-          }}
-          onClose={() => setMembersModal(null)}
-        />
       )}
     </div>
   );
