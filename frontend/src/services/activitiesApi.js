@@ -176,8 +176,12 @@ class ActivitiesApiService {
    * Genera token deep-link per navigazione diretta Suite → Servizio (60s)
    * Ritorna { token, url }
    */
-  async getDeepLinkToken(activityId, serviceCode) {
-    return api.request(`/services/deep-link-token?activity_id=${activityId}&service=${serviceCode}`);
+  async getDeepLinkToken(activityId, serviceCode, returnTo = null) {
+    let url = `/services/deep-link-token?activity_id=${activityId}&service=${serviceCode}`;
+    if (returnTo) {
+      url += `&return_to=${encodeURIComponent(returnTo)}`;
+    }
+    return api.request(url);
   }
 
   // ==================== PAYMENTS / INVOICES ====================

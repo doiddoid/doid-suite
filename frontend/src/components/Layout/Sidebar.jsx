@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Building2,
@@ -54,6 +54,7 @@ const serviceConfig = {
 
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { currentActivity, activities, switchActivity, getServicesDashboard, accessService } = useActivities();
 
@@ -261,7 +262,10 @@ export default function Sidebar({ collapsed, onToggle }) {
               return (
                 <button
                   key={activity.id}
-                  onClick={() => switchActivity(activity)}
+                  onClick={() => {
+                    switchActivity(activity);
+                    navigate('/');
+                  }}
                   className={`
                     w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all text-left
                     ${selected
@@ -280,9 +284,9 @@ export default function Sidebar({ collapsed, onToggle }) {
                   <span className={`text-sm truncate flex-1 ${selected ? 'text-teal-700' : 'text-gray-700'}`}>
                     {activity.name}
                   </span>
-                  {/* Status dot (solo agenzia) */}
-                  {isAgency && (
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusDotColor(activity.id)}`} />
+                  {/* Status dot (solo per selezionato) */}
+                  {selected && (
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 bg-green-400`} />
                   )}
                 </button>
               );

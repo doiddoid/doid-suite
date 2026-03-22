@@ -5,7 +5,7 @@ import {
   RefreshCw, Plus, AlertCircle, X, Trash2, Edit2,
   Mail, Calendar, Hash, CreditCard, Star, FileText,
   Check, Clock, Ban, Search, UtensilsCrossed, Monitor,
-  User, Shield, Briefcase, MapPin, Phone, Layers,
+  User, Shield, Briefcase, Phone, Layers,
   ExternalLink, Loader2, LogIn, ChevronDown, ChevronRight,
   MessageSquare, Zap, Key, Bot, CheckCircle, XCircle,
   ChevronUp, GripVertical
@@ -498,27 +498,10 @@ export default function Admin() {
     clientTypeFilter === 'all' || org.accountType === clientTypeFilter
   );
 
-  // Costruisce struttura gerarchica: agencies con children, e clienti diretti (single)
+  // Suddivide le organizzazioni in agenzie e clienti diretti (single)
   const buildHierarchy = (flatList) => {
-    const map = {};
-    const agencies = [];
-    const direct = [];
-
-    // Prima passata: popola la mappa
-    flatList.forEach(o => { map[o.id] = { ...o, children: [] }; });
-
-    // Seconda passata: costruisce l'albero
-    flatList.forEach(o => {
-      if (o.accountType === 'agency') {
-        agencies.push(map[o.id]);
-      } else if (!o.parentOrgId || !map[o.parentOrgId]) {
-        // Senza padre valido = diretto (include orfani)
-        direct.push(map[o.id]);
-      } else {
-        map[o.parentOrgId].children.push(map[o.id]);
-      }
-    });
-
+    const agencies = flatList.filter(o => o.accountType === 'agency');
+    const direct = flatList.filter(o => o.accountType !== 'agency');
     return { agencies, direct };
   };
 
@@ -567,7 +550,7 @@ export default function Admin() {
       if (type === 'user') {
         setFormData({ email: '', password: '', fullName: '', emailConfirm: true });
       } else if (type === 'organization') {
-        setFormData({ name: '', email: '', accountType: 'single', parentOrgId: '', maxActivities: 1, ownerId: '' });
+        setFormData({ name: '', email: '', accountType: 'single', maxActivities: 1, ownerId: '' });
       } else if (type === 'activity') {
         setFormData({ name: '', email: '', organizationId: '', ownerId: '' });
       } else if (type === 'package') {
@@ -1134,14 +1117,14 @@ export default function Admin() {
                                   }}
                                 >
                                   <div className="flex items-center gap-3">
-                                    {/* Toggle expand — visibile se ha children o attività */}
+                                    {/* Toggle expand — visibile se ha attività */}
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         toggleOrgExpansion(agency);
                                       }}
                                       className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                                        !agency.children?.length && !agency.activitiesCount ? 'invisible' : ''
+                                        !agency.activitiesCount ? 'invisible' : ''
                                       }`}
                                     >
                                       {expandedOrgs[agency.id] ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
@@ -1168,7 +1151,7 @@ export default function Admin() {
                                     <div className="text-right">
                                       {getStatusBadge(agency.status)}
                                       <p className="text-xs text-gray-400 mt-1">
-                                        {agency.children?.length || 0} clienti · {agency.activitiesCount || 0} attività
+                                        {agency.activitiesCount || 0} clienti
                                       </p>
                                     </div>
 
@@ -1189,123 +1172,8 @@ export default function Admin() {
                                   </div>
                                 </div>
 
-                                {/* Clienti L2 — visibili solo se expanded */}
-                                {expandedOrgs[agency.id] && agency.children?.length > 0 && (
-                                  <div className="bg-gray-50 border-t">
-                                    {agency.children.map((client) => (
-                                      <div key={client.id}>
-                                        {/* Riga Cliente L2 */}
-                                        <div
-                                          className={`pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
-                                            selectedItem?.id === client.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
-                                          }`}
-                                          style={{ paddingLeft: '28px' }}
-                                        >
-                                          <div className="flex items-center gap-3">
-                                            {/* Toggle per sotto-sedi L3 */}
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setExpandedOrgs(prev => ({ ...prev, [client.id]: !prev[client.id] }));
-                                              }}
-                                              className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                                                !client.children?.length ? 'invisible' : ''
-                                              }`}
-                                            >
-                                              {expandedOrgs[client.id] ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-                                            </button>
-
-                                            {/* Avatar blue */}
-                                            <div
-                                              onClick={() => {
-                                                setSelectedItem({ ...client, type: 'organization' });
-                                                fetchItemDetails('organization', client.id);
-                                              }}
-                                              className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                                              style={{ backgroundColor: '#3B82F6' }}
-                                            >
-                                              <Building2 className="w-4 h-4" />
-                                            </div>
-
-                                            <div
-                                              className="flex-1 min-w-0"
-                                              onClick={() => {
-                                                setSelectedItem({ ...client, type: 'organization' });
-                                                fetchItemDetails('organization', client.id);
-                                              }}
-                                            >
-                                              <div className="flex items-center gap-2">
-                                                <p className="font-medium text-gray-800 text-sm truncate">{client.name}</p>
-                                                {client.children?.length > 0 && (
-                                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded font-medium">
-                                                    {client.children.length} sedi
-                                                  </span>
-                                                )}
-                                              </div>
-                                              <p className="text-xs text-gray-500 truncate">{client.email || 'Nessuna email'}</p>
-                                            </div>
-
-                                            <div className="text-right">
-                                              {getStatusBadge(client.status)}
-                                            </div>
-
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleImpersonate('organization', client.id);
-                                              }}
-                                              disabled={impersonating}
-                                              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                              title="Accedi come owner"
-                                            >
-                                              {impersonating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                                            </button>
-                                          </div>
-                                        </div>
-
-                                        {/* Sotto-sedi L3 — visibili solo se expanded */}
-                                        {expandedOrgs[client.id] && client.children?.map((sub) => (
-                                          <div
-                                            key={sub.id}
-                                            className={`pr-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors border-b last:border-b-0 ${
-                                              selectedItem?.id === sub.id && selectedItem?.type === 'organization' ? 'bg-indigo-50' : ''
-                                            }`}
-                                            style={{ paddingLeft: '44px' }}
-                                            onClick={() => {
-                                              setSelectedItem({ ...sub, type: 'organization' });
-                                              fetchItemDetails('organization', sub.id);
-                                            }}
-                                          >
-                                            <div className="flex items-center gap-3">
-                                              {/* Spacer per allineamento (nessun toggle per L3) */}
-                                              <div className="w-7" />
-
-                                              {/* Avatar amber */}
-                                              <div
-                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                                                style={{ backgroundColor: '#F59E0B' }}
-                                              >
-                                                <MapPin className="w-4 h-4" />
-                                              </div>
-
-                                              <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-gray-800 text-sm truncate">{sub.name}</p>
-                                                <p className="text-xs text-gray-500 truncate">{sub.email || 'Nessuna email'}</p>
-                                              </div>
-
-                                              <div className="text-right">
-                                                {getStatusBadge(sub.status)}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Attività espanse (per agenzie senza children gerarchici) */}
-                                {expandedOrgs[agency.id] && !agency.children?.length && (() => {
+                                {/* Attività espanse dell'agenzia */}
+                                {expandedOrgs[agency.id] && (() => {
                                   const orgData = expandedOrgDetails[agency.id] || (selectedItem?.id === agency.id ? itemDetails : null);
                                   const agencyActivities = orgData?.activities || [];
 
@@ -1489,8 +1357,21 @@ export default function Admin() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                               <p className="font-medium text-gray-800 text-sm">{act.name}</p>
-                                              <p className="text-xs text-gray-500">{act.owner?.email || 'Nessun owner'}</p>
+                                              <p className="text-xs text-gray-500">{act.owner?.email || act.email || 'Nessun owner'}</p>
                                             </div>
+                                            {/* Icone servizi attivi */}
+                                            {act.services?.length > 0 && (
+                                              <div className="flex items-center gap-0.5">
+                                                {act.services.filter(s => s.subscription && ['active', 'trial', 'free'].includes(s.subscription.status)).map((s) => {
+                                                  const SIcon = SERVICE_ICONS[s.service?.icon] || Star;
+                                                  return (
+                                                    <div key={s.service?.code} className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: `${s.service?.color || '#6B7280'}20` }} title={`${s.service?.name} (${s.subscription?.status})`}>
+                                                      <SIcon className="w-3 h-3" style={{ color: s.service?.color || '#6B7280' }} />
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            )}
                                             <div className="text-right">
                                               {getStatusBadge(act.status)}
                                             </div>
@@ -2375,8 +2256,6 @@ export default function Admin() {
                       {[
                         { value: 'single', label: 'Singolo', desc: 'Cliente diretto', icon: User, borderColor: '#6366f1', bgColor: '#eef2ff', textColor: '#4f46e5' },
                         { value: 'agency', label: 'Agenzia', desc: 'Multi attività', icon: Briefcase, borderColor: '#2EBAA3', bgColor: '#f0fdfa', textColor: '#2EBAA3' },
-                        { value: 'client', label: 'Cliente', desc: 'Di un\'agenzia', icon: Building2, borderColor: '#3B82F6', bgColor: '#eff6ff', textColor: '#3B82F6' },
-                        { value: 'sub', label: 'Sotto-sede', desc: 'Di un cliente', icon: MapPin, borderColor: '#F59E0B', bgColor: '#fffbeb', textColor: '#F59E0B' },
                       ].map(({ value, label, desc, icon: Icon, borderColor, bgColor, textColor }) => (
                         <label key={value} className="flex items-center gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all"
                           style={formData.accountType === value
@@ -2386,10 +2265,7 @@ export default function Admin() {
                         >
                           <input type="radio" name="accountType" value={value} checked={formData.accountType === value}
                             onChange={(e) => {
-                              const newType = e.target.value;
-                              const updates = { ...formData, accountType: newType };
-                              if (newType === 'single' || newType === 'agency') updates.parentOrgId = '';
-                              setFormData(updates);
+                              setFormData({ ...formData, accountType: e.target.value });
                             }} className="sr-only" />
                           <Icon className="w-5 h-5" style={{ color: formData.accountType === value ? textColor : '#9ca3af' }} />
                           <div><p className="font-medium text-sm">{label}</p><p className="text-xs text-gray-500">{desc}</p></div>
@@ -2398,27 +2274,6 @@ export default function Admin() {
                     </div>
                   </FormField>
 
-                  {/* Organizzazione padre — visibile solo per client e sub */}
-                  {(formData.accountType === 'client' || formData.accountType === 'sub') && (
-                    <FormField label="Organizzazione padre" required hint={formData.accountType === 'client' ? 'Seleziona l\'agenzia' : 'Seleziona il cliente'}>
-                      <select
-                        required
-                        value={formData.parentOrgId || ''}
-                        onChange={(e) => setFormData({ ...formData, parentOrgId: e.target.value })}
-                        className="input-field"
-                      >
-                        <option value="">Seleziona...</option>
-                        {formData.accountType === 'client'
-                          ? organizations.filter(o => o.accountType === 'agency').map(o => (
-                              <option key={o.id} value={o.id}>{o.name}</option>
-                            ))
-                          : organizations.filter(o => o.accountType === 'client').map(o => (
-                              <option key={o.id} value={o.id}>{o.name}</option>
-                            ))
-                        }
-                      </select>
-                    </FormField>
-                  )}
 
                   <FormField label="Max Attività" hint="-1 per illimitate">
                     <input type="number" min={-1} value={formData.maxActivities ?? 1} onChange={(e) => setFormData({ ...formData, maxActivities: parseInt(e.target.value) })} className="input-field" />

@@ -316,11 +316,11 @@ export function ActivityProvider({ children }) {
    * Accedi a un servizio esterno via deep-link JWT (60s)
    * Genera token short-lived e apre il servizio in una nuova tab
    */
-  const accessService = useCallback(async (serviceCode, activityId = currentActivity?.id) => {
+  const accessService = useCallback(async (serviceCode, activityId = currentActivity?.id, returnTo = null) => {
     if (!activityId) return { success: false, error: 'Nessuna attività selezionata' };
 
     try {
-      const response = await activitiesApi.getDeepLinkToken(activityId, serviceCode);
+      const response = await activitiesApi.getDeepLinkToken(activityId, serviceCode, returnTo);
       if (response.success) {
         const { url } = response.data;
         window.open(url, '_blank', 'noopener,noreferrer');

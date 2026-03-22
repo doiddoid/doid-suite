@@ -27,12 +27,13 @@ const validate = (req, res, next) => {
 router.get('/deep-link-token',
   [
     query('activity_id').isUUID().withMessage('ID attività non valido'),
-    query('service').isIn(['page', 'review', 'menu']).withMessage('Servizio non valido (page, review, menu)')
+    query('service').isIn(['page', 'review', 'menu']).withMessage('Servizio non valido (page, review, menu)'),
+    query('return_to').optional().isString().withMessage('return_to non valido')
   ],
   validate,
   authenticate,
   asyncHandler(async (req, res) => {
-    const { activity_id, service } = req.query;
+    const { activity_id, service, return_to } = req.query;
 
     // Verifica che l'attività esista
     const activity = await activityService.getActivityById(activity_id);
@@ -56,16 +57,17 @@ router.get('/deep-link-token',
     }
 
     // Genera JWT con scadenza 60 secondi
-    const token = jwt.sign(
-      {
-        user_id: req.user.id,
-        activity_id,
-        service,
-        type: 'deep_link'
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: 60 }
-    );
+    const tokenPayload = {
+      user_id: req.user.id,
+      activity_id,
+      service,
+      type: 'deep_link'
+    };
+    if (return_to) {
+      tokenPayload.return_to = return_to;
+    }
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: 60 });
 
     const serviceUrl = SERVICES[service]?.appUrl;
     const url = `${serviceUrl}/auth/deep-link.php?token=${token}`;

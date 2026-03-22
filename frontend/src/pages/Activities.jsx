@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, Plus, Users, Settings, Trash2, AlertCircle, Check, ChevronRight, Loader2 } from 'lucide-react';
+import { Building2, Plus, Users, Settings, Trash2, AlertCircle, Check, ChevronRight, Loader2, Mail, User } from 'lucide-react';
 import { useActivities } from '../hooks/useActivities';
 
 export default function Activities() {
@@ -10,12 +10,25 @@ export default function Activities() {
     currentActivity,
     switchActivity,
     deleteActivity,
+    getMembers,
     loading
   } = useActivities();
 
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState('');
+  const [membersMap, setMembersMap] = useState({});
+
+  // Carica i membri per tutte le attività
+  useEffect(() => {
+    if (!activities.length) return;
+    activities.forEach(async (activity) => {
+      const result = await getMembers(activity.id);
+      if (result.success) {
+        setMembersMap(prev => ({ ...prev, [activity.id]: result.data }));
+      }
+    });
+  }, [activities]);
 
   const handleDelete = async (activityId) => {
     setDeleteLoading(true);
@@ -112,7 +125,13 @@ export default function Activities() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-1">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3
+                        className="text-lg font-semibold text-gray-900 hover:text-teal-600 cursor-pointer transition-colors"
+                        onClick={() => {
+                          switchActivity(activity);
+                          navigate('/');
+                        }}
+                      >
                         {activity.name}
                       </h3>
                       {getRoleBadge(activity.role)}
@@ -169,7 +188,7 @@ export default function Activities() {
                   <button
                     onClick={() => {
                       switchActivity(activity);
-                      window.location.href = '/dashboard';
+                      navigate('/');
                     }}
                     className="flex items-center text-sm text-gray-600 hover:text-gray-900"
                   >
@@ -178,6 +197,24 @@ export default function Activities() {
                     <ChevronRight className="w-3 h-3 ml-1" />
                   </button>
                 </div>
+
+                {/* Members List */}
+                {membersMap[activity.id]?.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Membri</p>
+                    <div className="space-y-1.5">
+                      {membersMap[activity.id].map((member) => (
+                        <div key={member.id} className="flex items-center gap-2 text-sm">
+                          <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-700">{member.fullName || 'Nome non impostato'}</span>
+                          <span className="text-gray-400">·</span>
+                          <span className="text-gray-500">{member.email}</span>
+                          <span className="ml-auto">{getRoleBadge(member.role)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Delete Confirmation */}
