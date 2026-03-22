@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Loader2, Building2, AlertCircle, Trash2, Users, Save } from 'lucide-react';
 import { useActivities } from '../hooks/useActivities';
+import MembersManageModal from '../components/Admin/MembersManageModal';
 
 export default function ActivitySettings() {
   const { id } = useParams();
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const navigate = useNavigate();
   const { getActivity, updateActivity, deleteActivity, getMembers } = useActivities();
 
@@ -297,12 +299,12 @@ export default function ActivitySettings() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Membri</h2>
-          <Link
-            to={`/activities/${id}/members`}
+          <button
+            onClick={() => setShowMembersModal(true)}
             className="text-sm text-primary-600 hover:text-primary-700 font-medium"
           >
             Gestisci
-          </Link>
+          </button>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -352,6 +354,20 @@ export default function ActivitySettings() {
             </div>
           )}
         </div>
+      )}
+      {/* Members Modal */}
+      {showMembersModal && (
+        <MembersManageModal
+          entityType="activity"
+          entityId={id}
+          entityName={activity?.name || ''}
+          members={members}
+          onUpdate={async () => {
+            const result = await getMembers(id);
+            if (result.success) setMembers(result.data?.members || []);
+          }}
+          onClose={() => setShowMembersModal(false)}
+        />
       )}
     </div>
   );

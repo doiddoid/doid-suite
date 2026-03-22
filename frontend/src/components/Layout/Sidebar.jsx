@@ -330,20 +330,6 @@ export default function Sidebar({ collapsed, onToggle }) {
           ))}
         </div>
 
-        {/* Active Services */}
-        {activeServices.length > 0 && (
-          <div className="mt-6 space-y-1">
-            {!collapsed && (
-              <p className="px-3 mb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                I tuoi servizi
-              </p>
-            )}
-            {activeServices.map((service) => (
-              <ServiceNavItem key={service.service.code} service={service} />
-            ))}
-          </div>
-        )}
-
         <div className="my-4 border-t border-gray-100" />
 
         <div className="space-y-1">

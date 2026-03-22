@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, Building2, Plus, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useActivities } from '../hooks/useActivities';
-import { ServiceList, ClientGrid, ContactModal } from '../components/Dashboard';
+import { DashboardStats, ServicesGrid, ClientGrid, ContactModal } from '../components/Dashboard';
 import { PlanModal } from '../components/Services';
 import { CONTACT_REQUIRED_SERVICES } from '../config/services';
 
@@ -13,19 +13,22 @@ export default function Dashboard() {
     loading: activitiesLoading,
     switchActivity,
     getServicesDashboard,
+    getSubscriptionStats,
     activateTrial,
     activateSubscription,
     accessService
   } = useActivities();
 
   const [services, setServices] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [contactService, setContactService] = useState(null);
 
-  // Vista corrente: "client" (per cliente) o "service" (per servizio, solo agenzia)
-  const [currentView, setCurrentView] = useState('client');
+  // Vista corrente: "client" (per cliente) o "service" (panoramica, solo agenzia)
+  // Default: panoramica per agenzie, client per utente singolo
+  const [currentView, setCurrentView] = useState('service');
 
   // Cache servizi per tutte le attività (per ClientGrid)
   const [allServicesMap, setAllServicesMap] = useState({});
@@ -45,12 +48,20 @@ export default function Dashboard() {
     setError(null);
 
     try {
-      const result = await getServicesDashboard();
-      if (result.success) {
-        setServices(result.data || []);
-        setAllServicesMap(prev => ({ ...prev, [currentActivity.id]: result.data }));
+      const [servicesResult, statsResult] = await Promise.all([
+        getServicesDashboard(),
+        getSubscriptionStats()
+      ]);
+
+      if (servicesResult.success) {
+        setServices(servicesResult.data || []);
+        setAllServicesMap(prev => ({ ...prev, [currentActivity.id]: servicesResult.data }));
       } else {
-        setError(result.error);
+        setError(servicesResult.error);
+      }
+
+      if (statsResult.success) {
+        setStats(statsResult.data);
       }
     } catch (err) {
       setError(err.message);
@@ -84,9 +95,28 @@ export default function Dashboard() {
     loadAllServices();
   }, [isAgency, activities, getServicesDashboard]);
 
+  // Separa servizi "miei" da "disponibili" (come layout precedente)
+  const { myServices, availableServices } = useMemo(() => {
+    const filtered = services.filter(s => s.service.isActive !== false);
+
+    const mine = filtered
+      .filter(s => s.subscription)
+      .sort((a, b) => {
+        if (a.isActive && !b.isActive) return -1;
+        if (!a.isActive && b.isActive) return 1;
+        return (a.service.sortOrder || 0) - (b.service.sortOrder || 0);
+      });
+
+    const available = filtered
+      .filter(s => !s.subscription)
+      .sort((a, b) => (a.service.sortOrder || 0) - (b.service.sortOrder || 0));
+
+    return { myServices: mine, availableServices: available };
+  }, [services]);
+
   // Handlers
-  const handleOpenService = async (activityId, serviceCode) => {
-    const result = await accessService(serviceCode, activityId);
+  const handleAccessService = async (serviceCode) => {
+    const result = await accessService(serviceCode);
     if (!result.success) {
       alert(result.error || 'Impossibile aprire il servizio. Riprova.');
     }
@@ -98,6 +128,27 @@ export default function Dashboard() {
       loadDashboardData();
     } else {
       alert(result.error || 'Errore nell\'attivazione del trial');
+    }
+  };
+
+  const handleChoosePlan = (serviceCode) => {
+    const service = services.find(s => s.service.code === serviceCode);
+    if (service) setSelectedService(service);
+  };
+
+  const handleConfigureService = async (serviceCode) => {
+    const result = await accessService(serviceCode);
+    if (!result.success) {
+      alert(result.error || 'Errore nell\'accesso al servizio');
+    }
+  };
+
+  const handleRequestInfo = (serviceCode) => {
+    const apiService = services.find(s => s.service.code === serviceCode);
+    if (apiService) {
+      setContactService(apiService.service);
+    } else if (CONTACT_REQUIRED_SERVICES[serviceCode]) {
+      setContactService(CONTACT_REQUIRED_SERVICES[serviceCode]);
     }
   };
 
@@ -218,21 +269,53 @@ export default function Dashboard() {
       </div>
 
       {/* Content */}
-      {currentView === 'client' ? (
-        <ServiceList
-          services={services}
-          onOpenService={handleOpenService}
-          onActivateTrial={handleActivateTrial}
-          activityId={currentActivity?.id}
-          loading={loading}
-        />
-      ) : (
+      {currentView === 'service' && isAgency ? (
         <ClientGrid
           activities={activities}
           currentActivityId={currentActivity?.id}
           onSelectActivity={handleSelectActivityFromGrid}
           servicesMap={allServicesMap}
         />
+      ) : (
+        <>
+          {/* Stats */}
+          <DashboardStats stats={stats} />
+
+          {/* I tuoi servizi attivi */}
+          {myServices.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">I tuoi servizi</h2>
+              <ServicesGrid
+                services={myServices}
+                onAccessService={handleAccessService}
+                onActivateTrialService={handleActivateTrial}
+                onChoosePlanService={handleChoosePlan}
+                onConfigureService={handleConfigureService}
+                onRequestInfoService={handleRequestInfo}
+              />
+            </div>
+          )}
+
+          {/* Scopri gli altri servizi */}
+          {availableServices.length > 0 && (
+            <div className="mb-6">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Scopri gli altri servizi</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Potenzia la tua attività con i servizi digitali doID
+                </p>
+              </div>
+              <ServicesGrid
+                services={availableServices}
+                onAccessService={handleAccessService}
+                onActivateTrialService={handleActivateTrial}
+                onChoosePlanService={handleChoosePlan}
+                onConfigureService={handleConfigureService}
+                onRequestInfoService={handleRequestInfo}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* Plan Modal */}
