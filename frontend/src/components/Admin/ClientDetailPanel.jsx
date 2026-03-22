@@ -67,6 +67,7 @@ export default function ClientDetailPanel({
   impersonating,
   onSelectOrg,
   onOpenEdit,
+  onCreateActivity,
   onRefreshDetails,
 }) {
   const [activeTab, setActiveTab] = useState('servizi');
@@ -101,6 +102,8 @@ export default function ClientDetailPanel({
         phone: itemDetails.phone || selectedItem?.phone || '',
         vatNumber: itemDetails.vatNumber || '',
         address: itemDetails.address || '',
+        accountType: itemDetails.accountType || selectedItem?.accountType || 'single',
+        maxActivities: itemDetails.maxActivities ?? selectedItem?.maxActivities ?? 1,
       });
     }
   }, [itemDetails]);
@@ -109,23 +112,7 @@ export default function ClientDetailPanel({
 
   const isOrg = selectedItem.type === 'organization';
   const isAgency = isOrg && selectedItem.accountType === 'agency';
-  const isClient = isOrg && selectedItem.accountType === 'client';
-  const isSub = isOrg && selectedItem.accountType === 'sub';
 
-  // Costruisci breadcrumb risalendo parent_org_id
-  const getAncestors = () => {
-    if (!isOrg || !allOrganizations?.length) return [];
-    const ancestors = [];
-    let currentId = selectedItem.parentOrgId;
-    while (currentId) {
-      const parent = allOrganizations.find(o => o.id === currentId);
-      if (!parent) break;
-      ancestors.unshift(parent);
-      currentId = parent.parentOrgId;
-    }
-    return ancestors;
-  };
-  const ancestors = getAncestors();
   const name = itemDetails?.name || selectedItem.name || '';
   const email = itemDetails?.email || selectedItem.email || '';
   const phone = itemDetails?.phone || selectedItem.phone || '';
@@ -356,34 +343,16 @@ export default function ClientDetailPanel({
 
       {/* ═══ HEADER CLIENTE ═══ */}
       <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50/80 px-5 py-4">
-        {/* Breadcrumb */}
-        {ancestors.length > 0 && (
-          <div className="flex items-center gap-1 mb-2 text-xs text-gray-400">
-            {ancestors.map((anc, i) => (
-              <span key={anc.id} className="flex items-center gap-1">
-                <button
-                  onClick={() => onSelectOrg && onSelectOrg(anc)}
-                  className="hover:text-teal-600 hover:underline transition-colors"
-                >
-                  {anc.name}
-                </button>
-                <ChevronRight className="w-3 h-3" />
-              </span>
-            ))}
-            <span className="text-gray-600 font-medium">{name}</span>
-          </div>
-        )}
-
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             {/* Avatar — colore per tipo */}
             <div
               className={`w-11 h-11 rounded-[10px] flex items-center justify-center text-white font-extrabold text-base ${
-                !isAgency && !isClient && !isSub ? 'bg-gradient-to-br from-teal-500 to-teal-700' : ''
+                !isAgency ? 'bg-gradient-to-br from-teal-500 to-teal-700' : ''
               }`}
-              style={(isAgency || isClient || isSub) ? { backgroundColor: isAgency ? '#2EBAA3' : isClient ? '#3B82F6' : '#F59E0B' } : undefined}
+              style={isAgency ? { backgroundColor: '#2EBAA3' } : undefined}
             >
-              {isAgency ? <Briefcase className="w-5 h-5" /> : isClient ? <Building2 className="w-5 h-5" /> : isSub ? <MapPin className="w-5 h-5" /> : name.charAt(0).toUpperCase()}
+              {isAgency ? <Briefcase className="w-5 h-5" /> : name.charAt(0).toUpperCase()}
             </div>
 
             {/* Nome + badge + contatti */}
@@ -392,12 +361,6 @@ export default function ClientDetailPanel({
                 <span className="font-bold text-base text-gray-900">{name}</span>
                 {isAgency && (
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-100 text-teal-700 tracking-wide">AGENZIA</span>
-                )}
-                {isClient && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 tracking-wide">CLIENTE</span>
-                )}
-                {isSub && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 tracking-wide">SEDE</span>
                 )}
               </div>
               <div className="flex items-center gap-3 mt-0.5">
@@ -424,7 +387,7 @@ export default function ClientDetailPanel({
           {/* Action buttons */}
           <div className="flex items-center gap-1.5">
             {/* Impersonate (solo org, non per sotto-sedi) */}
-            {isOrg && !isSub && (
+            {isOrg && (
               <button
                 onClick={() => onImpersonate('organization', selectedItem.id)}
                 disabled={impersonating}
@@ -900,6 +863,8 @@ export default function ClientDetailPanel({
                           phone: itemDetails?.phone || selectedItem?.phone || '',
                           vatNumber: itemDetails?.vatNumber || '',
                           address: itemDetails?.address || '',
+                          accountType: selectedItem?.accountType || 'single',
+                          maxActivities: selectedItem?.maxActivities ?? 1,
                         });
                       } else {
                         setEditMode(true);
@@ -951,6 +916,62 @@ export default function ClientDetailPanel({
                       {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                       Salva
                     </button>
+                  </div>
+                )}
+
+                {/* Tipo Account (solo per organizzazioni) */}
+                {isOrg && (
+                  <div className="mt-6">
+                    <span className="text-sm font-bold text-gray-900 block mb-3">Tipo Account</span>
+                    <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+                      <div className="flex gap-2">
+                        {[
+                          { value: 'single', label: 'Singolo', desc: 'Max 1 attività', cls: 'border-indigo-400 bg-indigo-50 text-indigo-700', inactiveCls: 'border-gray-200 text-gray-500' },
+                          { value: 'agency', label: 'Agenzia', desc: 'Multi attività', cls: 'border-teal-400 bg-teal-50 text-teal-700', inactiveCls: 'border-gray-200 text-gray-500' },
+                        ].map(({ value, label, desc, cls, inactiveCls }) => {
+                          const currentType = editMode ? (editData.accountType || selectedItem.accountType) : selectedItem.accountType;
+                          const isSelected = currentType === value;
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              disabled={!editMode}
+                              onClick={() => {
+                                const updates = { ...editData, accountType: value };
+                                if (value === 'single') updates.maxActivities = 1;
+                                if (value === 'agency' && (!editData.maxActivities || editData.maxActivities === 1)) updates.maxActivities = 5;
+                                setEditData(updates);
+                              }}
+                              className={`flex-1 px-3 py-2 rounded-lg border-2 text-center transition-all ${
+                                isSelected ? cls : inactiveCls
+                              } ${editMode ? 'cursor-pointer hover:shadow-sm' : 'cursor-default'}`}
+                            >
+                              <p className="font-semibold text-xs">{label}</p>
+                              <p className="text-[10px] opacity-70">{desc}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {(editMode ? (editData.accountType || selectedItem.accountType) : selectedItem.accountType) === 'agency' && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 w-24">Max attività:</span>
+                          {editMode ? (
+                            <input
+                              type="number"
+                              min={-1}
+                              value={editData.maxActivities ?? selectedItem.maxActivities ?? 5}
+                              onChange={(e) => setEditData({ ...editData, maxActivities: parseInt(e.target.value) })}
+                              className="w-20 px-2 py-1 rounded-md border border-gray-200 text-xs outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-200"
+                            />
+                          ) : (
+                            <span className="text-xs font-medium text-gray-900">
+                              {selectedItem.maxActivities === -1 ? 'Illimitate' : selectedItem.maxActivities}
+                            </span>
+                          )}
+                          {editMode && <span className="text-[10px] text-gray-400">(-1 = illimitate)</span>}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1362,9 +1383,10 @@ export default function ClientDetailPanel({
                     Clienti gestiti ({hierarchyChildren.length || activities.length})
                   </span>
                   <button
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-[11px] font-semibold hover:bg-purple-700 transition-colors"
+                    onClick={() => onCreateActivity && onCreateActivity(selectedItem.id, name)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-600 text-white text-[11px] font-semibold hover:bg-teal-700 transition-colors"
                   >
-                    <Link2 className="w-3 h-3" /> Associa
+                    <Plus className="w-3 h-3" /> Nuovo Cliente
                   </button>
                 </div>
 

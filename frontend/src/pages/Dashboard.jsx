@@ -27,10 +27,9 @@ export default function Dashboard() {
   const [contactService, setContactService] = useState(null);
 
   // Vista corrente: "client" (per cliente) o "service" (panoramica, solo agenzia)
-  // Default: panoramica per agenzie, client per utente singolo
-  const [currentView, setCurrentView] = useState('service');
+  const [currentView, setCurrentView] = useState('client');
 
-  // Cache servizi per tutte le attività (per ClientGrid)
+  // Cache servizi per tutti i clienti (per ClientGrid)
   const [allServicesMap, setAllServicesMap] = useState({});
 
   // Euristica tipo account: ≥2 attività = agenzia
@@ -73,6 +72,13 @@ export default function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Quando cambia l'attività selezionata, mostra la vista "Per cliente"
+  useEffect(() => {
+    if (currentActivity?.id) {
+      setCurrentView('client');
+    }
+  }, [currentActivity?.id]);
 
   // Carica servizi per tutte le attività (per vista "Per servizio")
   useEffect(() => {
@@ -231,7 +237,7 @@ export default function Dashboard() {
           </h1>
           <p className="text-gray-500 mt-1">
             {currentView === 'client'
-              ? 'Gestisci i servizi doID per questa attività'
+              ? 'Gestisci i servizi doID per questo cliente'
               : `${activities.length} clienti nella tua agenzia`
             }
           </p>

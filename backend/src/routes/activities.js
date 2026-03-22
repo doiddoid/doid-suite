@@ -219,6 +219,31 @@ router.delete('/:activityId/members/:memberId',
   })
 );
 
+// PUT /api/activities/:activityId/transfer-ownership
+// Trasferisci ownership dell'attività a un altro utente
+router.put('/:activityId/transfer-ownership',
+  [
+    param('activityId').isUUID().withMessage('ID attività non valido'),
+    body('newOwnerUserId').isUUID().withMessage('ID nuovo proprietario non valido')
+  ],
+  validate,
+  loadActivity,
+  requireActivityRole(['owner']),
+  asyncHandler(async (req, res) => {
+    const result = await activityService.transferOwnership(
+      req.params.activityId,
+      req.body.newOwnerUserId,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Proprietà trasferita con successo'
+    });
+  })
+);
+
 // ==================== ACTIVITY SUBSCRIPTIONS ====================
 
 // GET /api/activities/:activityId/subscriptions

@@ -434,7 +434,7 @@ class AdminService {
   // ==================== ORGANIZATIONS/AGENCIES ====================
 
   // Crea nuova organizzazione/agenzia (super admin)
-  async createOrganization({ name, email, phone, vatNumber, accountType = 'single', parentOrgId, maxActivities = 1, ownerId, ownerEmail, createNewOwner, newOwnerEmail, newOwnerPassword, newOwnerName, createActivity = true }) {
+  async createOrganization({ name, email, phone, vatNumber, accountType = 'single', maxActivities = 1, ownerId, ownerEmail, createNewOwner, newOwnerEmail, newOwnerPassword, newOwnerName, createActivity = true }) {
     // Genera slug unico per organizzazione
     const baseSlug = generateSlug(name);
     const slug = await ensureUniqueSlug(baseSlug, async (s) => {
@@ -456,7 +456,6 @@ class AdminService {
         phone: phone || null,
         vat_number: vatNumber || null,
         account_type: accountType,
-        parent_org_id: parentOrgId || null,
         max_activities: accountType === 'agency' ? (maxActivities || 5) : 1,
         created_by_admin: true,
         status: 'active'
@@ -626,19 +625,12 @@ class AdminService {
           .eq('organization_id', org.id)
           .in('status', ['active', 'trial']);
 
-        // Conta organizzazioni figlie (per gerarchia agency->client->sub)
-        const { count: childrenCount } = await supabaseAdmin
-          .from('organizations')
-          .select('*', { count: 'exact', head: true })
-          .eq('parent_org_id', org.id);
-
         return {
           ...this.formatOrganization(org),
           membersCount: membersCount || 0,
           activitiesCount: activitiesCount || 0,
           activeSubscriptions: subsCount || 0,
-          activePackages: packagesCount || 0,
-          childrenCount: childrenCount || 0
+          activePackages: packagesCount || 0
         };
       })
     );
@@ -666,7 +658,6 @@ class AdminService {
       logoUrl: org.logo_url,
       status: org.status,
       accountType: org.account_type || 'single',
-      parentOrgId: org.parent_org_id || null,
       maxActivities: org.max_activities || 1,
       createdByAdmin: org.created_by_admin || false,
       createdAt: org.created_at,
@@ -1311,7 +1302,7 @@ class AdminService {
 
   // Aggiorna organizzazione
   async updateOrganization(organizationId, updates) {
-    const allowedFields = ['name', 'email', 'phone', 'vat_number', 'logo_url', 'status', 'account_type', 'parent_org_id'];
+    const allowedFields = ['name', 'email', 'phone', 'vat_number', 'logo_url', 'status', 'account_type', 'max_activities'];
     const updateData = {};
 
     for (const field of allowedFields) {
@@ -1322,11 +1313,6 @@ class AdminService {
       if (updates[field] !== undefined) {
         updateData[field] = updates[field];
       }
-    }
-
-    // Gestisce parentOrgId = '' o null come NULL nel DB
-    if ('parent_org_id' in updateData && !updateData.parent_org_id) {
-      updateData.parent_org_id = null;
     }
 
     const { data, error } = await supabaseAdmin
@@ -3592,6 +3578,15 @@ class AdminService {
       });
     }
 
+    // Se il nuovo membro è owner, declassa gli altri owner a admin
+    if (role === 'owner') {
+      await supabaseAdmin
+        .from('organization_users')
+        .update({ role: 'admin' })
+        .eq('organization_id', organizationId)
+        .eq('role', 'owner');
+    }
+
     const { data, error } = await supabaseAdmin
       .from('organization_users')
       .insert({
@@ -3643,6 +3638,15 @@ class AdminService {
       if (owners?.length <= 1) {
         throw Errors.BadRequest('Impossibile cambiare ruolo dell\'ultimo proprietario');
       }
+    }
+
+    // Trasferimento ownership: se il nuovo ruolo è owner, declassa gli altri owner a admin
+    if (newRole === 'owner' && member.role !== 'owner') {
+      await supabaseAdmin
+        .from('organization_users')
+        .update({ role: 'admin' })
+        .eq('organization_id', organizationId)
+        .eq('role', 'owner');
     }
 
     // Aggiorna il ruolo
@@ -3740,6 +3744,15 @@ class AdminService {
       });
     }
 
+    // Se il nuovo membro è owner, declassa gli altri owner a admin
+    if (role === 'owner') {
+      await supabaseAdmin
+        .from('activity_users')
+        .update({ role: 'admin' })
+        .eq('activity_id', activityId)
+        .eq('role', 'owner');
+    }
+
     const { data, error } = await supabaseAdmin
       .from('activity_users')
       .insert({
@@ -3779,7 +3792,7 @@ class AdminService {
 
     if (!member) throw Errors.NotFound('Membro non trovato');
 
-    // Protezione owner
+    // Protezione owner: non si può declassare l'ultimo owner
     if (member.role === 'owner' && newRole !== 'owner') {
       const { data: owners } = await supabaseAdmin
         .from('activity_users')
@@ -3790,6 +3803,15 @@ class AdminService {
       if (owners?.length <= 1) {
         throw Errors.BadRequest('Impossibile cambiare ruolo dell\'ultimo proprietario');
       }
+    }
+
+    // Trasferimento ownership: se il nuovo ruolo è owner, declassa gli altri owner a admin
+    if (newRole === 'owner' && member.role !== 'owner') {
+      await supabaseAdmin
+        .from('activity_users')
+        .update({ role: 'admin' })
+        .eq('activity_id', activityId)
+        .eq('role', 'owner');
     }
 
     // Aggiorna il ruolo

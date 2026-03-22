@@ -1414,6 +1414,10 @@ export default function Admin() {
                         fetchItemDetails('organization', org.id);
                       }}
                       onOpenEdit={(type, item) => openModal(type, 'edit', item)}
+                      onCreateActivity={(orgId, orgName) => {
+                        setFormData({ name: '', email: '', organizationId: orgId });
+                        openModal('activity', 'create');
+                      }}
                       onRefreshDetails={() => {
                         if (selectedItem?.type === 'organization') {
                           fetchItemDetails('organization', selectedItem.id);

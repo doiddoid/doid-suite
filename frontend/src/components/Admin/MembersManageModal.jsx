@@ -59,12 +59,21 @@ export default function MembersManageModal({
       });
 
       if (response.success) {
-        setMembers(prev => [...prev, response.data]);
+        if (newRole === 'owner') {
+          // Declassa vecchi owner localmente
+          setMembers(prev => [
+            ...prev.map(m => m.role === 'owner' ? { ...m, role: 'admin' } : m),
+            response.data
+          ]);
+          setSuccess('Membro aggiunto come proprietario');
+        } else {
+          setMembers(prev => [...prev, response.data]);
+          setSuccess('Membro aggiunto con successo');
+        }
         setNewEmail('');
         setNewName('');
         setNewRole('user');
         setShowAddForm(false);
-        setSuccess('Membro aggiunto con successo');
         if (onUpdate) onUpdate();
       } else {
         setError(response.error || 'Errore nell\'aggiunta');
@@ -88,11 +97,20 @@ export default function MembersManageModal({
       });
 
       if (response.success) {
-        setMembers(prev => prev.map(m =>
-          m.id === memberId ? { ...m, role: editingMember.role, fullName: editingMember.fullName } : m
-        ));
+        if (editingMember.role === 'owner') {
+          setMembers(prev => prev.map(m => {
+            if (m.id === memberId) return { ...m, role: 'owner', fullName: editingMember.fullName };
+            if (m.role === 'owner') return { ...m, role: 'admin' };
+            return m;
+          }));
+          setSuccess('Proprietà trasferita con successo');
+        } else {
+          setMembers(prev => prev.map(m =>
+            m.id === memberId ? { ...m, role: editingMember.role, fullName: editingMember.fullName } : m
+          ));
+          setSuccess('Membro aggiornato');
+        }
         setEditingMember(null);
-        setSuccess('Membro aggiornato');
         if (onUpdate) onUpdate();
       } else {
         setError(response.error || 'Errore nell\'aggiornamento');
@@ -114,11 +132,21 @@ export default function MembersManageModal({
       });
 
       if (response.success) {
-        setMembers(prev => prev.map(m =>
-          m.id === memberId ? { ...m, role: newRole } : m
-        ));
+        // Se promozione a owner, declassa gli altri owner localmente
+        if (newRole === 'owner') {
+          setMembers(prev => prev.map(m => {
+            if (m.id === memberId) return { ...m, role: 'owner' };
+            if (m.role === 'owner') return { ...m, role: 'admin' };
+            return m;
+          }));
+          setSuccess('Proprietà trasferita con successo');
+        } else {
+          setMembers(prev => prev.map(m =>
+            m.id === memberId ? { ...m, role: newRole } : m
+          ));
+          setSuccess('Ruolo aggiornato');
+        }
         setEditingRole(null);
-        setSuccess('Ruolo aggiornato');
         if (onUpdate) onUpdate();
       } else {
         setError(response.error || 'Errore nell\'aggiornamento');
@@ -207,7 +235,7 @@ export default function MembersManageModal({
                         className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       >
                         {availableRoles.map(r => (
-                          <option key={r} value={r} disabled={r === 'owner' && !isOwner}>
+                          <option key={r} value={r}>
                             {ROLE_CONFIG[r]?.label || r}
                           </option>
                         ))}
@@ -264,7 +292,7 @@ export default function MembersManageModal({
                         className="text-xs px-2 py-1 border rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none pr-6"
                       >
                         {availableRoles.map(r => (
-                          <option key={r} value={r} disabled={r === 'owner' && !isOwner}>
+                          <option key={r} value={r}>
                             {ROLE_CONFIG[r]?.label || r}
                           </option>
                         ))}
@@ -334,7 +362,7 @@ export default function MembersManageModal({
                 onChange={(e) => setNewRole(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
-                {availableRoles.filter(r => r !== 'owner').map(r => (
+                {availableRoles.map(r => (
                   <option key={r} value={r}>{ROLE_CONFIG[r]?.label || r}</option>
                 ))}
               </select>

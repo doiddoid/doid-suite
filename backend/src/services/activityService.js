@@ -731,6 +731,75 @@ class ActivityService {
   }
 
   /**
+   * Trasferisci ownership dell'attività a un altro utente
+   * Il vecchio owner diventa admin
+   */
+  async transferOwnership(activityId, newOwnerUserId, requestingUserId) {
+    // Verifica permessi: solo owner diretto o owner dell'organizzazione
+    const roleInfo = await this.getUserActivityRoleInfo(activityId, requestingUserId);
+    if (!roleInfo || roleInfo.role !== 'owner') {
+      throw Errors.Forbidden('Solo il proprietario può trasferire la proprietà');
+    }
+
+    // Verifica che il nuovo owner esista
+    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+    const newOwner = users?.find(u => u.id === newOwnerUserId);
+    if (!newOwner) {
+      throw Errors.NotFound('Utente non trovato');
+    }
+
+    // Trova l'attuale owner diretto in activity_users
+    const { data: currentOwnerEntry } = await supabaseAdmin
+      .from('activity_users')
+      .select('id, user_id')
+      .eq('activity_id', activityId)
+      .eq('role', 'owner')
+      .single();
+
+    // Aggiorna il vecchio owner a admin (se esiste come membro diretto)
+    if (currentOwnerEntry) {
+      await supabaseAdmin
+        .from('activity_users')
+        .update({ role: 'admin' })
+        .eq('id', currentOwnerEntry.id);
+    }
+
+    // Verifica se il nuovo owner è già membro
+    const { data: existingMember } = await supabaseAdmin
+      .from('activity_users')
+      .select('id')
+      .eq('activity_id', activityId)
+      .eq('user_id', newOwnerUserId)
+      .single();
+
+    if (existingMember) {
+      // Promuovi a owner
+      await supabaseAdmin
+        .from('activity_users')
+        .update({ role: 'owner' })
+        .eq('id', existingMember.id);
+    } else {
+      // Aggiungi come owner
+      await supabaseAdmin
+        .from('activity_users')
+        .insert({
+          activity_id: activityId,
+          user_id: newOwnerUserId,
+          role: 'owner'
+        });
+    }
+
+    return {
+      success: true,
+      newOwner: {
+        id: newOwner.id,
+        email: newOwner.email,
+        fullName: newOwner.user_metadata?.full_name
+      }
+    };
+  }
+
+  /**
    * Formatta attività per risposta API
    */
   formatActivity(activity, role = null) {

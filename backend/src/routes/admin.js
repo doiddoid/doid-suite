@@ -287,8 +287,7 @@ router.post('/organizations',
     body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email non valida'),
     body('phone').optional({ checkFalsy: true }).trim(),
     body('vatNumber').optional({ checkFalsy: true }).trim(),
-    body('accountType').optional().isIn(['single', 'agency', 'client', 'sub']).withMessage('Tipo account non valido'),
-    body('parentOrgId').optional({ checkFalsy: true }).isUUID().withMessage('ID organizzazione padre non valido'),
+    body('accountType').optional().isIn(['single', 'agency']).withMessage('Tipo account non valido'),
     body('maxActivities').optional().isInt({ min: -1 }).withMessage('Max attività deve essere >= -1'),
     body('ownerId').optional({ checkFalsy: true }).isUUID().withMessage('ID owner non valido'),
     body('ownerEmail').optional({ checkFalsy: true }).isEmail().withMessage('Email owner non valida'),
@@ -334,13 +333,7 @@ router.put('/organizations/:id',
     body('name').optional({ checkFalsy: true }).trim().notEmpty().withMessage('Nome non può essere vuoto'),
     body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email non valida'),
     body('status').optional().isIn(['active', 'suspended', 'cancelled']).withMessage('Status non valido'),
-    body('accountType').optional().isIn(['single', 'agency', 'client', 'sub']).withMessage('Tipo account non valido'),
-    body('parentOrgId').optional({ nullable: true }).custom((value) => {
-      if (value === null || value === '' || value === undefined) return true;
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(value)) throw new Error('ID organizzazione padre non valido');
-      return true;
-    })
+    body('accountType').optional().isIn(['single', 'agency']).withMessage('Tipo account non valido')
   ],
   validate,
   logAdminAction('update_organization'),
