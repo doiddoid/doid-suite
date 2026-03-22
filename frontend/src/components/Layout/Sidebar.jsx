@@ -144,7 +144,7 @@ export default function Sidebar({ collapsed, onToggle }) {
 
   const mainNavItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Attività', path: '/activities', icon: Building2 }
+    { name: 'Gestisci attività', path: '/activities', icon: Settings }
   ];
 
   const adminNavItem = { name: 'Pannello Admin', path: '/admin', icon: Shield };

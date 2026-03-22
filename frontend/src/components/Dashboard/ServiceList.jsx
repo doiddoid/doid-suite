@@ -73,10 +73,16 @@ export default function ServiceList({
   const highestPlan = proCount > 0 ? 'PRO' : activeCount > 0 ? 'Free' : '—';
   const monthlySpend = Math.round(proCount * 14.9);
 
-  // Servizi non attivi (per sezione "Aggiungi")
+  // Servizi attivi (hanno subscription attiva/trial/free) — mostrati nella lista principale
+  const activeServiceConfigs = SERVICE_CONFIG.filter((cfg) => {
+    const s = servicesMap[cfg.code];
+    return s && (s.isActive || s.canAccess);
+  });
+
+  // Servizi non attivi (nessuna subscription o scaduta) — mostrati in "Aggiungi servizio"
   const inactiveServices = SERVICE_CONFIG.filter((cfg) => {
     const s = servicesMap[cfg.code];
-    return !s || !s.isActive;
+    return !s || (!s.isActive && !s.canAccess);
   });
 
   const handleOpenService = async (serviceCode) => {
@@ -155,70 +161,62 @@ export default function ServiceList({
         </div>
       </div>
 
-      {/* Service Rows */}
-      <div className="space-y-2">
-        {SERVICE_CONFIG.map((cfg) => {
-          const serviceData = servicesMap[cfg.code];
-          const isActive = serviceData?.isActive || false;
-          const canAccess = serviceData?.canAccess || false;
-          const planName = serviceData?.subscription?.plan?.name || null;
-          const status = serviceData?.subscription?.status || null;
-          const isLoading = loadingService === cfg.code;
-          const Icon = cfg.icon;
+      {/* Service Rows — solo servizi con subscription attiva/trial/free */}
+      {activeServiceConfigs.length > 0 && (
+        <div className="space-y-2">
+          {activeServiceConfigs.map((cfg) => {
+            const serviceData = servicesMap[cfg.code];
+            const isClickable = serviceData?.canAccess || serviceData?.isActive || false;
+            const planName = serviceData?.subscription?.plan?.name || null;
+            const status = serviceData?.subscription?.status || null;
+            const isLoading = loadingService === cfg.code;
+            const Icon = cfg.icon;
 
-          const planBadge = status === 'trial' ? 'TRIAL' : status === 'active' ? (planName || 'PRO') : status === 'free' ? 'FREE' : null;
-          const badgeStyle = status === 'trial'
-            ? 'bg-blue-100 text-blue-700'
-            : status === 'active'
-              ? 'bg-amber-100 text-amber-700'
-              : 'bg-gray-100 text-gray-500';
+            const planBadge = status === 'trial' ? 'TRIAL' : status === 'active' ? (planName || 'PRO') : 'FREE';
+            const badgeStyle = status === 'trial'
+              ? 'bg-blue-100 text-blue-700'
+              : status === 'active' && serviceData?.subscription?.plan?.code !== 'free'
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-green-100 text-green-700';
 
-          return (
-            <button
-              key={cfg.code}
-              onClick={() => canAccess && handleOpenService(cfg.code)}
-              disabled={!canAccess || isLoading}
-              className={`
-                w-full flex items-center gap-4 bg-white rounded-xl border border-gray-100 px-5 py-4
-                transition-all duration-200 text-left group
-                ${canAccess
-                  ? 'hover:shadow-md hover:border-gray-200 cursor-pointer'
-                  : 'opacity-45 cursor-default'
-                }
-              `}
-            >
-              {/* Icon */}
-              <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center ${cfg.bgColor}`}
+            return (
+              <button
+                key={cfg.code}
+                onClick={() => isClickable && handleOpenService(cfg.code)}
+                disabled={!isClickable || isLoading}
+                className={`
+                  w-full flex items-center gap-4 bg-white rounded-xl border border-gray-100 px-5 py-4
+                  transition-all duration-200 text-left group
+                  hover:shadow-md hover:border-gray-200 cursor-pointer
+                `}
               >
-                <Icon className="w-5 h-5" style={{ color: cfg.color }} />
-              </div>
+                {/* Icon */}
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${cfg.bgColor}`}>
+                  <Icon className="w-5 h-5" style={{ color: cfg.color }} />
+                </div>
 
-              {/* Name + Description */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900">{cfg.name}</p>
-                <p className="text-xs text-gray-500 truncate">{cfg.description}</p>
-              </div>
+                {/* Name + Description */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{cfg.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{cfg.description}</p>
+                </div>
 
-              {/* Badge */}
-              {planBadge && (
+                {/* Badge */}
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeStyle}`}>
                   {planBadge}
                 </span>
-              )}
 
-              {/* Arrow / Loading */}
-              {canAccess && (
-                isLoading ? (
+                {/* Arrow / Loading */}
+                {isLoading ? (
                   <Loader2 className="w-4 h-4 text-teal-500 animate-spin flex-shrink-0" />
                 ) : (
                   <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-teal-500 transition-colors flex-shrink-0" />
-                )
-              )}
-            </button>
-          );
-        })}
-      </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Aggiungi Servizio */}
       {inactiveServices.length > 0 && (
