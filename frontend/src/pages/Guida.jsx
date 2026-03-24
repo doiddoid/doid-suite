@@ -230,14 +230,14 @@ export default function Guida() {
           </a>
           <span className="text-gray-300">|</span>
           <a
-            href="tel:+393480890477"
+            href="tel:+393516781324"
             className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
           >
-            +39 348 089 0477
+            +39 351 678 1324
           </a>
           <span className="text-gray-300">|</span>
           <a
-            href="https://wa.me/393480890477"
+            href="https://wa.me/393516781324"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"

@@ -126,6 +126,7 @@ class ServiceService {
       borderColor: service.border_color || configService.borderColor || null,
       type: service.contact_required ? 'contact_required' : (configService.type || 'activatable'),
       contactRequired: service.contact_required || false,
+      paymentUrl: service.payment_url || null,
       sortOrder: service.sort_order
     };
   }

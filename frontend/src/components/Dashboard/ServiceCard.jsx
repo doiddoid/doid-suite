@@ -55,6 +55,7 @@ const iconMap = {
  * - onAccess: () => void
  * - onActivateTrial: () => void
  * - onChoosePlan: () => void
+ * - onRenew: () => void - per rinnovo/riattivazione (GHL o WhatsApp)
  * - onConfigure: () => void - per configurare/collegare account servizio
  * - onRequestInfo: () => void - per servizi contact_required
  * - discount: number - percentuale sconto (0, 10, 20)
@@ -70,6 +71,7 @@ export default function ServiceCard({
   onAccess,
   onActivateTrial,
   onChoosePlan,
+  onRenew,
   onConfigure,
   onRequestInfo
 }) {
@@ -156,11 +158,20 @@ export default function ServiceCard({
         await onAccess();
       } else if (!subscription && onActivateTrial) {
         await onActivateTrial();
-      } else if ((subscription?.status === 'expired' || subscription?.status === 'canceled' || subscription?.status === 'suspended' || isTrialExpired) && onChoosePlan) {
-        // Trial scaduto, abbonamento scaduto, cancellato o sospeso - scegli piano per riattivare
-        await onChoosePlan();
-      } else if (isTrialExpiring && onChoosePlan) {
-        await onChoosePlan();
+      } else if ((subscription?.status === 'expired' || subscription?.status === 'canceled' || subscription?.status === 'suspended' || isTrialExpired) && (onRenew || onChoosePlan)) {
+        // Trial scaduto, abbonamento scaduto, cancellato o sospeso - rinnovo via GHL/WhatsApp
+        if (onRenew) {
+          await onRenew();
+        } else {
+          await onChoosePlan();
+        }
+      } else if (isTrialExpiring && (onRenew || onChoosePlan)) {
+        // Trial in scadenza - attiva piano a pagamento
+        if (onRenew) {
+          await onRenew();
+        } else {
+          await onChoosePlan();
+        }
       } else if (subscription?.status === 'past_due' && onAccess) {
         // past_due: tenta accesso (superadmin può accedere via bypass backend)
         await onAccess();

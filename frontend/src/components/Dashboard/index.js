@@ -7,3 +7,4 @@ export { default as WelcomeBanner } from './WelcomeBanner';
 export { default as ContactModal } from './ContactModal';
 export { default as ServiceList } from './ServiceList';
 export { default as ClientGrid } from './ClientGrid';
+export { default as ExpiringServicesAlert } from './ExpiringServicesAlert';

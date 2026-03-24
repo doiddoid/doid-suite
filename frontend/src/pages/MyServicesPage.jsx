@@ -4,9 +4,6 @@ import { useMyServices } from '../hooks/useMyServices';
 import { useAuth } from '../hooks/useAuth';
 import { ServiceCard, DiscountBanner } from '../components/my-services';
 
-// Configurazione GHL Domain (placeholder configurabile)
-const GHL_DOMAIN = 'checkout.doid.it';
-
 // Configurazione URL dashboard servizi
 const SERVICE_DASHBOARD_URLS = {
   review: 'https://review.doid.it/dashboard',
@@ -61,19 +58,30 @@ export default function MyServicesPage() {
     setExpandedService(prev => prev === serviceCode ? null : serviceCode);
   };
 
+  // Apri link GHL (da DB) o WhatsApp per acquisto/rinnovo
+  const openCheckoutOrWhatsApp = (serviceCode, activityName = '', ciclo = 'mensile') => {
+    const serviceInfo = orderedServices.find(s => s.info.code === serviceCode);
+    const paymentUrl = serviceInfo?.info?.payment_url;
+    const serviceName = serviceInfo?.info?.name || serviceCode;
+
+    if (paymentUrl) {
+      window.open(paymentUrl, '_blank');
+    } else {
+      const msg = encodeURIComponent(
+        `Ciao, vorrei rinnovare/attivare il servizio *${serviceName}* per l'attività *${activityName}* (ciclo: ${ciclo}). Grazie!`
+      );
+      window.open(`https://wa.me/393480890477?text=${msg}`, '_blank');
+    }
+  };
+
   const handleAction = (element, actionType, serviceCode) => {
-    const userEmail = encodeURIComponent(user?.email || '');
-    const userFirstName = encodeURIComponent(user?.first_name || user?.firstName || '');
+    const activityName = element?.activity_name || '';
+    const ciclo = element?.billing_cycle === 'yearly' ? 'annuale' : 'mensile';
 
     switch (actionType) {
-      case 'upgrade_annual': {
-        const url = `https://${GHL_DOMAIN}/upgrade-${serviceCode}?email=${userEmail}&first_name=${userFirstName}`;
-        window.open(url, '_blank');
-        break;
-      }
+      case 'upgrade_annual':
       case 'activate_pro': {
-        const url = `https://${GHL_DOMAIN}/checkout-${serviceCode}?email=${userEmail}&first_name=${userFirstName}`;
-        window.open(url, '_blank');
+        openCheckoutOrWhatsApp(serviceCode, activityName, actionType === 'upgrade_annual' ? 'annuale' : ciclo);
         break;
       }
       case 'manage': {
@@ -89,10 +97,7 @@ export default function MyServicesPage() {
   };
 
   const handleAddElement = (serviceCode) => {
-    const userEmail = encodeURIComponent(user?.email || '');
-    const userFirstName = encodeURIComponent(user?.first_name || user?.firstName || '');
-    const url = `https://${GHL_DOMAIN}/checkout-${serviceCode}?email=${userEmail}&first_name=${userFirstName}`;
-    window.open(url, '_blank');
+    openCheckoutOrWhatsApp(serviceCode);
   };
 
   const handleDashboard = (serviceCode) => {
@@ -293,7 +298,7 @@ function TopBar({ totals, formatPrice }) {
 // Support Bar Component
 function SupportBar() {
   const handleWhatsApp = () => {
-    window.open('https://wa.me/393480890477', '_blank');
+    window.open('https://wa.me/393516781324', '_blank');
   };
 
   return (
@@ -316,7 +321,7 @@ function SupportBar() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Phone className="w-3.5 h-3.5" />
-                  +39 348 089 0477
+                  +39 351 678 1324
                 </span>
               </div>
             </div>

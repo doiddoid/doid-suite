@@ -526,27 +526,8 @@ router.post('/:activityId/checkout',
       });
     }
 
-    // Mappa servizio + ciclo → Payment Link GHL
-    const paymentLinks = {
-      smart_review: {
-        monthly: process.env.GHL_PAYMENT_LINK_SMART_REVIEW_MONTHLY,
-        yearly: process.env.GHL_PAYMENT_LINK_SMART_REVIEW_YEARLY
-      },
-      smart_page: {
-        monthly: process.env.GHL_PAYMENT_LINK_SMART_PAGE_MONTHLY,
-        yearly: process.env.GHL_PAYMENT_LINK_SMART_PAGE_YEARLY
-      },
-      menu_digitale: {
-        monthly: process.env.GHL_PAYMENT_LINK_MENU_DIGITALE_MONTHLY,
-        yearly: process.env.GHL_PAYMENT_LINK_MENU_DIGITALE_YEARLY
-      },
-      display_suite: {
-        monthly: process.env.GHL_PAYMENT_LINK_DISPLAY_SUITE_MONTHLY,
-        yearly: process.env.GHL_PAYMENT_LINK_DISPLAY_SUITE_YEARLY
-      }
-    };
-
-    const paymentLink = paymentLinks[serviceCode]?.[billingCycle];
+    // Payment link dal database (gestito da admin)
+    const paymentLink = service.paymentUrl;
 
     if (!paymentLink) {
       return res.status(400).json({
@@ -557,10 +538,9 @@ router.post('/:activityId/checkout',
     }
 
     // Costruisci URL con parametri pre-compilati
-    // GHL accetta alcuni parametri via query string per pre-fill
     const checkoutUrl = new URL(paymentLink);
 
-    // Pre-compila email (GHL usa 'email' come parametro)
+    // Pre-compila email
     if (req.user.email) {
       checkoutUrl.searchParams.set('email', req.user.email);
     }
@@ -577,13 +557,12 @@ router.post('/:activityId/checkout',
       }
     }
 
-    // Prezzi per riferimento
-    const prices = {
-      smart_review: { monthly: 9.90, yearly: 99.00 },
-      smart_page: { monthly: 6.90, yearly: 69.00 },
-      menu_digitale: { monthly: 9.90, yearly: 99.00 },
-      display_suite: { monthly: 14.90, yearly: 149.00 }
-    };
+    // Prezzi dal database (tabella plans)
+    const plans = await serviceService.getPlansByServiceCode(serviceCode);
+    const proPlan = plans.find(p => p.code === 'pro') || plans.find(p => p.priceMonthly > 0);
+    const price = proPlan
+      ? (billingCycle === 'yearly' ? proPlan.priceYearly : proPlan.priceMonthly)
+      : 0;
 
     res.json({
       success: true,
@@ -595,7 +574,7 @@ router.post('/:activityId/checkout',
         },
         billing: {
           cycle: billingCycle,
-          price: prices[serviceCode]?.[billingCycle] || 0,
+          price,
           currency: 'EUR'
         }
       }

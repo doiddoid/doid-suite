@@ -952,6 +952,7 @@ router.get('/services',
           benefits: s.benefits || [],
           contactRequired: s.contact_required || false,
           appUrl: s.app_url,
+          paymentUrl: s.payment_url || null,
           icon: s.icon,
           color: s.color_primary || s.color,
           colorPrimary: s.color_primary,
@@ -984,6 +985,7 @@ router.post('/services',
     body('benefits').optional().isArray().withMessage('Benefits deve essere un array'),
     body('contactRequired').optional().isBoolean(),
     body('appUrl').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('URL non valido'),
+    body('paymentUrl').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('URL pagamento non valido'),
     body('icon').optional().trim(),
     body('colorPrimary').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore primario deve essere esadecimale'),
     body('colorDark').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore scuro deve essere esadecimale'),
@@ -1001,7 +1003,7 @@ router.post('/services',
   asyncHandler(async (req, res) => {
     const {
       code, name, description, tagline, headline, benefits, contactRequired,
-      appUrl, icon, colorPrimary, colorDark, colorLight, borderColor,
+      appUrl, paymentUrl, icon, colorPrimary, colorDark, colorLight, borderColor,
       priceProMonthly, priceProYearly, priceAddonMonthly,
       hasFreeTier, trialDays, sortOrder
     } = req.body;
@@ -1017,6 +1019,7 @@ router.post('/services',
         benefits: benefits || [],
         contact_required: contactRequired || false,
         app_url: appUrl || null,
+        payment_url: paymentUrl || null,
         icon: icon || null,
         color_primary: colorPrimary || null,
         color_dark: colorDark || null,
@@ -1062,6 +1065,7 @@ router.put('/services/:id',
     body('benefits').optional().isArray().withMessage('Benefits deve essere un array'),
     body('contactRequired').optional().isBoolean(),
     body('appUrl').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('URL non valido'),
+    body('paymentUrl').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('URL pagamento non valido'),
     body('icon').optional().trim(),
     body('color').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore deve essere esadecimale'),
     body('colorPrimary').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore primario deve essere esadecimale'),
@@ -1081,7 +1085,7 @@ router.put('/services/:id',
   asyncHandler(async (req, res) => {
     const {
       name, description, tagline, headline, benefits, contactRequired,
-      appUrl, icon, color, colorPrimary, colorDark, colorLight, borderColor,
+      appUrl, paymentUrl, icon, color, colorPrimary, colorDark, colorLight, borderColor,
       priceProMonthly, priceProYearly, priceAddonMonthly,
       hasFreeTier, trialDays, isActive, sortOrder
     } = req.body;
@@ -1094,6 +1098,7 @@ router.put('/services/:id',
     if (benefits !== undefined) updateData.benefits = benefits;
     if (contactRequired !== undefined) updateData.contact_required = contactRequired;
     if (appUrl !== undefined) updateData.app_url = appUrl;
+    if (paymentUrl !== undefined) updateData.payment_url = paymentUrl || null;
     if (icon !== undefined) updateData.icon = icon;
     if (color !== undefined) updateData.color = color;
     if (colorPrimary !== undefined) updateData.color_primary = colorPrimary;

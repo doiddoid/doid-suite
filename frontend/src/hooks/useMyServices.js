@@ -104,7 +104,8 @@ export function useMyServices() {
               price_pro_monthly: parseFloat(service.price_pro_monthly || service.priceProMonthly) || 0,
               price_pro_yearly: parseFloat(service.price_pro_yearly || service.priceProYearly) || 0,
               price_addon_monthly: parseFloat(service.price_addon_monthly || service.priceAddonMonthly) || null,
-              has_free_tier: service.has_free_tier || service.hasFreeTier || false
+              has_free_tier: service.has_free_tier || service.hasFreeTier || false,
+              payment_url: service.payment_url || service.paymentUrl || null
             },
             elements: serviceSubscriptions
           };

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, Building2, Plus, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useActivities } from '../hooks/useActivities';
-import { DashboardStats, ServicesGrid, ClientGrid, ContactModal } from '../components/Dashboard';
+import { DashboardStats, ServicesGrid, ClientGrid, ContactModal, ExpiringServicesAlert } from '../components/Dashboard';
 import { PlanModal } from '../components/Services';
 import { CONTACT_REQUIRED_SERVICES } from '../config/services';
 
@@ -140,6 +140,24 @@ export default function Dashboard() {
   const handleChoosePlan = (serviceCode) => {
     const service = services.find(s => s.service.code === serviceCode);
     if (service) setSelectedService(service);
+  };
+
+  const handleRenew = (serviceCode) => {
+    const serviceItem = services.find(s => s.service.code === serviceCode);
+    const serviceName = serviceItem?.service?.name || serviceCode;
+    const paymentUrl = serviceItem?.service?.paymentUrl;
+    const activityName = currentActivity?.name || '';
+    const billingCycle = serviceItem?.subscription?.billingCycle || 'monthly';
+    const ciclo = billingCycle === 'yearly' ? 'annuale' : 'mensile';
+
+    if (paymentUrl) {
+      window.open(paymentUrl, '_blank');
+    } else {
+      const msg = encodeURIComponent(
+        `Ciao, vorrei rinnovare/attivare il servizio *${serviceName}* per l'attività *${activityName}* (ciclo: ${ciclo}). Grazie!`
+      );
+      window.open(`https://wa.me/393480890477?text=${msg}`, '_blank');
+    }
   };
 
   const handleConfigureService = async (serviceCode) => {
@@ -287,6 +305,14 @@ export default function Dashboard() {
           {/* Stats */}
           <DashboardStats stats={stats} />
 
+          {/* Servizi scaduti / in scadenza */}
+          <ExpiringServicesAlert
+            services={services}
+            activityName={currentActivity?.name || ''}
+            allServicesMap={isAgency ? allServicesMap : null}
+            activities={activities}
+          />
+
           {/* I tuoi servizi attivi */}
           {myServices.length > 0 && (
             <div className="mb-8">
@@ -296,6 +322,7 @@ export default function Dashboard() {
                 onAccessService={handleAccessService}
                 onActivateTrialService={handleActivateTrial}
                 onChoosePlanService={handleChoosePlan}
+                onRenewService={handleRenew}
                 onConfigureService={handleConfigureService}
                 onRequestInfoService={handleRequestInfo}
               />
@@ -316,6 +343,7 @@ export default function Dashboard() {
                 onAccessService={handleAccessService}
                 onActivateTrialService={handleActivateTrial}
                 onChoosePlanService={handleChoosePlan}
+                onRenewService={handleRenew}
                 onConfigureService={handleConfigureService}
                 onRequestInfoService={handleRequestInfo}
               />
