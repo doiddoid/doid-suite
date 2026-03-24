@@ -294,7 +294,14 @@ router.post('/organizations',
     body('createNewOwner').optional().isBoolean().withMessage('createNewOwner deve essere boolean'),
     body('newOwnerEmail').optional({ checkFalsy: true }).isEmail().withMessage('Email nuovo owner non valida'),
     body('newOwnerPassword').optional({ checkFalsy: true }).isLength({ min: 8 }).withMessage('Password deve essere almeno 8 caratteri'),
-    body('newOwnerName').optional({ checkFalsy: true }).trim()
+    body('newOwnerName').optional({ checkFalsy: true }).trim(),
+    body().custom((value) => {
+      const { ownerId, ownerEmail, createNewOwner, newOwnerEmail } = value;
+      if (!ownerId && !ownerEmail && !(createNewOwner && newOwnerEmail)) {
+        throw new Error('È necessario specificare un owner (selezionare esistente o crearne uno nuovo)');
+      }
+      return true;
+    })
   ],
   validate,
   logAdminAction('create_organization'),

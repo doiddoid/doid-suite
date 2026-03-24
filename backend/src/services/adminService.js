@@ -470,6 +470,11 @@ class AdminService {
 
     let resolvedOwnerId = ownerId || null;
 
+    // Verifica che sia stato fornito un owner
+    if (!ownerId && !ownerEmail && !(createNewOwner && newOwnerEmail)) {
+      throw Errors.BadRequest('È necessario specificare un owner per l\'organizzazione');
+    }
+
     // Se richiesto, crea nuovo utente owner
     if (createNewOwner && newOwnerEmail && newOwnerPassword) {
       const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({

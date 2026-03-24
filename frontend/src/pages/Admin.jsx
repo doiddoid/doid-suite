@@ -2215,8 +2215,9 @@ export default function Admin() {
                             value={formData.ownerId || ''}
                             onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
                             className="input-field"
+                            required
                           >
-                            <option value="">Nessun owner (opzionale)...</option>
+                            <option value="">Seleziona owner *</option>
                             {users.map((u) => (
                               <option key={u.id} value={u.id}>
                                 {u.fullName || u.email} {u.fullName ? `(${u.email})` : ''}
