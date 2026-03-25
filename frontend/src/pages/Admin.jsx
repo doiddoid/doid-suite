@@ -1934,7 +1934,7 @@ export default function Admin() {
                                         priceProYearly: parseFloat(editingServiceData.priceProYearly) || 0,
                                         priceAddonMonthly: editingServiceData.priceAddonMonthly ? parseFloat(editingServiceData.priceAddonMonthly) : null,
                                         hasFreeTier: Boolean(editingServiceData.hasFreeTier),
-                                        trialDays: parseInt(editingServiceData.trialDays) || 30,
+                                        trialDays: editingServiceData.trialDays !== undefined && editingServiceData.trialDays !== '' ? parseInt(editingServiceData.trialDays) : 30,
                                         isActive: editingServiceData.isActive !== false
                                       };
                                       const response = await api.request(`/admin/services/${service.id}`, {
