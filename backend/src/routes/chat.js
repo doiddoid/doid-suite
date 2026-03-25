@@ -1,5 +1,6 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import serviceService from '../services/serviceService.js';
 
 const router = express.Router();
 
@@ -16,15 +17,48 @@ const chatLimiter = rateLimit({
 
 router.use(chatLimiter);
 
-const SYSTEM_PROMPT = `Sei l'assistente AI di DOID Suite — il pannello di controllo unico per gestire tutti gli strumenti digitali di un'attività commerciale.
+// Cache prezzi da Supabase (5 minuti)
+let pricingCache = null;
+let pricingCacheTime = 0;
+const CACHE_TTL = 5 * 60 * 1000;
+
+async function getPricingBlock() {
+  const now = Date.now();
+  if (pricingCache && (now - pricingCacheTime) < CACHE_TTL) {
+    return pricingCache;
+  }
+
+  try {
+    const servicesWithPlans = await serviceService.getAllServicesWithPlans();
+    const lines = servicesWithPlans.map(s => {
+      const proPlan = s.plans.find(p => p.code === 'pro');
+      if (!proPlan) return null;
+      const monthly = proPlan.priceMonthly > 0 ? `€${proPlan.priceMonthly.toFixed(2).replace('.', ',')}/mese` : 'N/D';
+      const yearly = proPlan.priceYearly > 0 ? `€${proPlan.priceYearly.toFixed(2).replace('.', ',')}/anno` : 'N/D';
+      return `| ${s.name} — ${s.description || ''} | ${monthly} | ${yearly} |`;
+    }).filter(Boolean);
+
+    pricingCache = lines.length > 0
+      ? '| Servizio | Mensile | Annuale |\n' + lines.join('\n')
+      : null;
+    pricingCacheTime = now;
+  } catch (err) {
+    console.error('[Chat] Errore lettura prezzi da DB:', err.message);
+    // Se la cache è scaduta e il DB fallisce, teniamo la vecchia cache
+  }
+
+  return pricingCache;
+}
+
+function buildSystemPrompt(pricingBlock) {
+  const pricing = pricingBlock
+    ? `PREZZI ABBONAMENTI PRO (da database aggiornato):\n${pricingBlock}`
+    : 'PREZZI: non disponibili al momento — invita l\'utente a visitare suite.doid.it per i prezzi aggiornati.';
+
+  return `Sei l'assistente AI di DOID Suite — il pannello di controllo unico per gestire tutti gli strumenti digitali di un'attività commerciale.
 Il tuo ruolo è assistere i visitatori del sito suite.doid.it e dei servizi collegati (review.doid.it, page.doid.it, menu.doid.it), rispondere alle loro domande, guidarli verso il trial gratuito e supportarli nell'uso dei servizi.
 
-PREZZI ABBONAMENTI PRO:
-| Servizio | Mensile | Annuale |
-| Smart Review (gestione reputazione online) | €14,90/mese | €149,00/anno |
-| Smart Page (biglietto da visita digitale) | €14,90/mese | €149,00/anno |
-| Smart Menu (menu digitale per ristoranti) | €24,90/mese | €249,00/anno |
-| Smart Display (gestione schermi digitali) | €49,00/mese | €490,00/anno |
+${pricing}
 Ogni servizio ha un piano FREE gratuito con funzionalità limitate.
 Trial gratuito PRO: 30 giorni senza carta di credito.
 Sconti automatici: 20% sul 2° servizio, 30% sul 3° servizio.
@@ -60,6 +94,7 @@ REGOLE:
 - Guida verso il trial gratuito quando c'è interesse
 - Non inventare funzionalità o prezzi non citati qui sopra
 - Per domande tecniche complesse o problemi account: rimanda al supporto tramite link WhatsApp`;
+}
 
 // POST /api/chat
 router.post('/', async (req, res) => {
@@ -94,6 +129,10 @@ router.post('/', async (req, res) => {
       return res.status(500).json({ error: 'Servizio chat non disponibile' });
     }
 
+    // Costruisci system prompt con prezzi live da Supabase
+    const pricingBlock = await getPricingBlock();
+    const systemPrompt = buildSystemPrompt(pricingBlock);
+
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -104,7 +143,7 @@ router.post('/', async (req, res) => {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 600,
-        system: SYSTEM_PROMPT,
+        system: systemPrompt,
         messages: messages.map(m => ({ role: m.role, content: m.content }))
       })
     });
