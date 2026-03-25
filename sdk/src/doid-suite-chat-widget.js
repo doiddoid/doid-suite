@@ -667,9 +667,9 @@
     var match;
 
     while ((match = linkRegex.exec(text)) !== null) {
-      // Testo prima del link
+      // Testo prima del link — escape + formattazione inline
       if (match.index > lastIndex) {
-        parts.push(escapeHtml(text.substring(lastIndex, match.index)));
+        parts.push(formatInline(escapeHtml(text.substring(lastIndex, match.index))));
       }
       // Crea il pulsante
       parts.push(createLinkButton(match[1], match[2]));
@@ -678,10 +678,18 @@
 
     // Testo residuo dopo l'ultimo link
     if (lastIndex < text.length) {
-      parts.push(escapeHtml(text.substring(lastIndex)));
+      parts.push(formatInline(escapeHtml(text.substring(lastIndex))));
     }
 
     return parts.join('');
+  }
+
+  function formatInline(html) {
+    // Bold: **testo** → <strong>testo</strong>
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // Italic: *testo* → <em>testo</em> (solo asterischi singoli non preceduti/seguiti da *)
+    html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+    return html;
   }
 
   function createLinkButton(label, url) {
