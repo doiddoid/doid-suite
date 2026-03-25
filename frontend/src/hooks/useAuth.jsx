@@ -9,6 +9,8 @@ export function AuthProvider({ children }) {
   const [currentOrganization, setCurrentOrganization] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [requirePasswordChange, setRequirePasswordChange] = useState(false);
+  const [migratedFrom, setMigratedFrom] = useState(null);
 
   // Load user on mount
   useEffect(() => {
@@ -25,6 +27,12 @@ export function AuthProvider({ children }) {
             const savedOrgId = localStorage.getItem('currentOrganizationId');
             const savedOrg = response.data.organizations?.find(o => o.id === savedOrgId);
             setCurrentOrganization(savedOrg || response.data.organizations?.[0] || null);
+
+            // Check se l'utente deve cambiare password (utenti migrati)
+            if (response.data.requirePasswordChange) {
+              setRequirePasswordChange(true);
+              setMigratedFrom(response.data.migratedFrom || null);
+            }
           }
         } catch (err) {
           console.error('Auth init error:', err);
@@ -49,11 +57,8 @@ export function AuthProvider({ children }) {
 
         // Gestione utenti migrati che devono cambiare password
         if (response.data.requirePasswordChange) {
-          return {
-            success: true,
-            requirePasswordChange: true,
-            migratedFrom: response.data.migratedFrom
-          };
+          setRequirePasswordChange(true);
+          setMigratedFrom(response.data.migratedFrom || null);
         }
 
         return { success: true };
@@ -113,6 +118,12 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Clear password change requirement (dopo cambio password riuscito)
+  const clearPasswordChangeRequired = useCallback(() => {
+    setRequirePasswordChange(false);
+    setMigratedFrom(null);
+  }, []);
+
   // Create organization
   const createOrganization = useCallback(async (data) => {
     try {
@@ -136,12 +147,15 @@ export function AuthProvider({ children }) {
     loading,
     error,
     isAuthenticated: !!user,
+    requirePasswordChange,
+    migratedFrom,
     login,
     register,
     logout,
     switchOrganization,
     refreshUser,
     createOrganization,
+    clearPasswordChangeRequired,
   };
 
   return (

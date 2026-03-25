@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 export default function ChangePassword() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, clearPasswordChangeRequired } = useAuth();
 
   const migratedFrom = location.state?.migratedFrom;
   const isRequired = location.state?.required === true;
@@ -48,6 +48,7 @@ export default function ChangePassword() {
     try {
       await api.updatePassword(password);
       setSuccess(true);
+      clearPasswordChangeRequired();
     } catch (err) {
       setError(err.message || 'Errore durante l\'aggiornamento della password');
     } finally {

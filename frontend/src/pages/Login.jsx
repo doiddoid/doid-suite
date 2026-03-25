@@ -57,16 +57,6 @@ export default function Login() {
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      // Utente migrato: deve cambiare password
-      if (result.requirePasswordChange) {
-        navigate('/change-password', {
-          replace: true,
-          state: { migratedFrom: result.migratedFrom, required: true }
-        });
-        setLoading(false);
-        return;
-      }
-
       // Check for SSO redirect params (reverse SSO flow from subdomain)
       const storedService = sessionStorage.getItem('sso_redirect_service') || redirectService;
       const storedReturnUrl = sessionStorage.getItem('sso_return_url') || returnUrl;

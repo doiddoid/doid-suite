@@ -13,7 +13,7 @@ const tabs = [
 ];
 
 export default function Settings() {
-  const { user, currentOrganization, refreshUser } = useAuth();
+  const { user, currentOrganization, refreshUser, clearPasswordChangeRequired } = useAuth();
   const { currentActivity, getServicesDashboard } = useActivities();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
@@ -207,6 +207,7 @@ export default function Settings() {
       if (response.success) {
         setPasswordMessage({ type: 'success', text: 'Password aggiornata con successo' });
         setPasswordData({ newPassword: '', confirmPassword: '' });
+        clearPasswordChangeRequired();
       }
     } catch (error) {
       setPasswordMessage({ type: 'error', text: error.message || 'Errore nell\'aggiornamento della password' });

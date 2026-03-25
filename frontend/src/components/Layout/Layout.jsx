@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
-import { LogOut, AlertTriangle } from 'lucide-react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { LogOut, AlertTriangle, ShieldAlert } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function Layout() {
+  const navigate = useNavigate();
+  const { requirePasswordChange, migratedFrom } = useAuth();
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     // Persist sidebar state in localStorage
     const saved = localStorage.getItem('sidebarCollapsed');
@@ -80,18 +84,36 @@ export default function Layout() {
         </div>
       )}
 
+      {/* Password Change Required Banner */}
+      {requirePasswordChange && (
+        <div className={`fixed left-0 right-0 z-50 bg-red-500 text-white px-4 py-2 flex items-center justify-between shadow-lg ${impersonation ? 'top-[44px]' : 'top-0'}`}>
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5" />
+            <span className="font-medium">
+              Cambio password obbligatorio{migratedFrom ? ` — account migrato da ${migratedFrom}` : ''}. Per sicurezza, aggiorna la tua password.
+            </span>
+          </div>
+          <button
+            onClick={() => navigate('/settings')}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+          >
+            Cambia password
+          </button>
+        </div>
+      )}
+
       {/* Sidebar */}
       <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
       {/* Header */}
-      <Header sidebarCollapsed={sidebarCollapsed} />
+      <Header sidebarCollapsed={sidebarCollapsed} bannerOffset={impersonation && requirePasswordChange ? 88 : impersonation || requirePasswordChange ? 44 : 0} />
 
       {/* Main Content */}
       <main
         className={`
           min-h-screen transition-all duration-300 ease-in-out
           ${sidebarCollapsed ? 'pl-[72px]' : 'pl-64'}
-          ${impersonation ? 'pt-[104px]' : 'pt-16'}
+          ${impersonation && requirePasswordChange ? 'pt-[148px]' : impersonation || requirePasswordChange ? 'pt-[104px]' : 'pt-16'}
         `}
       >
         <div className="p-6 lg:p-8">

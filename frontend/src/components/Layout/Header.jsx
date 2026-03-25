@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-export default function Header({ sidebarCollapsed }) {
+export default function Header({ sidebarCollapsed, bannerOffset = 0 }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -41,10 +41,11 @@ export default function Header({ sidebarCollapsed }) {
   return (
     <header
       className={`
-        fixed top-0 right-0 z-30 h-16 bg-white border-b border-gray-200
+        fixed right-0 z-30 h-16 bg-white border-b border-gray-200
         transition-all duration-300 ease-in-out
         ${sidebarCollapsed ? 'left-[72px]' : 'left-64'}
       `}
+      style={{ top: bannerOffset ? `${bannerOffset}px` : 0 }}
     >
       <div className="h-full px-4 lg:px-6 flex items-center justify-between">
         {/* Left side - Search only */}

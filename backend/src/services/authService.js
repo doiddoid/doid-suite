@@ -398,7 +398,10 @@ class AuthService {
 
     const organizations = await this.getUserOrganizations(userId);
 
-    return {
+    // Verifica se l'utente deve cambiare password (utenti migrati)
+    const migrationResult = await this.checkAndUpdateMigrationStatus(userId);
+
+    const result = {
       id: user.user.id,
       email: user.user.email,
       fullName: user.user.user_metadata?.full_name,
@@ -406,6 +409,13 @@ class AuthService {
       isSuperAdmin: isSuperAdmin(user.user.email),
       organizations
     };
+
+    if (migrationResult?.requirePasswordChange) {
+      result.requirePasswordChange = true;
+      result.migratedFrom = migrationResult.migratedFrom;
+    }
+
+    return result;
   }
 
   // Refresh token
