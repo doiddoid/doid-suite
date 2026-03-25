@@ -925,22 +925,40 @@
   // ============================================
 
   function sendTranscript() {
-    // Invia solo se: ha un nome/email, ci sono messaggi utente, non già inviato
+    // Invia solo se: ci sono messaggi utente e non già inviato
     var userMessages = messages.filter(function(m) { return m.role === 'user'; });
-    if (transcriptSent || userMessages.length === 0 || !visitor.name) return;
+    if (transcriptSent || userMessages.length === 0) return;
     transcriptSent = true;
 
-    fetch(config.apiUrl + '/chat/transcript', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        visitorName: visitor.name,
-        visitorEmail: visitor.email,
-        messages: messages
-      })
-    }).catch(function(err) {
-      console.error('[DOIDChat] Errore invio transcript:', err);
+    var payload = JSON.stringify({
+      visitorName: visitor.name || 'Anonimo',
+      visitorEmail: visitor.email || '',
+      messages: messages
     });
+
+    var url = config.apiUrl + '/chat/transcript';
+
+    // Usa sendBeacon se disponibile (più affidabile alla chiusura)
+    if (navigator.sendBeacon) {
+      var blob = new Blob([payload], { type: 'application/json' });
+      var sent = navigator.sendBeacon(url, blob);
+      if (!sent) {
+        // Fallback a fetch se sendBeacon fallisce
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true
+        }).catch(function() {});
+      }
+    } else {
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      }).catch(function() {});
+    }
   }
 
   // ============================================
