@@ -395,6 +395,100 @@
       flex-shrink: 0;
     }
 
+    /* Intro Form */
+    .doid-chat-intro {
+      padding: 24px 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .doid-chat-intro-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1F2937;
+      text-align: center;
+    }
+
+    .doid-chat-intro-subtitle {
+      font-size: 13px;
+      color: #6B7280;
+      text-align: center;
+      margin-top: -8px;
+    }
+
+    .doid-chat-intro-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .doid-chat-intro-field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .doid-chat-intro-field input {
+      padding: 10px 12px;
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      color: #1F2937;
+      background: #F9FAFB;
+      transition: border-color 0.15s;
+    }
+
+    .doid-chat-intro-field input:focus {
+      border-color: #14B8A6;
+      background: #fff;
+    }
+
+    .doid-chat-intro-btn {
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #14B8A6, #0D9488);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      margin-top: 4px;
+    }
+
+    .doid-chat-intro-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+    }
+
+    .doid-chat-intro-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .doid-chat-intro-skip {
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+      font-family: inherit;
+    }
+
+    .doid-chat-intro-skip:hover {
+      color: #6B7280;
+      text-decoration: underline;
+    }
+
     /* Error Message */
     .doid-chat-error {
       align-self: center;
@@ -447,6 +541,9 @@
   let isOpen = false;
   let isLoading = false;
   let elements = {};
+  let visitor = { name: '', email: '' };
+  let introCompleted = false;
+  let transcriptSent = false;
 
   function init(userConfig) {
     config = Object.assign({}, DEFAULT_CONFIG, userConfig || {});
@@ -506,8 +603,22 @@
         '</div>' +
         '<button class="doid-chat-header-close" aria-label="Chiudi chat">' + ICONS.close + '</button>' +
       '</div>' +
-      '<div class="doid-chat-messages"></div>' +
-      '<div class="doid-chat-input-area">' +
+      '<div class="doid-chat-intro">' +
+        '<div class="doid-chat-intro-title">Prima di iniziare</div>' +
+        '<div class="doid-chat-intro-subtitle">Inserisci i tuoi dati per ricevere un riepilogo della chat via email</div>' +
+        '<div class="doid-chat-intro-field">' +
+          '<label>Nome</label>' +
+          '<input type="text" class="doid-chat-intro-name" placeholder="Il tuo nome" />' +
+        '</div>' +
+        '<div class="doid-chat-intro-field">' +
+          '<label>Email</label>' +
+          '<input type="email" class="doid-chat-intro-email" placeholder="la-tua@email.it" />' +
+        '</div>' +
+        '<button class="doid-chat-intro-btn" disabled>Inizia la chat</button>' +
+        '<button class="doid-chat-intro-skip">Continua senza dati</button>' +
+      '</div>' +
+      '<div class="doid-chat-messages" style="display:none"></div>' +
+      '<div class="doid-chat-input-area" style="display:none">' +
         '<textarea class="doid-chat-input" placeholder="' + escapeHtml(config.placeholder) + '" rows="1"></textarea>' +
         '<button class="doid-chat-send" aria-label="Invia messaggio" disabled>' + ICONS.send + '</button>' +
       '</div>' +
@@ -522,7 +633,13 @@
     elements.fab = fab;
     elements.window = win;
     elements.closeBtn = win.querySelector('.doid-chat-header-close');
+    elements.intro = win.querySelector('.doid-chat-intro');
+    elements.introName = win.querySelector('.doid-chat-intro-name');
+    elements.introEmail = win.querySelector('.doid-chat-intro-email');
+    elements.introBtn = win.querySelector('.doid-chat-intro-btn');
+    elements.introSkip = win.querySelector('.doid-chat-intro-skip');
     elements.messagesArea = win.querySelector('.doid-chat-messages');
+    elements.inputArea = win.querySelector('.doid-chat-input-area');
     elements.input = win.querySelector('.doid-chat-input');
     elements.sendBtn = win.querySelector('.doid-chat-send');
     elements.badge = fab.querySelector('.doid-chat-fab-badge');
@@ -532,6 +649,25 @@
     elements.fab.addEventListener('click', toggleChat);
     elements.closeBtn.addEventListener('click', closeChat);
 
+    // Intro form events
+    function validateIntro() {
+      var name = elements.introName.value.trim();
+      var email = elements.introEmail.value.trim();
+      elements.introBtn.disabled = !name || !email || !email.includes('@');
+    }
+    elements.introName.addEventListener('input', validateIntro);
+    elements.introEmail.addEventListener('input', validateIntro);
+    elements.introEmail.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); completeIntro(); }
+    });
+    elements.introBtn.addEventListener('click', completeIntro);
+    elements.introSkip.addEventListener('click', function() {
+      visitor.name = 'Visitatore';
+      visitor.email = '';
+      showChatArea();
+    });
+
+    // Chat events
     elements.sendBtn.addEventListener('click', sendMessage);
 
     elements.input.addEventListener('keydown', function(e) {
@@ -548,6 +684,24 @@
       // Enable/disable send
       elements.sendBtn.disabled = !this.value.trim() || isLoading;
     });
+  }
+
+  function completeIntro() {
+    var name = elements.introName.value.trim();
+    var email = elements.introEmail.value.trim();
+    if (!name || !email || !email.includes('@')) return;
+    visitor.name = name;
+    visitor.email = email;
+    showChatArea();
+  }
+
+  function showChatArea() {
+    introCompleted = true;
+    elements.intro.style.display = 'none';
+    elements.messagesArea.style.display = 'flex';
+    elements.inputArea.style.display = 'flex';
+    renderMessages();
+    elements.input.focus();
   }
 
   // ============================================
@@ -567,13 +721,19 @@
     elements.window.classList.add('doid-chat-window--open');
     elements.fab.classList.add('doid-chat-fab--hidden');
     elements.badge.classList.remove('doid-chat-fab-badge--visible');
-    elements.input.focus();
+    if (introCompleted) {
+      elements.input.focus();
+    } else {
+      elements.introName.focus();
+    }
   }
 
   function closeChat() {
     isOpen = false;
     elements.window.classList.remove('doid-chat-window--open');
     elements.fab.classList.remove('doid-chat-fab--hidden');
+    // Invia transcript se ci sono messaggi dell'utente
+    sendTranscript();
   }
 
   async function sendMessage() {
@@ -754,6 +914,29 @@
     var div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // ============================================
+  // TRANSCRIPT
+  // ============================================
+
+  function sendTranscript() {
+    // Invia solo se: ha un nome/email, ci sono messaggi utente, non già inviato
+    var userMessages = messages.filter(function(m) { return m.role === 'user'; });
+    if (transcriptSent || userMessages.length === 0 || !visitor.name) return;
+    transcriptSent = true;
+
+    fetch(config.apiUrl + '/chat/transcript', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        visitorName: visitor.name,
+        visitorEmail: visitor.email,
+        messages: messages
+      })
+    }).catch(function(err) {
+      console.error('[DOIDChat] Errore invio transcript:', err);
+    });
   }
 
   // ============================================

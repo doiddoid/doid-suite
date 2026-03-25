@@ -52,7 +52,6 @@ async function getPricingBlock() {
     pricingCacheTime = now;
   } catch (err) {
     console.error('[Chat] Errore lettura prezzi da DB:', err.message);
-    // Se la cache è scaduta e il DB fallisce, teniamo la vecchia cache
   }
 
   return pricingCache;
@@ -83,7 +82,7 @@ Ordini prodotti NFC tramite WhatsApp.
 REGISTRAZIONE: suite.doid.it
 
 CONTATTI SUPPORTO:
-- Email: info@doid.biz
+- Email: support@doid.biz
 - WhatsApp: +39 351 678 1324
 
 FORMATO LINK:
@@ -91,7 +90,7 @@ Quando devi inserire un riferimento a email, WhatsApp, o sito, usa SEMPRE questo
 [testo visibile](url)
 Esempi:
 - Per WhatsApp: [Scrivici su WhatsApp](https://wa.me/393516781324)
-- Per email: [Invia un'email](mailto:info@doid.biz)
+- Per email: [Scrivici via email](mailto:support@doid.biz)
 - Per registrazione: [Registrati gratis](https://suite.doid.it/register)
 - Per accesso: [Accedi a DOID Suite](https://suite.doid.it/login)
 Non scrivere MAI email o numeri come testo semplice, usa SEMPRE il formato link sopra.
@@ -101,8 +100,8 @@ REGOLE:
 - Massimo 3-4 paragrafi per risposta, tono professionale ma accessibile
 - Quando ti chiedono i prezzi, rispondi con i dati della tabella sopra — li hai già, non rimandare al sito
 - Guida verso il trial gratuito quando c'è interesse
-- Non inventare funzionalità o prezzi non citati qui sopra
-- Per domande tecniche complesse o problemi account: rimanda al supporto tramite link WhatsApp`;
+- NON INVENTARE MAI funzionalità, prezzi, o informazioni non presenti nei dati sopra. Se non hai l'informazione, dì chiaramente che non puoi rispondere e invita a contattare il supporto con i pulsanti email e WhatsApp
+- Per domande tecniche complesse o problemi account: rimanda al supporto tramite link WhatsApp e email`;
 }
 
 // POST /api/chat
@@ -172,5 +171,88 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
+
+// POST /api/chat/transcript — Invia riepilogo chat via Telegram
+router.post('/transcript', async (req, res) => {
+  try {
+    const { visitorName, visitorEmail, messages } = req.body;
+
+    if (!visitorName || !visitorEmail || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Nome, email e messaggi sono richiesti' });
+    }
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+
+    if (!botToken || !chatId) {
+      console.error('[Chat] Telegram non configurato (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID)');
+      return res.status(500).json({ error: 'Servizio notifiche non disponibile' });
+    }
+
+    // Costruisci il messaggio Telegram
+    const now = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+    const transcript = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => {
+        const label = m.role === 'user' ? `👤 ${visitorName}` : '🤖 DOID AI';
+        // Rimuovi markdown link per leggibilità Telegram
+        const text = m.content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+        return `${label}:\n${text}`;
+      })
+      .join('\n\n');
+
+    const telegramText =
+      `📩 *Nuova chat DOID Suite*\n` +
+      `━━━━━━━━━━━━━━━━━\n` +
+      `👤 *Nome:* ${escapeMarkdown(visitorName)}\n` +
+      `📧 *Email:* ${escapeMarkdown(visitorEmail)}\n` +
+      `🕐 *Data:* ${now}\n` +
+      `💬 *Messaggi:* ${messages.filter(m => m.role === 'user').length}\n` +
+      `━━━━━━━━━━━━━━━━━\n\n` +
+      escapeMarkdown(transcript);
+
+    // Telegram ha un limite di 4096 caratteri
+    const chunks = splitText(telegramText, 4000);
+
+    for (const chunk of chunks) {
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: chunk,
+          parse_mode: 'Markdown'
+        })
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Chat] Errore invio transcript:', err.message);
+    res.status(500).json({ error: 'Errore nell\'invio del riepilogo' });
+  }
+});
+
+function escapeMarkdown(text) {
+  return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+}
+
+function splitText(text, maxLen) {
+  if (text.length <= maxLen) return [text];
+  const chunks = [];
+  let remaining = text;
+  while (remaining.length > 0) {
+    if (remaining.length <= maxLen) {
+      chunks.push(remaining);
+      break;
+    }
+    // Taglia all'ultimo \n prima del limite
+    let cutAt = remaining.lastIndexOf('\n', maxLen);
+    if (cutAt < maxLen / 2) cutAt = maxLen;
+    chunks.push(remaining.substring(0, cutAt));
+    remaining = remaining.substring(cutAt).trimStart();
+  }
+  return chunks;
+}
 
 export default router;
