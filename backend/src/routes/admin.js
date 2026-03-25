@@ -966,7 +966,7 @@ router.get('/services',
           priceProYearly: parseFloat(s.price_pro_yearly || 0),
           priceAddonMonthly: s.price_addon_monthly ? parseFloat(s.price_addon_monthly) : null,
           hasFreeTier: s.has_free_tier || false,
-          trialDays: s.trial_days || 30
+          trialDays: s.trial_days ?? 30
         }))
       }
     });
@@ -1029,8 +1029,8 @@ router.post('/services',
         price_pro_yearly: priceProYearly,
         price_addon_monthly: priceAddonMonthly || null,
         has_free_tier: hasFreeTier || false,
-        trial_days: trialDays || 30,
-        sort_order: sortOrder || 0,
+        trial_days: trialDays ?? 30,
+        sort_order: sortOrder ?? 0,
         is_active: true
       })
       .select()
