@@ -1064,14 +1064,14 @@ router.put('/services/:id',
     body('headline').optional().trim(),
     body('benefits').optional().isArray().withMessage('Benefits deve essere un array'),
     body('contactRequired').optional().isBoolean(),
-    body('appUrl').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('URL non valido'),
-    body('paymentUrl').optional({ nullable: true, checkFalsy: true }).isURL().withMessage('URL pagamento non valido'),
+    body('appUrl').optional({ nullable: true }).custom((v) => !v || v === '' || /^https?:\/\/.+/.test(v) || 'URL non valido'),
+    body('paymentUrl').optional({ nullable: true }).custom((v) => !v || v === '' || /^https?:\/\/.+/.test(v) || 'URL pagamento non valido'),
     body('icon').optional().trim(),
-    body('color').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore deve essere esadecimale'),
-    body('colorPrimary').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore primario deve essere esadecimale'),
-    body('colorDark').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore scuro deve essere esadecimale'),
-    body('colorLight').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore chiaro deve essere esadecimale'),
-    body('borderColor').optional({ nullable: true, checkFalsy: true }).matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Colore bordo deve essere esadecimale'),
+    body('color').optional({ nullable: true }).custom((v) => !v || v === '' || /^#[0-9A-Fa-f]{6}$/.test(v) || 'Colore deve essere esadecimale'),
+    body('colorPrimary').optional({ nullable: true }).custom((v) => !v || v === '' || /^#[0-9A-Fa-f]{6}$/.test(v) || 'Colore primario deve essere esadecimale'),
+    body('colorDark').optional({ nullable: true }).custom((v) => !v || v === '' || /^#[0-9A-Fa-f]{6}$/.test(v) || 'Colore scuro deve essere esadecimale'),
+    body('colorLight').optional({ nullable: true }).custom((v) => !v || v === '' || /^#[0-9A-Fa-f]{6}$/.test(v) || 'Colore chiaro deve essere esadecimale'),
+    body('borderColor').optional({ nullable: true }).custom((v) => !v || v === '' || /^#[0-9A-Fa-f]{6}$/.test(v) || 'Colore bordo deve essere esadecimale'),
     body('priceProMonthly').optional().isFloat({ min: 0 }).withMessage('Prezzo mensile non valido'),
     body('priceProYearly').optional().isFloat({ min: 0 }).withMessage('Prezzo annuale non valido'),
     body('priceAddonMonthly').optional({ nullable: true, checkFalsy: true }).isFloat({ min: 0 }).withMessage('Prezzo addon non valido'),
@@ -1121,6 +1121,46 @@ router.put('/services/:id',
       .single();
 
     if (error) throw error;
+
+    // Sincronizza tabella plans con i dati aggiornati del servizio
+    try {
+      const serviceId = req.params.id;
+
+      // Sync piano PRO: prezzi e trial_days
+      if (priceProMonthly !== undefined || priceProYearly !== undefined || trialDays !== undefined) {
+        const proUpdate = {};
+        if (priceProMonthly !== undefined) proUpdate.price_monthly = priceProMonthly;
+        if (priceProYearly !== undefined) proUpdate.price_yearly = priceProYearly;
+        if (trialDays !== undefined) proUpdate.trial_days = trialDays;
+
+        await supabaseAdmin
+          .from('plans')
+          .update(proUpdate)
+          .eq('service_id', serviceId)
+          .eq('code', 'pro');
+      }
+
+      // Sync piano FREE: attiva/disattiva in base a hasFreeTier
+      if (hasFreeTier !== undefined) {
+        await supabaseAdmin
+          .from('plans')
+          .update({ is_active: hasFreeTier })
+          .eq('service_id', serviceId)
+          .eq('code', 'free');
+      }
+
+      // Sync trial_days anche sul piano free
+      if (trialDays !== undefined) {
+        await supabaseAdmin
+          .from('plans')
+          .update({ trial_days: trialDays })
+          .eq('service_id', serviceId)
+          .eq('code', 'free');
+      }
+    } catch (syncErr) {
+      console.error('[Admin] Errore sync plans:', syncErr.message);
+      // Non bloccare la risposta — il servizio è stato aggiornato
+    }
 
     res.json({
       success: true,
