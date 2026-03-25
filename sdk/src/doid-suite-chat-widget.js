@@ -351,6 +351,50 @@
       height: 18px;
     }
 
+    /* Link Buttons */
+    .doid-chat-link-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      margin-right: 6px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      line-height: 1.3;
+    }
+
+    .doid-chat-link-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    .doid-chat-link-btn--whatsapp {
+      background: #25D366;
+      color: #fff;
+    }
+
+    .doid-chat-link-btn--email {
+      background: #3B82F6;
+      color: #fff;
+    }
+
+    .doid-chat-link-btn--default {
+      background: #14B8A6;
+      color: #fff;
+    }
+
+    .doid-chat-link-btn svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
     /* Error Message */
     .doid-chat-error {
       align-self: center;
@@ -588,6 +632,13 @@
   // RENDERING
   // ============================================
 
+  // Icone per i pulsanti link
+  var LINK_ICONS = {
+    whatsapp: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.11.546 4.093 1.504 5.818L0 24l6.335-1.652A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.82c-1.97 0-3.867-.53-5.523-1.527l-.396-.235-3.767.983.998-3.648-.258-.41A9.79 9.79 0 012.18 12c0-5.422 4.398-9.82 9.82-9.82 5.422 0 9.82 4.398 9.82 9.82 0 5.422-4.398 9.82-9.82 9.82z"/></svg>',
+    email: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>',
+    link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15,3 21,3 21,9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'
+  };
+
   function renderMessages() {
     var area = elements.messagesArea;
     area.innerHTML = '';
@@ -595,11 +646,59 @@
     messages.forEach(function(msg) {
       var bubble = document.createElement('div');
       bubble.className = 'doid-chat-msg doid-chat-msg--' + msg.role;
-      bubble.textContent = msg.content;
+
+      if (msg.role === 'assistant') {
+        bubble.innerHTML = parseMessageContent(msg.content);
+      } else {
+        bubble.textContent = msg.content;
+      }
+
       area.appendChild(bubble);
     });
 
     scrollToBottom();
+  }
+
+  function parseMessageContent(text) {
+    // Regex per markdown links: [testo](url)
+    var linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g;
+    var parts = [];
+    var lastIndex = 0;
+    var match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      // Testo prima del link
+      if (match.index > lastIndex) {
+        parts.push(escapeHtml(text.substring(lastIndex, match.index)));
+      }
+      // Crea il pulsante
+      parts.push(createLinkButton(match[1], match[2]));
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Testo residuo dopo l'ultimo link
+    if (lastIndex < text.length) {
+      parts.push(escapeHtml(text.substring(lastIndex)));
+    }
+
+    return parts.join('');
+  }
+
+  function createLinkButton(label, url) {
+    var type = 'default';
+    var icon = LINK_ICONS.link;
+
+    if (url.indexOf('wa.me') !== -1 || url.indexOf('whatsapp') !== -1) {
+      type = 'whatsapp';
+      icon = LINK_ICONS.whatsapp;
+    } else if (url.indexOf('mailto:') === 0) {
+      type = 'email';
+      icon = LINK_ICONS.email;
+    }
+
+    return '<a class="doid-chat-link-btn doid-chat-link-btn--' + type + '" ' +
+      'href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">' +
+      icon + ' ' + escapeHtml(label) + '</a>';
   }
 
   function showTyping() {
