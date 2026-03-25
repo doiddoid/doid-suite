@@ -1,6 +1,6 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import serviceService from '../services/serviceService.js';
+import { supabaseAdmin } from '../config/supabase.js';
 
 const router = express.Router();
 
@@ -29,16 +29,21 @@ async function getPricingBlock() {
   }
 
   try {
-    const servicesWithPlans = await serviceService.getAllServicesWithPlans();
-    const lines = servicesWithPlans.map(s => {
-      const planCodes = s.plans.map(p => p.code.toUpperCase());
-      const hasFree = s.plans.some(p => p.code === 'free');
-      const proPlan = s.plans.find(p => p.code === 'pro');
-      const monthly = proPlan && proPlan.priceMonthly > 0 ? `€${proPlan.priceMonthly.toFixed(2).replace('.', ',')}/mese` : '—';
-      const yearly = proPlan && proPlan.priceYearly > 0 ? `€${proPlan.priceYearly.toFixed(2).replace('.', ',')}/anno` : '—';
-      const plansLabel = planCodes.join(', ');
-      const contactOnly = s.type === 'contact_required' ? ' (su richiesta)' : '';
-      return `| ${s.name} — ${s.description || ''}${contactOnly} | ${plansLabel} | ${hasFree ? 'Sì' : 'No'} | ${monthly} | ${yearly} |`;
+    const { data: services, error } = await supabaseAdmin
+      .from('services')
+      .select('name, description, contact_required, has_free_tier, price_pro_monthly, price_pro_yearly')
+      .eq('is_active', true)
+      .order('sort_order');
+
+    if (error) throw error;
+
+    const lines = services.map(s => {
+      if (s.contact_required) {
+        return `| ${s.name} — ${s.description || ''} | Su richiesta — contattaci per info | No | — | — |`;
+      }
+      const monthly = s.price_pro_monthly > 0 ? `€${s.price_pro_monthly.toFixed(2).replace('.', ',')}/mese` : '—';
+      const yearly = s.price_pro_yearly > 0 ? `€${s.price_pro_yearly.toFixed(2).replace('.', ',')}/anno` : '—';
+      return `| ${s.name} — ${s.description || ''} | PRO${s.has_free_tier ? ' + FREE' : ''} | ${s.has_free_tier ? 'Sì' : 'No'} | ${monthly} | ${yearly} |`;
     });
 
     pricingCache = lines.length > 0
