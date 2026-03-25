@@ -31,15 +31,18 @@ async function getPricingBlock() {
   try {
     const servicesWithPlans = await serviceService.getAllServicesWithPlans();
     const lines = servicesWithPlans.map(s => {
+      const planCodes = s.plans.map(p => p.code.toUpperCase());
+      const hasFree = s.plans.some(p => p.code === 'free');
       const proPlan = s.plans.find(p => p.code === 'pro');
-      if (!proPlan) return null;
-      const monthly = proPlan.priceMonthly > 0 ? `€${proPlan.priceMonthly.toFixed(2).replace('.', ',')}/mese` : 'N/D';
-      const yearly = proPlan.priceYearly > 0 ? `€${proPlan.priceYearly.toFixed(2).replace('.', ',')}/anno` : 'N/D';
-      return `| ${s.name} — ${s.description || ''} | ${monthly} | ${yearly} |`;
-    }).filter(Boolean);
+      const monthly = proPlan && proPlan.priceMonthly > 0 ? `€${proPlan.priceMonthly.toFixed(2).replace('.', ',')}/mese` : '—';
+      const yearly = proPlan && proPlan.priceYearly > 0 ? `€${proPlan.priceYearly.toFixed(2).replace('.', ',')}/anno` : '—';
+      const plansLabel = planCodes.join(', ');
+      const contactOnly = s.type === 'contact_required' ? ' (su richiesta)' : '';
+      return `| ${s.name} — ${s.description || ''}${contactOnly} | ${plansLabel} | ${hasFree ? 'Sì' : 'No'} | ${monthly} | ${yearly} |`;
+    });
 
     pricingCache = lines.length > 0
-      ? '| Servizio | Mensile | Annuale |\n' + lines.join('\n')
+      ? '| Servizio | Piani disponibili | Piano FREE | PRO Mensile | PRO Annuale |\n' + lines.join('\n')
       : null;
     pricingCacheTime = now;
   } catch (err) {
@@ -52,14 +55,15 @@ async function getPricingBlock() {
 
 function buildSystemPrompt(pricingBlock) {
   const pricing = pricingBlock
-    ? `PREZZI ABBONAMENTI PRO (da database aggiornato):\n${pricingBlock}`
+    ? `SERVIZI E PREZZI (da database aggiornato — fonte di verità):\n${pricingBlock}`
     : 'PREZZI: non disponibili al momento — invita l\'utente a visitare suite.doid.it per i prezzi aggiornati.';
 
   return `Sei l'assistente AI di DOID Suite — il pannello di controllo unico per gestire tutti gli strumenti digitali di un'attività commerciale.
 Il tuo ruolo è assistere i visitatori del sito suite.doid.it e dei servizi collegati (review.doid.it, page.doid.it, menu.doid.it), rispondere alle loro domande, guidarli verso il trial gratuito e supportarli nell'uso dei servizi.
 
 ${pricing}
-Ogni servizio ha un piano FREE gratuito con funzionalità limitate.
+IMPORTANTE: la colonna "Piano FREE" indica se il servizio ha un piano gratuito. Se dice "No", quel servizio NON ha un piano FREE — non proporlo. Proponi solo i piani che esistono nella tabella.
+I servizi marcati "(su richiesta)" non sono attivabili in autonomia — l'utente deve contattarci.
 Trial gratuito PRO: 30 giorni senza carta di credito.
 Sconti automatici: 20% sul 2° servizio, 30% sul 3° servizio.
 
