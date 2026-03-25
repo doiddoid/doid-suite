@@ -177,8 +177,8 @@ router.post('/transcript', async (req, res) => {
   try {
     const { visitorName, visitorEmail, messages } = req.body;
 
-    if (!visitorName || !visitorEmail || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: 'Nome, email e messaggi sono richiesti' });
+    if (!visitorName || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Nome e messaggi sono richiesti' });
     }
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -189,8 +189,9 @@ router.post('/transcript', async (req, res) => {
       return res.status(500).json({ error: 'Servizio notifiche non disponibile' });
     }
 
-    // Costruisci il messaggio Telegram
+    // Costruisci il messaggio Telegram (testo semplice, no parse_mode per evitare errori)
     const now = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+    const userMsgCount = messages.filter(m => m.role === 'user').length;
     const transcript = messages
       .filter(m => m.role === 'user' || m.role === 'assistant')
       .map(m => {
@@ -202,28 +203,32 @@ router.post('/transcript', async (req, res) => {
       .join('\n\n');
 
     const telegramText =
-      `📩 *Nuova chat DOID Suite*\n` +
+      `📩 Nuova chat DOID Suite\n` +
       `━━━━━━━━━━━━━━━━━\n` +
-      `👤 *Nome:* ${escapeMarkdown(visitorName)}\n` +
-      `📧 *Email:* ${escapeMarkdown(visitorEmail)}\n` +
-      `🕐 *Data:* ${now}\n` +
-      `💬 *Messaggi:* ${messages.filter(m => m.role === 'user').length}\n` +
+      `👤 Nome: ${visitorName}\n` +
+      `📧 Email: ${visitorEmail}\n` +
+      `🕐 Data: ${now}\n` +
+      `💬 Messaggi: ${userMsgCount}\n` +
       `━━━━━━━━━━━━━━━━━\n\n` +
-      escapeMarkdown(transcript);
+      transcript;
 
     // Telegram ha un limite di 4096 caratteri
     const chunks = splitText(telegramText, 4000);
 
     for (const chunk of chunks) {
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          text: chunk,
-          parse_mode: 'Markdown'
+          text: chunk
         })
       });
+
+      if (!tgRes.ok) {
+        const tgErr = await tgRes.text();
+        console.error('[Chat] Telegram API error:', tgRes.status, tgErr);
+      }
     }
 
     res.json({ success: true });
@@ -232,10 +237,6 @@ router.post('/transcript', async (req, res) => {
     res.status(500).json({ error: 'Errore nell\'invio del riepilogo' });
   }
 });
-
-function escapeMarkdown(text) {
-  return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
-}
 
 function splitText(text, maxLen) {
   if (text.length <= maxLen) return [text];

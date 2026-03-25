@@ -551,12 +551,6 @@
     injectStyles();
     createDOM();
     bindEvents();
-
-    // Welcome message
-    if (config.welcomeMessage) {
-      messages.push({ role: 'assistant', content: config.welcomeMessage });
-      renderMessages();
-    }
   }
 
   function injectStyles() {
@@ -700,6 +694,16 @@
     elements.intro.style.display = 'none';
     elements.messagesArea.style.display = 'flex';
     elements.inputArea.style.display = 'flex';
+
+    // Welcome message personalizzato con il nome
+    var name = visitor.name && visitor.name !== 'Visitatore' ? visitor.name.split(' ')[0] : '';
+    var welcome = name
+      ? 'Ciao ' + name + '! 👋 Sono l\'assistente AI di DOID Suite. Come posso aiutarti?'
+      : config.welcomeMessage;
+    if (welcome && messages.length === 0) {
+      messages.push({ role: 'assistant', content: welcome });
+    }
+
     renderMessages();
     elements.input.focus();
   }
