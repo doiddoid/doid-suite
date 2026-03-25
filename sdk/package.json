@@ -9,9 +9,10 @@
     "src"
   ],
   "scripts": {
-    "build": "npm run build:minify",
-    "build:minify": "terser src/doid-sidebar.js -o dist/doid-sidebar.min.js -c -m --source-map \"url='doid-sidebar.min.js.map'\"",
-    "build:copy": "cp src/doid-sidebar.js dist/doid-sidebar.js",
+    "build": "npm run build:sidebar && npm run build:chat",
+    "build:sidebar": "terser src/doid-sidebar.js -o dist/doid-sidebar.min.js -c -m --source-map \"url='doid-sidebar.min.js.map'\"",
+    "build:chat": "terser src/doid-suite-chat-widget.js -o dist/doid-suite-chat-widget.min.js -c -m --source-map \"url='doid-suite-chat-widget.min.js.map'\" && mkdir -p ../frontend/public/sdk && cp dist/doid-suite-chat-widget.min.js dist/doid-suite-chat-widget.min.js.map ../frontend/public/sdk/",
+    "build:copy": "cp src/doid-sidebar.js dist/doid-sidebar.js && cp src/doid-suite-chat-widget.js dist/doid-suite-chat-widget.js",
     "watch": "nodemon --watch src -e js --exec 'npm run build'"
   },
   "keywords": [

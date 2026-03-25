@@ -105,5 +105,13 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script src="/sdk/doid-suite-chat-widget.min.js" defer></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        if (window.DOIDChat) {
+          DOIDChat.init({ apiUrl: '/api' });
+        }
+      });
+    </script>
   </body>
 </html>
