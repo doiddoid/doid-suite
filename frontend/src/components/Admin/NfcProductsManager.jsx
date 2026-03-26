@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
   Plus, Edit2, Trash2, Save, X, Loader2,
-  Package, ShoppingBag, Eye, EyeOff, AlertCircle, Check
+  ShoppingBag, Eye, EyeOff, AlertCircle, Check
 } from 'lucide-react';
 import api from '../../services/api';
 
 export default function NfcProductsManager() {
   const [products, setProducts] = useState([]);
-  const [kits, setKits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -15,9 +14,7 @@ export default function NfcProductsManager() {
 
   // Edit states
   const [editingProduct, setEditingProduct] = useState(null);
-  const [editingKit, setEditingKit] = useState(null);
   const [showProductForm, setShowProductForm] = useState(false);
-  const [showKitForm, setShowKitForm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const emptyProduct = {
@@ -26,12 +23,7 @@ export default function NfcProductsManager() {
     has_variants: false, badge: '', link: '', sort_order: 0
   };
 
-  const emptyKit = {
-    qty: 1, price: 0, price_per_unit: 0, saving_percent: '', sort_order: 0
-  };
-
   const [productForm, setProductForm] = useState(emptyProduct);
-  const [kitForm, setKitForm] = useState(emptyKit);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -45,12 +37,8 @@ export default function NfcProductsManager() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [prodRes, kitsRes] = await Promise.all([
-        api.request('/admin/nfc-products?includeInactive=true'),
-        api.request('/admin/nfc-kits?includeInactive=true')
-      ]);
+      const prodRes = await api.request('/admin/nfc-products?includeInactive=true');
       if (prodRes.success) setProducts(prodRes.data.products || []);
-      if (kitsRes.success) setKits(kitsRes.data.kits || []);
     } catch (err) {
       setError(err.message);
     }
@@ -113,66 +101,6 @@ export default function NfcProductsManager() {
       await api.request(`/admin/nfc-products/${product.id}`, {
         method: 'PUT',
         body: JSON.stringify({ is_active: !product.is_active })
-      });
-      fetchAll();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  // ==================== KITS ====================
-
-  const saveKit = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      const payload = { ...kitForm };
-      if (!payload.saving_percent) payload.saving_percent = null;
-
-      let response;
-      if (editingKit) {
-        response = await api.request(`/admin/nfc-kits/${editingKit}`, {
-          method: 'PUT', body: JSON.stringify(payload)
-        });
-      } else {
-        response = await api.request('/admin/nfc-kits', {
-          method: 'POST', body: JSON.stringify(payload)
-        });
-      }
-
-      if (response.success) {
-        setSuccess(editingKit ? 'Kit aggiornato' : 'Kit creato');
-        setShowKitForm(false);
-        setEditingKit(null);
-        setKitForm(emptyKit);
-        fetchAll();
-      } else {
-        setError(response.error || 'Errore nel salvataggio');
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-    setSaving(false);
-  };
-
-  const deleteKit = async (id) => {
-    try {
-      const response = await api.request(`/admin/nfc-kits/${id}`, { method: 'DELETE' });
-      if (response.success) {
-        setSuccess('Kit disattivato');
-        setDeleteConfirm(null);
-        fetchAll();
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const toggleKit = async (kit) => {
-    try {
-      await api.request(`/admin/nfc-kits/${kit.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ is_active: !kit.is_active })
       });
       fetchAll();
     } catch (err) {
@@ -364,127 +292,6 @@ export default function NfcProductsManager() {
         </div>
       </div>
 
-      {/* ==================== KIT BULK ==================== */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-purple-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Kit Bulk (Agency)</h3>
-            <span className="px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full text-xs">{kits.length}</span>
-          </div>
-          {!showKitForm && (
-            <button
-              onClick={() => { setShowKitForm(true); setEditingKit(null); setKitForm(emptyKit); }}
-              className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700"
-            >
-              <Plus className="w-4 h-4" /> Nuovo Kit
-            </button>
-          )}
-        </div>
-
-        {/* Kit Form */}
-        {showKitForm && (
-          <div className="p-6 bg-purple-50 border-b-2 border-purple-200">
-            <h4 className="font-semibold text-purple-900 mb-4">
-              {editingKit ? 'Modifica Kit' : 'Nuovo Kit'}
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Quantita *</label>
-                <input type="number" min="1" value={kitForm.qty} onChange={(e) => setKitForm({ ...kitForm, qty: parseInt(e.target.value) || 1 })} className="w-full px-3 py-2 border rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Prezzo Totale *</label>
-                <input type="number" step="0.01" value={kitForm.price} onChange={(e) => setKitForm({ ...kitForm, price: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Prezzo/unita *</label>
-                <input type="number" step="0.01" value={kitForm.price_per_unit} onChange={(e) => setKitForm({ ...kitForm, price_per_unit: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Sconto %</label>
-                <input type="text" value={kitForm.saving_percent || ''} onChange={(e) => setKitForm({ ...kitForm, saving_percent: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="15%" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Ordine</label>
-                <input type="number" value={kitForm.sort_order} onChange={(e) => setKitForm({ ...kitForm, sort_order: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2 border rounded-lg text-sm" />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => { setShowKitForm(false); setEditingKit(null); }} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Annulla</button>
-              <button onClick={saveKit} disabled={saving || !kitForm.qty || !kitForm.price} className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2">
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                <Save className="w-4 h-4" />
-                {editingKit ? 'Aggiorna' : 'Crea'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Kits Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="text-left p-3">#</th>
-                <th className="text-right p-3">Quantita</th>
-                <th className="text-right p-3">Prezzo</th>
-                <th className="text-right p-3">Prezzo/unita</th>
-                <th className="text-center p-3">Sconto</th>
-                <th className="text-center p-3">Stato</th>
-                <th className="text-right p-3">Azioni</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {kits.map((k) => (
-                <tr key={k.id} className={!k.is_active ? 'bg-gray-50 opacity-60' : 'hover:bg-gray-50'}>
-                  <td className="p-3 text-gray-400">{k.sort_order}</td>
-                  <td className="p-3 text-right font-medium">{k.qty} pz</td>
-                  <td className="p-3 text-right font-medium">{Number(k.price).toFixed(2)}</td>
-                  <td className="p-3 text-right text-purple-600">{Number(k.price_per_unit).toFixed(2)}</td>
-                  <td className="p-3 text-center">
-                    {k.saving_percent && <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">{k.saving_percent}</span>}
-                  </td>
-                  <td className="p-3 text-center">
-                    <button onClick={() => toggleKit(k)} className="p-1 rounded hover:bg-gray-100">
-                      {k.is_active ? <Eye className="w-4 h-4 text-green-600" /> : <EyeOff className="w-4 h-4 text-gray-400" />}
-                    </button>
-                  </td>
-                  <td className="p-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => {
-                          setEditingKit(k.id);
-                          setKitForm({
-                            qty: k.qty, price: Number(k.price),
-                            price_per_unit: Number(k.price_per_unit),
-                            saving_percent: k.saving_percent || '',
-                            sort_order: k.sort_order || 0
-                          });
-                          setShowKitForm(true);
-                        }}
-                        className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      {deleteConfirm === k.id ? (
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => deleteKit(k.id)} className="px-2 py-1 text-xs bg-red-600 text-white rounded">Conferma</button>
-                          <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 text-xs bg-gray-200 rounded">No</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setDeleteConfirm(k.id)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
