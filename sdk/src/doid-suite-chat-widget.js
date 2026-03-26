@@ -22,7 +22,6 @@
     offsetBottom: '24px',
     offsetSide: '24px',
     zIndex: 10000,
-    welcomeMessage: 'Ciao! 👋 Sono l\'assistente AI di DOID Suite. Come posso aiutarti?',
     placeholder: 'Scrivi un messaggio...',
     title: 'DOID Assistente',
     subtitle: 'AI Support',
@@ -395,100 +394,6 @@
       flex-shrink: 0;
     }
 
-    /* Intro Form */
-    .doid-chat-intro {
-      padding: 24px 16px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 16px;
-    }
-
-    .doid-chat-intro-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #1F2937;
-      text-align: center;
-    }
-
-    .doid-chat-intro-subtitle {
-      font-size: 13px;
-      color: #6B7280;
-      text-align: center;
-      margin-top: -8px;
-    }
-
-    .doid-chat-intro-field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .doid-chat-intro-field label {
-      font-size: 12px;
-      font-weight: 500;
-      color: #374151;
-    }
-
-    .doid-chat-intro-field input {
-      padding: 10px 12px;
-      border: 1px solid #E5E7EB;
-      border-radius: 10px;
-      font-size: 14px;
-      font-family: inherit;
-      outline: none;
-      color: #1F2937;
-      background: #F9FAFB;
-      transition: border-color 0.15s;
-    }
-
-    .doid-chat-intro-field input:focus {
-      border-color: #14B8A6;
-      background: #fff;
-    }
-
-    .doid-chat-intro-btn {
-      padding: 12px;
-      border: none;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #14B8A6, #0D9488);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-      margin-top: 4px;
-    }
-
-    .doid-chat-intro-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
-    }
-
-    .doid-chat-intro-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .doid-chat-intro-skip {
-      background: none;
-      border: none;
-      color: #9CA3AF;
-      font-size: 12px;
-      cursor: pointer;
-      text-align: center;
-      font-family: inherit;
-    }
-
-    .doid-chat-intro-skip:hover {
-      color: #6B7280;
-      text-decoration: underline;
-    }
-
     /* Error Message */
     .doid-chat-error {
       align-self: center;
@@ -537,12 +442,13 @@
   // ============================================
 
   let config = {};
-  let messages = [];
+  let messages = [];      // messaggi visibili nella chat (role: assistant/user)
+  let apiMessages = [];   // messaggi da inviare all'AI (solo dopo intro completato)
   let isOpen = false;
   let isLoading = false;
   let elements = {};
   let visitor = { name: '', email: '' };
-  let introCompleted = false;
+  let introPhase = 'greeting'; // 'greeting' | 'ask_name' | 'ask_email' | 'done'
   let transcriptSent = false;
 
   function init(userConfig) {
@@ -551,6 +457,34 @@
     injectStyles();
     createDOM();
     bindEvents();
+    tryAutoLogin();
+  }
+
+  // ============================================
+  // AUTO-LOGIN (utente già autenticato)
+  // ============================================
+
+  function tryAutoLogin() {
+    var token = null;
+    try { token = localStorage.getItem('accessToken'); } catch(e) {}
+    if (!token) return;
+
+    fetch(config.apiUrl + '/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(data) {
+      if (!data || !data.data) return;
+      var user = data.data.user || data.data;
+      var name = user.fullName || user.full_name || user.name || '';
+      var email = user.email || '';
+      if (name && email) {
+        visitor.name = name;
+        visitor.email = email;
+        introPhase = 'done';
+      }
+    })
+    .catch(function() {});
   }
 
   function injectStyles() {
@@ -580,14 +514,13 @@
     fab.style[oppositeSide] = 'auto';
     fab.innerHTML = ICONS.chat + '<span class="doid-chat-fab-badge"></span>';
 
-    // Chat Window
+    // Chat Window — nessun form intro, solo chat area visibile sempre
     var win = document.createElement('div');
     win.className = 'doid-chat-window' + (config.position === 'left' ? ' doid-chat-window--left' : '');
     win.style[side] = config.offsetSide;
     win.style.bottom = 'calc(' + config.offsetBottom + ' + 68px)';
     win.style[oppositeSide] = 'auto';
 
-    // Header
     win.innerHTML =
       '<div class="doid-chat-header">' +
         '<div class="doid-chat-header-avatar">d</div>' +
@@ -597,22 +530,8 @@
         '</div>' +
         '<button class="doid-chat-header-close" aria-label="Chiudi chat">' + ICONS.close + '</button>' +
       '</div>' +
-      '<div class="doid-chat-intro">' +
-        '<div class="doid-chat-intro-title">Prima di iniziare</div>' +
-        '<div class="doid-chat-intro-subtitle">Inserisci i tuoi dati per ricevere un riepilogo della chat via email</div>' +
-        '<div class="doid-chat-intro-field">' +
-          '<label>Nome</label>' +
-          '<input type="text" class="doid-chat-intro-name" placeholder="Il tuo nome" />' +
-        '</div>' +
-        '<div class="doid-chat-intro-field">' +
-          '<label>Email</label>' +
-          '<input type="email" class="doid-chat-intro-email" placeholder="la-tua@email.it" />' +
-        '</div>' +
-        '<button class="doid-chat-intro-btn" disabled>Inizia la chat</button>' +
-        '<button class="doid-chat-intro-skip">Continua senza dati</button>' +
-      '</div>' +
-      '<div class="doid-chat-messages" style="display:none"></div>' +
-      '<div class="doid-chat-input-area" style="display:none">' +
+      '<div class="doid-chat-messages"></div>' +
+      '<div class="doid-chat-input-area">' +
         '<textarea class="doid-chat-input" placeholder="' + escapeHtml(config.placeholder) + '" rows="1"></textarea>' +
         '<button class="doid-chat-send" aria-label="Invia messaggio" disabled>' + ICONS.send + '</button>' +
       '</div>' +
@@ -627,11 +546,6 @@
     elements.fab = fab;
     elements.window = win;
     elements.closeBtn = win.querySelector('.doid-chat-header-close');
-    elements.intro = win.querySelector('.doid-chat-intro');
-    elements.introName = win.querySelector('.doid-chat-intro-name');
-    elements.introEmail = win.querySelector('.doid-chat-intro-email');
-    elements.introBtn = win.querySelector('.doid-chat-intro-btn');
-    elements.introSkip = win.querySelector('.doid-chat-intro-skip');
     elements.messagesArea = win.querySelector('.doid-chat-messages');
     elements.inputArea = win.querySelector('.doid-chat-input-area');
     elements.input = win.querySelector('.doid-chat-input');
@@ -643,31 +557,12 @@
     elements.fab.addEventListener('click', toggleChat);
     elements.closeBtn.addEventListener('click', closeChat);
 
-    // Intro form events
-    function validateIntro() {
-      var name = elements.introName.value.trim();
-      var email = elements.introEmail.value.trim();
-      elements.introBtn.disabled = !name || !email || !email.includes('@');
-    }
-    elements.introName.addEventListener('input', validateIntro);
-    elements.introEmail.addEventListener('input', validateIntro);
-    elements.introEmail.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') { e.preventDefault(); completeIntro(); }
-    });
-    elements.introBtn.addEventListener('click', completeIntro);
-    elements.introSkip.addEventListener('click', function() {
-      visitor.name = 'Visitatore';
-      visitor.email = '';
-      showChatArea();
-    });
-
-    // Chat events
-    elements.sendBtn.addEventListener('click', sendMessage);
+    elements.sendBtn.addEventListener('click', handleInput);
 
     elements.input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendMessage();
+        handleInput();
       }
     });
 
@@ -680,32 +575,92 @@
     });
   }
 
-  function completeIntro() {
-    var name = elements.introName.value.trim();
-    var email = elements.introEmail.value.trim();
-    if (!name || !email || !email.includes('@')) return;
-    visitor.name = name;
-    visitor.email = email;
-    showChatArea();
-  }
+  // ============================================
+  // FLUSSO CONVERSAZIONALE INTRO
+  // ============================================
 
-  function showChatArea() {
-    introCompleted = true;
-    elements.intro.style.display = 'none';
-    elements.messagesArea.style.display = 'flex';
-    elements.inputArea.style.display = 'flex';
+  function startConversation() {
+    if (messages.length > 0) return; // già iniziata
 
-    // Welcome message personalizzato con il nome
-    var name = visitor.name && visitor.name !== 'Visitatore' ? visitor.name.split(' ')[0] : '';
-    var welcome = name
-      ? 'Ciao ' + name + '! 👋 Sono l\'assistente AI di DOID Suite. Come posso aiutarti?'
-      : config.welcomeMessage;
-    if (welcome && messages.length === 0) {
-      messages.push({ role: 'assistant', content: welcome });
+    if (introPhase === 'done') {
+      // Utente loggato → saluto personalizzato e via
+      var firstName = visitor.name.split(' ')[0];
+      messages.push({ role: 'assistant', content: 'Ciao ' + firstName + '! 👋 Sono l\'assistente AI di DOID Suite. Come posso aiutarti?' });
+      renderMessages();
+      elements.input.placeholder = config.placeholder;
+      return;
     }
 
+    // Utente non loggato → flusso conversazionale
+    introPhase = 'ask_name';
+    messages.push({ role: 'assistant', content: 'Ciao! 👋 Sono l\'assistente AI di DOID Suite.\n\nCome ti chiami?' });
     renderMessages();
-    elements.input.focus();
+    elements.input.placeholder = 'Il tuo nome...';
+  }
+
+  function handleInput() {
+    var text = elements.input.value.trim();
+    if (!text || isLoading) return;
+
+    if (introPhase === 'ask_name') {
+      handleNameInput(text);
+    } else if (introPhase === 'ask_email') {
+      handleEmailInput(text);
+    } else {
+      sendMessage(text);
+    }
+  }
+
+  function handleNameInput(text) {
+    visitor.name = text;
+    messages.push({ role: 'user', content: text });
+    clearInput();
+    renderMessages();
+
+    var firstName = text.split(' ')[0];
+
+    // Piccola pausa per sembrare naturale
+    setTimeout(function() {
+      messages.push({ role: 'assistant', content: 'Piacere ' + firstName + '! 😊\n\nA quale indirizzo email posso inviarti il riepilogo della nostra conversazione?' });
+      introPhase = 'ask_email';
+      elements.input.placeholder = 'La tua email...';
+      elements.input.type = 'email';
+      renderMessages();
+    }, 400);
+  }
+
+  function handleEmailInput(text) {
+    // Validazione email minima
+    if (!text.includes('@') || !text.includes('.')) {
+      messages.push({ role: 'user', content: text });
+      clearInput();
+      renderMessages();
+      setTimeout(function() {
+        messages.push({ role: 'assistant', content: 'Hmm, non sembra un indirizzo email valido. Puoi riprovare?' });
+        renderMessages();
+      }, 300);
+      return;
+    }
+
+    visitor.email = text;
+    messages.push({ role: 'user', content: text });
+    clearInput();
+    renderMessages();
+
+    var firstName = visitor.name.split(' ')[0];
+
+    setTimeout(function() {
+      introPhase = 'done';
+      elements.input.placeholder = config.placeholder;
+      messages.push({ role: 'assistant', content: 'Perfetto ' + firstName + ', come posso aiutarti oggi?' });
+      renderMessages();
+    }, 400);
+  }
+
+  function clearInput() {
+    elements.input.value = '';
+    elements.input.style.height = 'auto';
+    elements.sendBtn.disabled = true;
   }
 
   // ============================================
@@ -725,33 +680,29 @@
     elements.window.classList.add('doid-chat-window--open');
     elements.fab.classList.add('doid-chat-fab--hidden');
     elements.badge.classList.remove('doid-chat-fab-badge--visible');
-    if (introCompleted) {
-      elements.input.focus();
-    } else {
-      elements.introName.focus();
-    }
+
+    // Avvia conversazione alla prima apertura
+    startConversation();
+    elements.input.focus();
   }
 
   function closeChat() {
     isOpen = false;
     elements.window.classList.remove('doid-chat-window--open');
     elements.fab.classList.remove('doid-chat-fab--hidden');
-    // Invia transcript se ci sono messaggi dell'utente
     sendTranscript();
   }
 
-  async function sendMessage() {
-    var text = elements.input.value.trim();
-    if (!text || isLoading) return;
+  async function sendMessage(text) {
     if (text.length > 2000) {
       text = text.substring(0, 2000);
     }
 
-    // Add user message
+    // Aggiungi messaggio utente
     messages.push({ role: 'user', content: text });
-    elements.input.value = '';
-    elements.input.style.height = 'auto';
-    elements.sendBtn.disabled = true;
+    // Aggiungi ai messaggi API (esclusi quelli dell'intro)
+    apiMessages.push({ role: 'user', content: text });
+    clearInput();
     renderMessages();
 
     // Show typing
@@ -759,15 +710,14 @@
     showTyping();
 
     try {
-      // Prendi solo gli ultimi N messaggi (senza welcome se è il primo)
-      var apiMessages = messages
-        .slice(-config.maxMessages)
-        .map(function(m) { return { role: m.role, content: m.content }; });
+      var payload = apiMessages.slice(-config.maxMessages).map(function(m) {
+        return { role: m.role, content: m.content };
+      });
 
       var response = await fetch(config.apiUrl + '/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages })
+        body: JSON.stringify({ messages: payload })
       });
 
       var data = await response.json();
@@ -781,6 +731,7 @@
       }
 
       messages.push({ role: 'assistant', content: data.content });
+      apiMessages.push({ role: 'assistant', content: data.content });
       renderMessages();
 
     } catch (err) {
@@ -831,16 +782,13 @@
     var match;
 
     while ((match = linkRegex.exec(text)) !== null) {
-      // Testo prima del link — escape + formattazione inline
       if (match.index > lastIndex) {
         parts.push(formatInline(escapeHtml(text.substring(lastIndex, match.index))));
       }
-      // Crea il pulsante
       parts.push(createLinkButton(match[1], match[2]));
       lastIndex = match.index + match[0].length;
     }
 
-    // Testo residuo dopo l'ultimo link
     if (lastIndex < text.length) {
       parts.push(formatInline(escapeHtml(text.substring(lastIndex))));
     }
@@ -851,7 +799,7 @@
   function formatInline(html) {
     // Bold: **testo** → <strong>testo</strong>
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    // Italic: *testo* → <em>testo</em> (solo asterischi singoli non preceduti/seguiti da *)
+    // Italic: *testo* → <em>testo</em>
     html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
     return html;
   }
@@ -897,7 +845,6 @@
     elements.messagesArea.appendChild(error);
     scrollToBottom();
 
-    // Auto-remove after 5 seconds
     setTimeout(function() {
       if (error.parentNode) error.remove();
     }, 5000);
@@ -925,9 +872,8 @@
   // ============================================
 
   function sendTranscript() {
-    // Invia solo se: ci sono messaggi utente e non già inviato
-    var userMessages = messages.filter(function(m) { return m.role === 'user'; });
-    if (transcriptSent || userMessages.length === 0) return;
+    // Invia solo se ci sono messaggi AI reali (non intro) e non già inviato
+    if (transcriptSent || apiMessages.length === 0) return;
     transcriptSent = true;
 
     var payload = JSON.stringify({
@@ -938,12 +884,10 @@
 
     var url = config.apiUrl + '/chat/transcript';
 
-    // Usa sendBeacon se disponibile (più affidabile alla chiusura)
     if (navigator.sendBeacon) {
       var blob = new Blob([payload], { type: 'application/json' });
       var sent = navigator.sendBeacon(url, blob);
       if (!sent) {
-        // Fallback a fetch se sendBeacon fallisce
         fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -972,6 +916,7 @@
     var style = document.getElementById('doid-chat-styles');
     if (style) style.remove();
     messages = [];
+    apiMessages = [];
     isOpen = false;
     isLoading = false;
     elements = {};
