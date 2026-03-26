@@ -819,7 +819,8 @@ export default function Admin() {
     },
   ];
 
-  const [openDropdown, setOpenDropdown] = useState(null);
+  // Trova il gruppo attivo per la seconda barra
+  const getActiveGroup = () => tabGroups.find(g => g.tabs.some(t => t.id === activeTab)) || tabGroups[0];
 
   const getStatusBadge = (status, daysRemaining = null) => {
     const styles = {
@@ -903,78 +904,58 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Tabs - Grouped with dropdowns */}
+      {/* Primary Nav - Group labels */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-1 overflow-x-auto" aria-label="Tabs">
             {tabGroups.map((group) => {
               const GroupIcon = group.icon;
               const isGroupActive = group.tabs.some(t => t.id === activeTab);
-              const isSingle = group.tabs.length === 1;
-
-              if (isSingle) {
-                const tab = group.tabs[0];
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => { setActiveTab(tab.id); setOpenDropdown(null); }}
-                    className={`flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-indigo-500 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {group.label}
-                  </button>
-                );
-              }
-
               return (
-                <div key={group.label} className="relative">
-                  <button
-                    onClick={() => setOpenDropdown(openDropdown === group.label ? null : group.label)}
-                    className={`flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-                      isGroupActive
-                        ? 'border-indigo-500 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <GroupIcon className="w-5 h-5" />
-                    {group.label}
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === group.label ? 'rotate-180' : ''}`} />
-                  </button>
-                  {openDropdown === group.label && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
-                      <div className="absolute top-full left-0 mt-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[200px]">
-                        {group.tabs.map((tab) => {
-                          const Icon = tab.icon;
-                          return (
-                            <button
-                              key={tab.id}
-                              onClick={() => { setActiveTab(tab.id); setOpenDropdown(null); }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                                activeTab === tab.id
-                                  ? 'bg-indigo-50 text-indigo-600 font-medium'
-                                  : 'text-gray-700 hover:bg-gray-50'
-                              }`}
-                            >
-                              <Icon className="w-4 h-4" />
-                              {tab.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
+                <button
+                  key={group.label}
+                  onClick={() => setActiveTab(group.tabs[0].id)}
+                  className={`flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                    isGroupActive
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <GroupIcon className="w-5 h-5" />
+                  {group.label}
+                </button>
               );
             })}
           </nav>
         </div>
       </div>
+
+      {/* Secondary Nav - Sub-tabs for active group (only if group has multiple tabs) */}
+      {getActiveGroup().tabs.length > 1 && (
+        <div className="bg-gray-50 border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="flex space-x-1 overflow-x-auto" aria-label="Sub-tabs">
+              {getActiveGroup().tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 py-2.5 px-4 rounded-lg text-sm whitespace-nowrap transition-colors my-1 ${
+                      activeTab === tab.id
+                        ? 'bg-white text-indigo-600 font-medium shadow-sm border border-gray-200'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {tab.name}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
