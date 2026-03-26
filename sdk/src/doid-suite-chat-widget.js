@@ -448,8 +448,9 @@
   let isLoading = false;
   let elements = {};
   let visitor = { name: '', email: '' };
-  let introPhase = 'greeting'; // 'greeting' | 'ask_name' | 'ask_email' | 'done'
+  let introPhase = 'greeting'; // 'greeting' | 'ask_name' | 'done' | 'ask_email_closing'
   let transcriptSent = false;
+  let isAuthenticated = false;
 
   function init(userConfig) {
     config = Object.assign({}, DEFAULT_CONFIG, userConfig || {});
@@ -482,6 +483,7 @@
         visitor.name = name;
         visitor.email = email;
         introPhase = 'done';
+        isAuthenticated = true;
       }
     })
     .catch(function() {});
@@ -604,8 +606,8 @@
 
     if (introPhase === 'ask_name') {
       handleNameInput(text);
-    } else if (introPhase === 'ask_email') {
-      handleEmailInput(text);
+    } else if (introPhase === 'ask_email_closing') {
+      handleEmailClosing(text);
     } else {
       sendMessage(text);
     }
@@ -619,24 +621,21 @@
 
     var firstName = text.split(' ')[0];
 
-    // Piccola pausa per sembrare naturale
     setTimeout(function() {
-      messages.push({ role: 'assistant', content: 'Piacere ' + firstName + '! 😊\n\nA quale indirizzo email posso inviarti il riepilogo della nostra conversazione?' });
-      introPhase = 'ask_email';
-      elements.input.placeholder = 'La tua email...';
-      elements.input.type = 'email';
+      introPhase = 'done';
+      elements.input.placeholder = config.placeholder;
+      messages.push({ role: 'assistant', content: 'Piacere ' + firstName + '! 😊 Come posso aiutarti?' });
       renderMessages();
     }, 400);
   }
 
-  function handleEmailInput(text) {
-    // Validazione email minima
+  function handleEmailClosing(text) {
     if (!text.includes('@') || !text.includes('.')) {
       messages.push({ role: 'user', content: text });
       clearInput();
       renderMessages();
       setTimeout(function() {
-        messages.push({ role: 'assistant', content: 'Hmm, non sembra un indirizzo email valido. Puoi riprovare?' });
+        messages.push({ role: 'assistant', content: 'Non sembra un indirizzo email valido. Puoi riprovare?' });
         renderMessages();
       }, 300);
       return;
@@ -652,8 +651,16 @@
     setTimeout(function() {
       introPhase = 'done';
       elements.input.placeholder = config.placeholder;
-      messages.push({ role: 'assistant', content: 'Perfetto ' + firstName + ', come posso aiutarti oggi?' });
+      messages.push({ role: 'assistant', content: 'Grazie ' + firstName + '! Ti invieremo il riepilogo a ' + text + '. A presto! 👋' });
       renderMessages();
+      // Ora invia il transcript con l'email
+      sendTranscript();
+      // Chiudi dopo un attimo
+      setTimeout(function() {
+        isOpen = false;
+        elements.window.classList.remove('doid-chat-window--open');
+        elements.fab.classList.remove('doid-chat-fab--hidden');
+      }, 2000);
     }, 400);
   }
 
@@ -687,6 +694,28 @@
   }
 
   function closeChat() {
+    // Se non loggato, ha conversato con l'AI e non ha ancora dato l'email → chiedi
+    // Se sta già chiedendo l'email e preme X di nuovo → chiudi senza email
+    if (introPhase === 'ask_email_closing') {
+      introPhase = 'done';
+      isOpen = false;
+      elements.window.classList.remove('doid-chat-window--open');
+      elements.fab.classList.remove('doid-chat-fab--hidden');
+      sendTranscript();
+      return;
+    }
+
+    if (!isAuthenticated && !visitor.email && apiMessages.length > 0) {
+      introPhase = 'ask_email_closing';
+      var firstName = visitor.name ? visitor.name.split(' ')[0] : '';
+      var greeting = firstName ? firstName + ', prima' : 'Prima';
+      messages.push({ role: 'assistant', content: greeting + ' di andare, vuoi lasciarmi la tua email? Ti invierò un riepilogo della nostra conversazione.' });
+      elements.input.placeholder = 'La tua email...';
+      renderMessages();
+      elements.input.focus();
+      return; // Non chiudere ancora
+    }
+
     isOpen = false;
     elements.window.classList.remove('doid-chat-window--open');
     elements.fab.classList.remove('doid-chat-fab--hidden');
