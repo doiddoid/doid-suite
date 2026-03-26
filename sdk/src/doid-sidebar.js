@@ -8,7 +8,7 @@
  *     DOIDSidebar.init({
  *       apiUrl: 'https://suite-api.doid.it',
  *       token: 'sso_token_here',
- *       currentService: 'smart_review',
+ *       currentService: 'review',
  *       activityId: 'uuid-here'
  *     });
  *   </script>
@@ -44,14 +44,14 @@
 
   // Definizione servizi DOID
   const DOID_SERVICES = {
-    smart_review: {
-      name: 'Smart Review',
+    review: {
+      name: 'Review',
       icon: 'star',
       color: '#F59E0B',
       url: 'https://review.doid.it'
     },
-    smart_page: {
-      name: 'Smart Page',
+    page: {
+      name: 'Page',
       icon: 'user',
       color: '#3B82F6',
       url: 'https://page.doid.it'

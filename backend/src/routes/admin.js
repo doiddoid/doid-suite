@@ -2419,7 +2419,7 @@ router.get('/webhook/logs',
 // Verifica stato endpoint webhook delle app esterne
 router.get('/webhook/health',
   asyncHandler(async (req, res) => {
-    const services = ['smart_review', 'smart_page'];
+    const services = ['review', 'page'];
     const results = {};
 
     for (const service of services) {

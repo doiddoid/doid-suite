@@ -19,7 +19,7 @@ import { Star, FileText, UtensilsCrossed, ChevronRight, Zap, CreditCard, Crown, 
 const SERVICE_CONFIG = [
   {
     code: 'review',
-    name: 'Smart Review',
+    name: 'Review',
     description: 'Gestisci le recensioni',
     icon: Star,
     color: '#EF9F27',
@@ -27,7 +27,7 @@ const SERVICE_CONFIG = [
   },
   {
     code: 'page',
-    name: 'Smart Page',
+    name: 'Page',
     description: 'Biglietto da visita digitale',
     icon: FileText,
     color: '#85B7EB',

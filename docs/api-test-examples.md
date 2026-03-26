@@ -33,8 +33,8 @@ Risposta attesa:
     "services": [
       {
         "id": "uuid",
-        "code": "smart_review",
-        "name": "Smart Review",
+        "code": "review",
+        "name": "Review",
         "description": "Gestisci le recensioni della tua attività",
         "appUrl": "https://smart-card.it/review",
         "icon": "star",
@@ -50,7 +50,7 @@ Risposta attesa:
 Dettaglio servizio con piani disponibili:
 
 ```bash
-curl -s http://localhost:3001/api/services/smart_review | jq .
+curl -s http://localhost:3001/api/services/review | jq .
 ```
 
 Risposta attesa:
@@ -60,8 +60,8 @@ Risposta attesa:
   "data": {
     "service": {
       "id": "uuid",
-      "code": "smart_review",
-      "name": "Smart Review",
+      "code": "review",
+      "name": "Review",
       "description": "...",
       "appUrl": "https://smart-card.it/review",
       "icon": "star",
@@ -110,8 +110,8 @@ Risposta attesa:
       {
         "service": {
           "id": "uuid",
-          "code": "smart_review",
-          "name": "Smart Review",
+          "code": "review",
+          "name": "Review",
           "description": "...",
           "appUrl": "...",
           "icon": "star",
@@ -124,8 +124,8 @@ Risposta attesa:
       {
         "service": {
           "id": "uuid",
-          "code": "smart_page",
-          "name": "Smart Page",
+          "code": "page",
+          "name": "Page",
           "...": "..."
         },
         "subscription": {
@@ -150,7 +150,7 @@ Attiva trial per un servizio:
 curl -s -X POST http://localhost:3001/api/subscriptions/trial \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"serviceCode": "smart_review"}' | jq .
+  -d '{"serviceCode": "review"}' | jq .
 ```
 
 Risposta attesa:
@@ -162,7 +162,7 @@ Risposta attesa:
       "id": "uuid",
       "status": "trial",
       "trialEndsAt": "2024-02-15T10:00:00Z",
-      "service": {"code": "smart_review", "name": "Smart Review"},
+      "service": {"code": "review", "name": "Review"},
       "plan": {"code": "pro", "name": "Pro", "trialDays": 30}
     }
   },
@@ -177,7 +177,7 @@ Attiva abbonamento (senza pagamento reale):
 curl -s -X POST http://localhost:3001/api/subscriptions/activate \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"serviceCode": "smart_review", "planCode": "pro", "billingCycle": "monthly"}' | jq .
+  -d '{"serviceCode": "review", "planCode": "pro", "billingCycle": "monthly"}' | jq .
 ```
 
 Risposta attesa:
@@ -190,7 +190,7 @@ Risposta attesa:
       "status": "active",
       "billingCycle": "monthly",
       "currentPeriodEnd": "2024-02-15T10:00:00Z",
-      "service": {"code": "smart_review"},
+      "service": {"code": "review"},
       "plan": {"code": "pro", "priceMonthly": 14.90}
     }
   },
@@ -205,7 +205,7 @@ Cancella abbonamento:
 curl -s -X POST http://localhost:3001/api/subscriptions/cancel \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"serviceCode": "smart_review"}' | jq .
+  -d '{"serviceCode": "review"}' | jq .
 ```
 
 Risposta attesa:
@@ -220,7 +220,7 @@ Risposta attesa:
 Verifica stato abbonamento per servizio:
 
 ```bash
-curl -s http://localhost:3001/api/subscriptions/check/smart_review \
+curl -s http://localhost:3001/api/subscriptions/check/review \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
@@ -286,7 +286,7 @@ echo -e "\n=== GET SERVICES ==="
 curl -s $BASE_URL/services | jq '.data.services | length'
 
 echo -e "\n=== GET SERVICE DETAIL ==="
-curl -s $BASE_URL/services/smart_review | jq '.data.service.name'
+curl -s $BASE_URL/services/review | jq '.data.service.name'
 
 # Test Subscriptions Dashboard
 echo -e "\n=== SUBSCRIPTIONS DASHBOARD ==="
@@ -298,11 +298,11 @@ echo -e "\n=== ACTIVATE TRIAL ==="
 curl -s -X POST $BASE_URL/subscriptions/trial \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"serviceCode": "smart_review"}' | jq '.message'
+  -d '{"serviceCode": "review"}' | jq '.message'
 
 # Check Subscription
 echo -e "\n=== CHECK SUBSCRIPTION ==="
-curl -s $BASE_URL/subscriptions/check/smart_review \
+curl -s $BASE_URL/subscriptions/check/review \
   -H "Authorization: Bearer $TOKEN" | jq '.data.isActive'
 
 # Cancel
@@ -310,7 +310,7 @@ echo -e "\n=== CANCEL SUBSCRIPTION ==="
 curl -s -X POST $BASE_URL/subscriptions/cancel \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"serviceCode": "smart_review"}' | jq '.message'
+  -d '{"serviceCode": "review"}' | jq '.message'
 
 echo -e "\n=== DONE ==="
 ```

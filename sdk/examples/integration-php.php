@@ -1,6 +1,6 @@
 <?php
 /**
- * Esempio di integrazione DOID Sidebar in Smart Review (PHP)
+ * Esempio di integrazione DOID Sidebar in Review (PHP)
  *
  * Questo file mostra come integrare la sidebar Suite in un'applicazione PHP esistente.
  *
@@ -32,7 +32,7 @@ $activity_id = $_SESSION['activity_id'] ?? null;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Review - DOID</title>
+    <title>Review - DOID</title>
 
     <!-- Permetti iframe solo da Suite -->
     <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self' https://suite.doid.it;">
@@ -63,13 +63,13 @@ $activity_id = $_SESSION['activity_id'] ?? null;
 <!-- Il tuo contenuto esistente -->
 <div class="app-container">
     <header class="app-header">
-        <h1>Smart Review</h1>
+        <h1>Review</h1>
         <!-- ... il resto del tuo header ... -->
     </header>
 
     <main class="app-main">
         <!-- ... il tuo contenuto principale ... -->
-        <p>Benvenuto nella dashboard di Smart Review!</p>
+        <p>Benvenuto nella dashboard di Review!</p>
     </main>
 </div>
 

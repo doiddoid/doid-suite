@@ -416,7 +416,7 @@ router.get('/:activityId/subscriptions/check/:serviceCode',
 // ==================== EXTERNAL APP ACCESS ====================
 
 // POST /api/activities/:activityId/generate-token
-// Genera token JWT per accesso a app esterna (Smart Review, Menu Digitale, etc.)
+// Genera token JWT per accesso a app esterna (Review, Menu Digitale, etc.)
 router.post('/:activityId/generate-token',
   [
     param('activityId').isUUID().withMessage('ID attività non valido'),

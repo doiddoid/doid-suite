@@ -1503,7 +1503,7 @@ export default function Admin() {
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Nome Servizio *</label>
-                          <input type="text" value={newServiceData.name || ''} onChange={(e) => setNewServiceData({ ...newServiceData, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Smart Review" />
+                          <input type="text" value={newServiceData.name || ''} onChange={(e) => setNewServiceData({ ...newServiceData, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Review" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Titolo (headline)</label>
@@ -2443,7 +2443,7 @@ export default function Admin() {
                     <input type="text" required value={formData.code || ''} onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/[^a-z_]/g, '') })} className="input-field font-mono" disabled={modalMode === 'edit'} placeholder="review" />
                   </FormField>
                   <FormField label="Nome" required>
-                    <input type="text" required value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="input-field" placeholder="Smart Review" />
+                    <input type="text" required value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="input-field" placeholder="Review" />
                   </FormField>
                   <FormField label="Descrizione">
                     <textarea value={formData.description || ''} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="input-field resize-none" rows={2} placeholder="Descrizione del servizio..." />

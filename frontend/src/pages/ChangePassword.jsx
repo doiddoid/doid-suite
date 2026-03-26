@@ -21,8 +21,8 @@ export default function ChangePassword() {
 
   const getServiceName = (code) => {
     const names = {
-      review: 'Smart Review',
-      page: 'Smart Page',
+      review: 'Review',
+      page: 'Page',
       menu: 'Menu Digitale',
       display: 'Display Suite'
     };

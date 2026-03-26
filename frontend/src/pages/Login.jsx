@@ -6,12 +6,12 @@ import api from '../services/api.js';
 
 // Service display names for contextual banner
 const SERVICE_NAMES = {
-  menu: 'Smart Menu',
-  review: 'Smart Review',
-  page: 'Smart Page',
-  smart_review: 'Smart Review',
-  smart_page: 'Smart Page',
-  menu_digitale: 'Smart Menu',
+  menu: 'Menu',
+  review: 'Review',
+  page: 'Page',
+  smart_review: 'Review',
+  smart_page: 'Page',
+  menu_digitale: 'Menu',
 };
 
 export default function Login() {

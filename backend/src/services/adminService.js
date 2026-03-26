@@ -2797,7 +2797,7 @@ class AdminService {
   /**
    * Collega un account esterno di un servizio a un'attività Suite
    * @param {string} activityId - ID attività Suite
-   * @param {string} serviceCode - Codice servizio (smart_review, smart_page, menu_digitale, display_suite)
+   * @param {string} serviceCode - Codice servizio (review, page, menu_digitale, display_suite)
    * @param {string} externalAccountId - ID account nel servizio esterno
    * @param {string} adminId - ID admin che effettua il collegamento
    * @param {string} notes - Note opzionali

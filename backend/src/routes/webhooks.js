@@ -68,11 +68,11 @@ async function findUserByEmail(email) {
 function parseServiceFromProduct(productName) {
   const name = (productName || '').toLowerCase();
 
-  if (name.includes('smart review') || name.includes('smartreview')) {
-    return 'smart_review';
+  if (name.includes('review') || name.includes('smartreview') || name.includes('smart review')) {
+    return 'review';
   }
-  if (name.includes('smart page') || name.includes('smartpage') || name.includes('vcard')) {
-    return 'smart_page';
+  if (name.includes('page') || name.includes('smartpage') || name.includes('smart page') || name.includes('vcard')) {
+    return 'page';
   }
   if (name.includes('menu') || name.includes('menù')) {
     return 'menu_digitale';
@@ -89,8 +89,8 @@ function parseServiceFromProduct(productName) {
  */
 function parseBillingCycle(amount, serviceCode) {
   const monthlyPrices = {
-    smart_review: 9.90,
-    smart_page: 6.90,
+    review: 9.90,
+    page: 6.90,
     menu_digitale: 9.90,
     display_suite: 14.90
   };

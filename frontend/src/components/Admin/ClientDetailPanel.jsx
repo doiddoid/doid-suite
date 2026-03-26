@@ -1361,7 +1361,7 @@ export default function ClientDetailPanel({
                 {products.length > 0 && (
                   <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
                     <p className="text-xs text-blue-700 font-medium">
-                      ✅ Questo cliente può attivare il piano Free per Smart Review e Smart Page
+                      ✅ Questo cliente può attivare il piano Free per Review e Page
                     </p>
                   </div>
                 )}

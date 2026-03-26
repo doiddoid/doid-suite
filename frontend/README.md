@@ -134,7 +134,7 @@ frontend/
 
 ### Dashboard (`/dashboard`)
 - Panoramica servizi con stato abbonamento
-- Card per ogni servizio (Smart Review, Smart Page, etc.)
+- Card per ogni servizio (Review, Page, etc.)
 - Azioni: Gestisci, Attiva Trial, Upgrade
 - Statistiche abbonamenti
 

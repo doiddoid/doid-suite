@@ -28,7 +28,7 @@ export const CONTACT_REQUIRED_SERVICES = {
   },
   agent_ai: {
     code: 'agent_ai',
-    name: 'Smart Agent AI',
+    name: 'Agent AI',
     description: 'L\'assistente AI che lavora mentre tu riposi',
     tagline: 'Automatizza. Risparmia. Cresci.',
     benefits: [
@@ -44,7 +44,7 @@ export const CONTACT_REQUIRED_SERVICES = {
   },
   connect: {
     code: 'connect',
-    name: 'Smart Connect',
+    name: 'Connect',
     description: 'Il CRM che trasforma contatti in clienti',
     tagline: 'Relazioni che generano fatturato',
     benefits: [

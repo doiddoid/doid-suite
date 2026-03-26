@@ -31,7 +31,7 @@ npm install @doid/sidebar-sdk
 <script>
   DOIDSidebar.init({
     token: 'SSO_TOKEN_HERE',
-    currentService: 'smart_review'
+    currentService: 'review'
   });
 </script>
 ```
@@ -48,7 +48,7 @@ DOIDSidebar.init({
   suiteUrl: 'https://suite.doid.it',    // URL frontend Suite
 
   // === CONTESTO ===
-  currentService: 'smart_review',  // Servizio corrente (evidenziato)
+  currentService: 'review',  // Servizio corrente (evidenziato)
   activityId: 'uuid',              // ID attività corrente
 
   // === ASPETTO ===
@@ -127,7 +127,7 @@ DOIDSidebar.isExpanded();  // true/false
 DOIDSidebar.isHidden();    // true/false
 ```
 
-## Integrazione PHP (Smart Review)
+## Integrazione PHP (Review)
 
 ### 1. Crea endpoint SSO
 
@@ -184,7 +184,7 @@ header('Location: /dashboard');
   <script>
     DOIDSidebar.init({
       token: '<?= $_SESSION['doid_token'] ?>',
-      currentService: 'smart_review',
+      currentService: 'review',
       activityId: '<?= $_SESSION['doid_activity']['id'] ?>',
       onReady: function() {
         document.body.classList.add('sidebar-ready');
@@ -216,8 +216,8 @@ La sidebar usa CSS custom properties che puoi sovrascrivere:
 
 | Codice | Nome |
 |--------|------|
-| `smart_review` | Smart Review |
-| `smart_page` | Smart Page |
+| `review` | Review |
+| `page` | Page |
 | `menu_digitale` | Menu Digitale |
 | `display_suite` | Display Suite |
 

@@ -34,8 +34,8 @@ import {
 // ============================================
 const services = [
   {
-    id: 'smart-review',
-    name: 'Smart Review',
+    id: 'review',
+    name: 'Review',
     tagline: 'Recensioni sotto controllo',
     description: 'Filtra le recensioni negative prima che arrivino online. Raccogli feedback su oltre 10 piattaforme con un solo QR code.',
     icon: Star,
@@ -48,8 +48,8 @@ const services = [
     features: ['Filtro recensioni negative', '10+ piattaforme', 'QR code personalizzato', 'Dashboard analytics']
   },
   {
-    id: 'smart-page',
-    name: 'Smart Page',
+    id: 'page',
+    name: 'Page',
     tagline: 'Il tuo biglietto da visita digitale',
     description: 'Crea landing page professionali e biglietti da visita NFC/QR. Condividi i tuoi contatti con un tap.',
     icon: FileText,
@@ -96,8 +96,8 @@ const services = [
 // ROADMAP SERVIZI FUTURI
 // ============================================
 const futureServices = [
-  { name: 'Smart Accessi', icon: UserCheck, description: 'Gestione ingressi e prenotazioni' },
-  { name: 'Smart CRM', icon: Users, description: 'Clienti e comunicazioni' },
+  { name: 'Accessi', icon: UserCheck, description: 'Gestione ingressi e prenotazioni' },
+  { name: 'CRM', icon: Users, description: 'Clienti e comunicazioni' },
 ];
 
 // ============================================
@@ -399,7 +399,7 @@ export default function Landing() {
                 <div className="w-3 h-3 rounded-full bg-teal-500"></div>
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">Oggi disponibili</p>
-                  <p className="text-sm text-gray-500">Smart Review, Smart Page</p>
+                  <p className="text-sm text-gray-500">Review, Page</p>
                 </div>
                 <span className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded-full">Attivi</span>
               </div>

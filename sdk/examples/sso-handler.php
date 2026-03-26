@@ -1,12 +1,12 @@
 <?php
 /**
- * SSO Handler per Smart Review
+ * SSO Handler per Review
  *
  * Questo file gestisce l'autenticazione SSO proveniente da Suite.
  * Deve essere posizionato in: /auth/sso.php (o equivalente)
  *
  * FLUSSO:
- * 1. L'utente clicca su "Smart Review" nella Suite
+ * 1. L'utente clicca su "Review" nella Suite
  * 2. Suite genera un token JWT temporaneo (5 min)
  * 3. L'utente viene reindirizzato qui con ?token=xxx
  * 4. Questo script verifica il token con Suite API
@@ -46,7 +46,7 @@ $organization = $data['organization'];
 $license = $data['license'];
 $role = $data['role'];
 
-// Verifica che l'utente abbia accesso a Smart Review
+// Verifica che l'utente abbia accesso a Review
 $hasSmartReview = false;
 if (isset($license['subscriptions'])) {
     foreach ($license['subscriptions'] as $sub) {
@@ -59,7 +59,7 @@ if (isset($license['subscriptions'])) {
 
 if (!$hasSmartReview) {
     http_response_code(403);
-    die('Non hai un abbonamento attivo a Smart Review. <a href="' . $SUITE_URL . '">Torna a Suite</a>');
+    die('Non hai un abbonamento attivo a Review. <a href="' . $SUITE_URL . '">Torna a Suite</a>');
 }
 
 // Crea sessione locale
@@ -91,7 +91,7 @@ $_SESSION['from_suite'] = true;
 // Log dell'accesso (opzionale)
 logAccess($user, $activity);
 
-// Redirect alla dashboard di Smart Review
+// Redirect alla dashboard di Review
 $redirectUrl = $_GET['redirect'] ?? '/dashboard';
 
 // Parametro per UI iframe (se presente)

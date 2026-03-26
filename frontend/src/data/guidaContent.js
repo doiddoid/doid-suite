@@ -30,7 +30,7 @@ export const guidaContent = {
           },
           {
             title: 'I servizi disponibili',
-            content: '**Smart Review** — Gestisci la reputazione online. Raccogli recensioni positive e intercetta i feedback negativi prima che finiscano online.\n\n**Smart Page** — Il tuo biglietto da visita digitale. Sempre aggiornato, condivisibile con un tap o QR Code.\n\n**Smart Menu** — Il menu digitale per il tuo ristorante. Aggiorna piatti e prezzi in qualsiasi momento.\n\n**Smart Display** — Gestisci schermi e display digitali da remoto.',
+            content: '**Review** — Gestisci la reputazione online. Raccogli recensioni positive e intercetta i feedback negativi prima che finiscano online.\n\n**Page** — Il tuo biglietto da visita digitale. Sempre aggiornato, condivisibile con un tap o QR Code.\n\n**Menu** — Il menu digitale per il tuo ristorante. Aggiorna piatti e prezzi in qualsiasi momento.\n\n**Display** — Gestisci schermi e display digitali da remoto.',
           },
           {
             title: 'Come funziona in pratica',
@@ -39,7 +39,7 @@ export const guidaContent = {
           },
           {
             title: 'Quanto costa?',
-            content: 'Ogni servizio ha un **piano FREE** (gratuito con funzionalità limitate) e un **piano PRO** con tutto incluso.\n\n| Servizio | PRO Mensile | PRO Annuale |\n|----------|-------------|-------------|\n| Smart Review | €14,90/mese | €149,00/anno (-17%) |\n| Smart Page | €14,90/mese | €149,00/anno (-17%) |\n| Smart Menu | €24,90/mese | €249,00/anno (-17%) |\n| Smart Display | €49,00/mese | €490,00/anno (-17%) |',
+            content: 'Ogni servizio ha un **piano FREE** (gratuito con funzionalità limitate) e un **piano PRO** con tutto incluso.\n\n| Servizio | PRO Mensile | PRO Annuale |\n|----------|-------------|-------------|\n| Review | €14,90/mese | €149,00/anno (-17%) |\n| Page | €14,90/mese | €149,00/anno (-17%) |\n| Menu | €24,90/mese | €249,00/anno (-17%) |\n| Display | €49,00/mese | €490,00/anno (-17%) |',
             warning: 'I prezzi si riferiscono a una singola attività. Se attivi più servizi per la stessa attività, hai diritto a sconti automatici (fino al 30%).',
           },
         ],
@@ -251,28 +251,28 @@ export const guidaContent = {
 
   review: {
     id: 'review',
-    label: 'Smart Review',
+    label: 'Review',
     color: 'yellow',
     bgColor: 'bg-yellow-50',
     textColor: 'text-yellow-700',
     borderColor: 'border-yellow-200',
     description: 'Gestisci la reputazione online: raccogli recensioni positive e intercetta quelle negative.',
     cta: {
-      headline: 'Non hai ancora provato Smart Review?',
+      headline: 'Non hai ancora provato Review?',
       problem: 'Le recensioni negative finiscono online prima che tu possa fare qualcosa.',
-      solution: 'Con Smart Review le intercetti e le gestisci in privato, trasformando un problema in un\'opportunità.',
+      solution: 'Con Review le intercetti e le gestisci in privato, trasformando un problema in un\'opportunità.',
       action: 'Attiva la prova gratuita — 30 giorni gratis',
       note: 'Nessun dato di pagamento richiesto.',
     },
     guides: [
       {
         id: 'review-01',
-        title: 'Cos\'è Smart Review e Come Funziona',
+        title: 'Cos\'è Review e Come Funziona',
         subtitle: 'Il flusso completo: dal QR Code alla recensione, FREE vs PRO e il Filtro',
         sections: [
           {
             title: 'A cosa serve',
-            content: 'Smart Review ti aiuta a **gestire la reputazione online** della tua attività:\n\n• **Raccogli più recensioni positive** su Google, TripAdvisor, Facebook e altre\n• **Intercetti i feedback negativi** prima che vengano pubblicati (piano PRO)\n• **Migliori il servizio** grazie ai feedback privati',
+            content: 'Review ti aiuta a **gestire la reputazione online** della tua attività:\n\n• **Raccogli più recensioni positive** su Google, TripAdvisor, Facebook e altre\n• **Intercetti i feedback negativi** prima che vengano pubblicati (piano PRO)\n• **Migliori il servizio** grazie ai feedback privati',
           },
           {
             title: 'Come funziona il flusso',
@@ -286,7 +286,7 @@ export const guidaContent = {
           },
           {
             title: 'Il Filtro Recensioni',
-            content: 'Il cuore di Smart Review PRO:\n\n1. Il cliente insoddisfatto dà 1-3 stelle\n2. Invece di finire su Google, vede un modulo privato\n3. Lascia il feedback direttamente a te\n4. Tu ricevi una notifica e puoi contattarlo\n\n**Non censura** — il cliente può sempre andare su Google autonomamente. Il filtro semplicemente non gli facilita il percorso.',
+            content: 'Il cuore di Review PRO:\n\n1. Il cliente insoddisfatto dà 1-3 stelle\n2. Invece di finire su Google, vede un modulo privato\n3. Lascia il feedback direttamente a te\n4. Tu ricevi una notifica e puoi contattarlo\n\n**Non censura** — il cliente può sempre andare su Google autonomamente. Il filtro semplicemente non gli facilita il percorso.',
           },
         ],
         nextGuide: 'review-02',
@@ -294,17 +294,17 @@ export const guidaContent = {
       {
         id: 'review-02',
         title: 'Primo Accesso e Configurazione',
-        subtitle: 'Accesso da Suite, pannello di gestione e prima Smart Review',
+        subtitle: 'Accesso da Suite, pannello di gestione e prima Review',
         sections: [
           {
             title: 'Accedere da DOID Suite',
-            content: 'Accedi a **suite.doid.it** e clicca su **"Smart Review"** nel menu laterale o sulla scheda del servizio.\n\nVerrai reindirizzato automaticamente a **review.doid.it** — senza un altro login (SSO).',
-            screenshot: { alt: 'Accesso Smart Review', desc: 'Menu laterale con Smart Review e freccia verso il pannello' },
+            content: 'Accedi a **suite.doid.it** e clicca su **"Review"** nel menu laterale o sulla scheda del servizio.\n\nVerrai reindirizzato automaticamente a **review.doid.it** — senza un altro login (SSO).',
+            screenshot: { alt: 'Accesso Review', desc: 'Menu laterale con Review e freccia verso il pannello' },
           },
           {
-            title: 'Creare la tua Smart Review',
-            content: '1. Clicca **"Crea la tua Smart Review"**\n2. Inserisci il **nome dell\'attività**\n3. Carica il **logo** (JPG o PNG, meglio quadrato su sfondo trasparente)\n4. Aggiungi almeno una **piattaforma** (incolla il link a Google Reviews, TripAdvisor...)\n5. Clicca **"Salva Modifiche"**\n6. Clicca **"Anteprima"** per vedere il risultato',
-            screenshot: { alt: 'Creazione Smart Review', desc: 'Pulsante "Crea la tua Smart Review" e modulo' },
+            title: 'Creare la tua Review',
+            content: '1. Clicca **"Crea la tua Review"**\n2. Inserisci il **nome dell\'attività**\n3. Carica il **logo** (JPG o PNG, meglio quadrato su sfondo trasparente)\n4. Aggiungi almeno una **piattaforma** (incolla il link a Google Reviews, TripAdvisor...)\n5. Clicca **"Salva Modifiche"**\n6. Clicca **"Anteprima"** per vedere il risultato',
+            screenshot: { alt: 'Creazione Review', desc: 'Pulsante "Crea la tua Review" e modulo' },
             tip: 'Le visite in modalità anteprima non vengono conteggiate nelle statistiche.',
           },
           {
@@ -326,7 +326,7 @@ export const guidaContent = {
         sections: [
           {
             title: 'Come aggiungere una piattaforma',
-            content: '1. Apri le impostazioni della tua Smart Review\n2. Scorri alla sezione **"Piattaforme di Recensione"**\n3. Trova il **link diretto** alla tua pagina sulla piattaforma\n4. Incolla il link nel campo corrispondente\n5. Ripeti per le altre piattaforme\n6. Clicca **"Salva Modifiche"**',
+            content: '1. Apri le impostazioni della tua Review\n2. Scorri alla sezione **"Piattaforme di Recensione"**\n3. Trova il **link diretto** alla tua pagina sulla piattaforma\n4. Incolla il link nel campo corrispondente\n5. Ripeti per le altre piattaforme\n6. Clicca **"Salva Modifiche"**',
             screenshot: { alt: 'Piattaforme', desc: 'Sezione "Piattaforme di Recensione" con i campi URL' },
           },
           {
@@ -359,13 +359,13 @@ export const guidaContent = {
           },
           {
             title: 'Come attivare il filtro',
-            content: '1. Apri le impostazioni della tua Smart Review\n2. Trova la sezione **"Filtro Recensioni"**\n3. Spunta **"Attiva il filtro automatico"**\n4. Opzionale: configura il **Google Maps Place ID** per il carosello recensioni\n5. Clicca **"Salva Modifiche"**',
+            content: '1. Apri le impostazioni della tua Review\n2. Trova la sezione **"Filtro Recensioni"**\n3. Spunta **"Attiva il filtro automatico"**\n4. Opzionale: configura il **Google Maps Place ID** per il carosello recensioni\n5. Clicca **"Salva Modifiche"**',
             screenshot: { alt: 'Attivazione filtro', desc: 'Sezione Filtro Recensioni nel pannello' },
             tip: 'Il carosello Google positivo fa "priming": i clienti che vedono recensioni positive sono più propensi a lasciarne una.',
           },
           {
             title: 'Come gestire i feedback negativi',
-            content: '**Visualizzare**: apri la tua Smart Review per vedere la lista dei feedback con nome, email, telefono, voto, testo e data.\n\n**Rispondere**: contatta il cliente entro 24 ore via email, telefono o WhatsApp.\n\n**Esempio messaggio**: "Ciao [Nome], grazie per il feedback. Mi dispiace che l\'esperienza non sia stata all\'altezza. Vorrei capire meglio cosa è successo e trovare un modo per rimediare."',
+            content: '**Visualizzare**: apri la tua Review per vedere la lista dei feedback con nome, email, telefono, voto, testo e data.\n\n**Rispondere**: contatta il cliente entro 24 ore via email, telefono o WhatsApp.\n\n**Esempio messaggio**: "Ciao [Nome], grazie per il feedback. Mi dispiace che l\'esperienza non sia stata all\'altezza. Vorrei capire meglio cosa è successo e trovare un modo per rimediare."',
             screenshot: { alt: 'Lista feedback', desc: 'Lista dei feedback negativi intercettati' },
             tip: 'Rispondere entro 24 ore aumenta significativamente le probabilità di risolvere positivamente.',
           },
@@ -423,7 +423,7 @@ export const guidaContent = {
         ],
         faq: [
           { q: 'Lo stand ha bisogno di batteria?', a: 'No, il chip NFC è passivo. Funziona sempre.' },
-          { q: 'Posso usare Smart Review senza stand?', a: 'Sì, puoi condividere il link diretto o il QR Code digitale.' },
+          { q: 'Posso usare Review senza stand?', a: 'Sì, puoi condividere il link diretto o il QR Code digitale.' },
         ],
         nextGuide: 'review-07',
       },
@@ -434,8 +434,8 @@ export const guidaContent = {
         sections: [
           {
             title: 'Le statistiche rapide',
-            content: 'Nella scheda della tua Smart Review vedi: piattaforme configurate, visite totali, media voto e negative intercettate.',
-            screenshot: { alt: 'Statistiche rapide', desc: 'Scheda Smart Review con le statistiche rapide' },
+            content: 'Nella scheda della tua Review vedi: piattaforme configurate, visite totali, media voto e negative intercettate.',
+            screenshot: { alt: 'Statistiche rapide', desc: 'Scheda Review con le statistiche rapide' },
           },
           {
             title: 'Come interpretare i numeri',
@@ -456,7 +456,7 @@ export const guidaContent = {
           { q: 'Il cliente sa che è stato filtrato?', a: 'No. L\'esperienza è trasparente.' },
           { q: 'Cosa succede alla fine della prova gratuita?', a: 'Il servizio passa a "Scaduto". I dati vengono conservati. Puoi attivare il PRO o passare al FREE.' },
           { q: 'Durante la prova ho tutte le funzionalità PRO?', a: 'Sì, tutte.' },
-          { q: 'Devo fare qualcosa ogni giorno?', a: 'No, Smart Review funziona in automatico. Controlla i feedback negativi una volta alla settimana.' },
+          { q: 'Devo fare qualcosa ogni giorno?', a: 'No, Review funziona in automatico. Controlla i feedback negativi una volta alla settimana.' },
           { q: 'I clienti devono scaricare un\'app?', a: 'No. Tutto funziona dal browser del telefono.' },
           { q: 'Il QR Code non funziona. Cosa faccio?', a: 'Verifica che sia stampato nitidamente, ben illuminato, e usa la fotocamera predefinita del telefono.' },
           { q: 'L\'NFC non risponde. Cosa faccio?', a: 'Verifica che l\'NFC sia attivo sul telefono e che stai avvicinando la parte superiore a 2-3 cm dallo stand.' },
@@ -468,28 +468,28 @@ export const guidaContent = {
 
   page: {
     id: 'page',
-    label: 'Smart Page',
+    label: 'Page',
     color: 'blue',
     bgColor: 'bg-blue-50',
     textColor: 'text-blue-700',
     borderColor: 'border-blue-200',
     description: 'Il tuo biglietto da visita digitale: sempre aggiornato, condivisibile con un tap.',
     cta: {
-      headline: 'Non hai ancora provato Smart Page?',
+      headline: 'Non hai ancora provato Page?',
       problem: 'I biglietti cartacei si perdono, si rovinano e diventano obsoleti appena cambi un numero.',
-      solution: 'Con Smart Page hai un biglietto digitale sempre aggiornato, condivisibile con un tocco. Chi lo riceve salva i tuoi contatti in rubrica con un tap.',
+      solution: 'Con Page hai un biglietto digitale sempre aggiornato, condivisibile con un tocco. Chi lo riceve salva i tuoi contatti in rubrica con un tap.',
       action: 'Attiva la prova gratuita — 30 giorni gratis',
       note: 'Nessun dato di pagamento richiesto.',
     },
     guides: [
       {
         id: 'page-01',
-        title: 'Cos\'è Smart Page e Come Funziona',
+        title: 'Cos\'è Page e Come Funziona',
         subtitle: 'Biglietto digitale, flusso NFC/QR → contatto salvato, FREE vs PRO',
         sections: [
           {
             title: 'A cosa serve',
-            content: 'Smart Page è il tuo **biglietto da visita digitale**:\n\n• **Condividi i contatti** in modo rapido e professionale\n• **Aggiorna le informazioni** senza ristampare nulla\n• **Far salvare il contatto** direttamente in rubrica\n• **Collega i social media** in un unico posto\n• **Personalizza il design** con i tuoi colori',
+            content: 'Page è il tuo **biglietto da visita digitale**:\n\n• **Condividi i contatti** in modo rapido e professionale\n• **Aggiorna le informazioni** senza ristampare nulla\n• **Far salvare il contatto** direttamente in rubrica\n• **Collega i social media** in un unico posto\n• **Personalizza il design** con i tuoi colori',
           },
           {
             title: 'Come funziona',
@@ -510,12 +510,12 @@ export const guidaContent = {
         sections: [
           {
             title: 'Accedere da DOID Suite',
-            content: 'Accedi a **suite.doid.it** e clicca su **Smart Page** nel menu laterale o dalla scheda servizio. Verrai reindirizzato a **page.doid.it** automaticamente.',
-            screenshot: { alt: 'Accesso Smart Page', desc: 'Accesso a Smart Page dalla dashboard Suite' },
+            content: 'Accedi a **suite.doid.it** e clicca su **Page** nel menu laterale o dalla scheda servizio. Verrai reindirizzato a **page.doid.it** automaticamente.',
+            screenshot: { alt: 'Accesso Page', desc: 'Accesso a Page dalla dashboard Suite' },
           },
           {
             title: 'Creare il primo biglietto',
-            content: '1. Clicca per **creare una nuova Smart Page**\n2. Inserisci **nome** e **cognome**\n3. Aggiungi una **bio breve** (max 160 caratteri)\n4. Inserisci **email** e **telefono**\n5. Aggiungi i **social** (Facebook, Instagram, LinkedIn — max 3 nel FREE)\n6. Scegli i **colori** primario e secondario\n7. Clicca **"Salva"** e poi **"Anteprima"**',
+            content: '1. Clicca per **creare una nuova Page**\n2. Inserisci **nome** e **cognome**\n3. Aggiungi una **bio breve** (max 160 caratteri)\n4. Inserisci **email** e **telefono**\n5. Aggiungi i **social** (Facebook, Instagram, LinkedIn — max 3 nel FREE)\n6. Scegli i **colori** primario e secondario\n7. Clicca **"Salva"** e poi **"Anteprima"**',
             screenshot: { alt: 'Anteprima biglietto', desc: 'Anteprima del biglietto su smartphone' },
           },
         ],
@@ -537,8 +537,8 @@ export const guidaContent = {
           },
           {
             title: 'Social media e link',
-            content: '**FREE**: Facebook, Instagram, LinkedIn (max 3).\n**PRO**: 25+ piattaforme incluso YouTube, TikTok, Spotify, Pinterest, Behance, Dribbble e molte altre.\n\n**Link personalizzati** (PRO): fino a 2 link con titolo a scelta (es. "Portfolio", "Shop online").\n\n**Pulsante Recensioni** (PRO): collega la tua Smart Review!',
-            tip: 'Se usi anche Smart Review, inserisci il link qui per raccogliere recensioni dal biglietto!',
+            content: '**FREE**: Facebook, Instagram, LinkedIn (max 3).\n**PRO**: 25+ piattaforme incluso YouTube, TikTok, Spotify, Pinterest, Behance, Dribbble e molte altre.\n\n**Link personalizzati** (PRO): fino a 2 link con titolo a scelta (es. "Portfolio", "Shop online").\n\n**Pulsante Recensioni** (PRO): collega la tua Review!',
+            tip: 'Se usi anche Review, inserisci il link qui per raccogliere recensioni dal biglietto!',
           },
           {
             title: 'Design: immagini e colori',
@@ -620,7 +620,7 @@ export const guidaContent = {
           { q: 'Funziona senza app?', a: 'Sì, tutto dal browser. Nessuna app necessaria.' },
           { q: 'Devo rigenerare il QR Code se cambio i dati?', a: 'No. Il QR contiene il link, non i dati. Le modifiche si vedono automaticamente.' },
           { q: 'La card NFC funziona con tutti i telefoni?', a: 'iPhone 7+ e Android con NFC attivo. Per gli altri c\'è il QR Code stampato.' },
-          { q: 'Quanto costa Smart Page PRO?', a: '€14,90/mese o €149,00/anno (-17%). Prova gratuita 30 giorni con tutto incluso.' },
+          { q: 'Quanto costa Page PRO?', a: '€14,90/mese o €149,00/anno (-17%). Prova gratuita 30 giorni con tutto incluso.' },
           { q: 'Cosa succede se torno al FREE?', a: 'Le funzionalità PRO vengono limitate ma i dati non vengono cancellati.' },
         ],
         nextGuide: null,
@@ -630,28 +630,28 @@ export const guidaContent = {
 
   menu: {
     id: 'menu',
-    label: 'Smart Menu',
+    label: 'Menu',
     color: 'green',
     bgColor: 'bg-green-50',
     textColor: 'text-green-700',
     borderColor: 'border-green-200',
     description: 'Il menu digitale per il tuo ristorante: aggiorna piatti e prezzi senza ristampare.',
     cta: {
-      headline: 'Non hai ancora provato Smart Menu?',
+      headline: 'Non hai ancora provato Menu?',
       problem: 'Ogni volta che cambi un prezzo o un piatto, devi ristampare tutti i menu. Costi, tempo e sprechi.',
-      solution: 'Con Smart Menu aggiorni tutto in 30 secondi dal telefono. I clienti scansionano il QR e vedono il menu sempre aggiornato, con foto, allergeni e multilingua.',
+      solution: 'Con Menu aggiorni tutto in 30 secondi dal telefono. I clienti scansionano il QR e vedono il menu sempre aggiornato, con foto, allergeni e multilingua.',
       action: 'Attiva la prova gratuita — 30 giorni gratis',
       note: 'Nessun dato di pagamento richiesto.',
     },
     guides: [
       {
         id: 'menu-01',
-        title: 'Cos\'è Smart Menu e Come Funziona',
+        title: 'Cos\'è Menu e Come Funziona',
         subtitle: 'Menu digitale via QR, FREE vs PRO e sistema d\'asporto',
         sections: [
           {
             title: 'A cosa serve',
-            content: 'Smart Menu è il **menu digitale** per il tuo ristorante:\n\n• **Aggiorna piatti e prezzi** in qualsiasi momento, senza ristampare\n• **Aggiungi foto** dei piatti per invogliare i clienti\n• **Indica allergeni** come richiesto dalla normativa UE\n• **Offri il menu in più lingue** — fino a 11 (ideale per zone turistiche)\n• **Ricevi ordini d\'asporto** direttamente dal menu (PRO)',
+            content: 'Menu è il **menu digitale** per il tuo ristorante:\n\n• **Aggiorna piatti e prezzi** in qualsiasi momento, senza ristampare\n• **Aggiungi foto** dei piatti per invogliare i clienti\n• **Indica allergeni** come richiesto dalla normativa UE\n• **Offri il menu in più lingue** — fino a 11 (ideale per zone turistiche)\n• **Ricevi ordini d\'asporto** direttamente dal menu (PRO)',
           },
           {
             title: 'Come funziona',
@@ -671,8 +671,8 @@ export const guidaContent = {
         sections: [
           {
             title: 'Accedere da DOID Suite',
-            content: 'Clicca su **Smart Menu** nel menu laterale della Suite. Verrai reindirizzato a **menu.doid.it** automaticamente.',
-            screenshot: { alt: 'Accesso Smart Menu', desc: 'Accesso a Smart Menu dalla dashboard Suite' },
+            content: 'Clicca su **Menu** nel menu laterale della Suite. Verrai reindirizzato a **menu.doid.it** automaticamente.',
+            screenshot: { alt: 'Accesso Menu', desc: 'Accesso a Menu dalla dashboard Suite' },
           },
           {
             title: 'Configurare il profilo',
@@ -793,7 +793,7 @@ export const guidaContent = {
         sections: [
           {
             title: 'Gestione multi-ristorante',
-            content: 'Se gestisci più ristoranti:\n\n1. Crea un\'attività in DOID Suite per ogni ristorante\n2. Attiva Smart Menu per ognuno\n3. Ogni ristorante ha menu, categorie e piatti indipendenti\n4. Passa da uno all\'altro dalla pagina di selezione',
+            content: 'Se gestisci più ristoranti:\n\n1. Crea un\'attività in DOID Suite per ogni ristorante\n2. Attiva Menu per ognuno\n3. Ogni ristorante ha menu, categorie e piatti indipendenti\n4. Passa da uno all\'altro dalla pagina di selezione',
             screenshot: { alt: 'Selezione ristorante', desc: 'Pagina di selezione ristorante con griglia' },
           },
           {
@@ -833,8 +833,8 @@ export const guidaContent = {
           { q: 'Il menu funziona su tutti i telefoni?', a: 'Sì, su tutti gli smartphone con browser moderno.' },
           { q: 'Posso avere menu diversi per pranzo e cena?', a: 'Sì, con il PRO. Menu illimitati.' },
           { q: 'Il menu viene tradotto automaticamente?', a: 'No, le traduzioni vanno inserite manualmente per accuratezza.' },
-          { q: 'Quanto risparmio rispetto ai menu cartacei?', a: 'Un menu cartaceo costa €500-1.500+/anno (stampe + ristampe). Smart Menu PRO costa €249/anno con aggiornamenti gratuiti e illimitati.' },
-          { q: 'Devo indicare gli allergeni per legge?', a: 'Il Regolamento UE 1169/2011 lo richiede. Smart Menu facilita la compliance con icone automatiche per i 14 allergeni.' },
+          { q: 'Quanto risparmio rispetto ai menu cartacei?', a: 'Un menu cartaceo costa €500-1.500+/anno (stampe + ristampe). Menu PRO costa €249/anno con aggiornamenti gratuiti e illimitati.' },
+          { q: 'Devo indicare gli allergeni per legge?', a: 'Il Regolamento UE 1169/2011 lo richiede. Menu facilita la compliance con icone automatiche per i 14 allergeni.' },
           { q: 'Come funziona l\'asporto?', a: 'Il cliente aggiunge piatti al carrello e invia l\'ordine via WhatsApp o email. Il pagamento avviene al ritiro.' },
           { q: 'Cosa succede se l\'abbonamento scade?', a: 'Il menu diventa non visibile. I dati vengono conservati per un periodo. Rinnova per riattivare.' },
         ],

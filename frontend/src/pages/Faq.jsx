@@ -9,8 +9,8 @@ const SERVICE_TABS = [
   { id: 'all', label: 'Tutte', icon: HelpCircle, activeClass: 'bg-teal-50 text-teal-700 border-teal-500' },
   { id: 'general', label: 'Generali', icon: HelpCircle, activeClass: 'bg-gray-100 text-gray-700 border-gray-500' },
   { id: 'suite', label: 'Suite', icon: Sparkles, activeClass: 'bg-teal-50 text-teal-700 border-teal-500' },
-  { id: 'review', label: 'Smart Review', icon: Star, activeClass: 'bg-yellow-50 text-yellow-700 border-yellow-500' },
-  { id: 'page', label: 'Smart Page', icon: FileText, activeClass: 'bg-blue-50 text-blue-700 border-blue-500' },
+  { id: 'review', label: 'Review', icon: Star, activeClass: 'bg-yellow-50 text-yellow-700 border-yellow-500' },
+  { id: 'page', label: 'Page', icon: FileText, activeClass: 'bg-blue-50 text-blue-700 border-blue-500' },
   { id: 'menu', label: 'Menu Digitale', icon: UtensilsCrossed, activeClass: 'bg-green-50 text-green-700 border-green-500' },
 ];
 
@@ -25,8 +25,8 @@ const SERVICE_STYLES = {
 const SERVICE_LABELS = {
   general: 'Generali',
   suite: 'Suite',
-  review: 'Smart Review',
-  page: 'Smart Page',
+  review: 'Review',
+  page: 'Page',
   menu: 'Menu Digitale',
 };
 

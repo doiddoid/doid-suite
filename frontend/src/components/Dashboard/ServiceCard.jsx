@@ -221,7 +221,7 @@ export default function ServiceCard({
       };
     }
 
-    // Servizi che richiedono contatto (Display Suite, Smart Agent AI, Smart Connect)
+    // Servizi che richiedono contatto (Display Suite, Agent AI, Connect)
     // Solo se NON hanno subscription attiva
     if (isContactRequired && !subscription) {
       return {

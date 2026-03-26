@@ -81,7 +81,7 @@ export default function ClientGrid({
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">Con Smart Review</p>
+              <p className="text-sm text-gray-500 mb-1">Con Review</p>
               <p className="text-2xl font-bold text-gray-900">{clientsWithReview}</p>
             </div>
             <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
@@ -92,7 +92,7 @@ export default function ClientGrid({
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">Con Smart Page</p>
+              <p className="text-sm text-gray-500 mb-1">Con Page</p>
               <p className="text-2xl font-bold text-gray-900">{clientsWithPage}</p>
             </div>
             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">

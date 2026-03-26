@@ -66,8 +66,8 @@ class WebhookService {
 
     // URL webhook per sincronizzazione licenze verso app DOID
     this.licenseSyncUrls = {
-      'smart_review': process.env.DOID_WEBHOOK_SMART_REVIEW || 'https://review.doid.it/api/webhook/sync-license',
-      'smart_page': process.env.DOID_WEBHOOK_SMART_PAGE || 'https://page.doid.it/api/webhook/sync-license',
+      'review': process.env.DOID_WEBHOOK_REVIEW || 'https://review.doid.it/api/webhook/sync-license',
+      'page': process.env.DOID_WEBHOOK_PAGE || 'https://page.doid.it/api/webhook/sync-license',
       'menu_digitale': process.env.DOID_WEBHOOK_MENU_DIGITALE,
       'display_suite': process.env.DOID_WEBHOOK_DISPLAY_SUITE
     };
@@ -93,10 +93,12 @@ class WebhookService {
 
     // Mapping servizio → label italiano
     this.serviceLabels = {
-      'smart_review': 'Smart Review',
-      'smart-review': 'Smart Review',
-      'smart_page': 'Smart Page',
-      'smart-page': 'Smart Page',
+      'review': 'Review',
+      'smart_review': 'Review',
+      'smart-review': 'Review',
+      'page': 'Page',
+      'smart_page': 'Page',
+      'smart-page': 'Page',
       'menu_digitale': 'Menu Digitale',
       'menu': 'Menu Digitale',
       'display_suite': 'Display Suite',
@@ -106,8 +108,10 @@ class WebhookService {
 
     // Mapping servizio → prezzo PRO mensile
     this.servicePrices = {
+      'review': '9.90',
       'smart_review': '9.90',
       'smart-review': '9.90',
+      'page': '6.90',
       'smart_page': '6.90',
       'smart-page': '6.90',
       'menu_digitale': '9.90',
@@ -119,8 +123,10 @@ class WebhookService {
 
     // Mapping servizio → ha piano FREE?
     this.serviceHasFree = {
+      'review': true,
       'smart_review': true,
       'smart-review': true,
+      'page': true,
       'smart_page': true,
       'smart-page': true,
       'menu_digitale': false,
@@ -144,8 +150,10 @@ class WebhookService {
    */
   getDashboardUrl(service) {
     const urls = {
+      'review': 'https://review.doid.it',
       'smart_review': 'https://review.doid.it',
       'smart-review': 'https://review.doid.it',
+      'page': 'https://page.doid.it',
       'smart_page': 'https://page.doid.it',
       'smart-page': 'https://page.doid.it',
       'menu_digitale': 'https://menu.doid.it',

@@ -12,7 +12,7 @@ export const getServices = async () => {
 
 /**
  * Ottieni dettaglio servizio con piani
- * @param {string} code - Codice del servizio (es. 'smart_review')
+ * @param {string} code - Codice del servizio (es. 'review')
  * @returns {Promise<{success: boolean, data: {service: Object, plans: Array}}>}
  */
 export const getService = async (code) => {

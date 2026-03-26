@@ -2,7 +2,7 @@
 export const SERVICES = {
   review: {
     code: 'review',
-    name: 'Smart Review',
+    name: 'Review',
     description: 'Trasforma ogni recensione in un cliente fedele',
     tagline: 'Più recensioni positive, più clienti',
     benefits: [
@@ -10,7 +10,7 @@ export const SERVICES = {
       'Gestisci più piattaforme in un unico luogo',
       'Blocca le recensioni negative prima che vadano online'
     ],
-    appUrl: process.env.SMART_REVIEW_URL || 'https://review.doid.it',
+    appUrl: process.env.REVIEW_URL || 'https://review.doid.it',
     icon: 'Star',
     color: '#F59E0B',
     bgLight: '#FFFBEB',
@@ -19,7 +19,7 @@ export const SERVICES = {
   },
   page: {
     code: 'page',
-    name: 'Smart Page',
+    name: 'Page',
     description: 'Il tuo biglietto da visita digitale che converte',
     tagline: 'Fatti trovare. Fatti scegliere.',
     benefits: [
@@ -27,7 +27,7 @@ export const SERVICES = {
       'QR Code pronto per biglietti e vetrine',
       'Analytics per capire chi ti cerca'
     ],
-    appUrl: process.env.SMART_PAGE_URL || 'https://page.doid.it',
+    appUrl: process.env.PAGE_URL || 'https://page.doid.it',
     icon: 'FileText',
     color: '#3B82F6',
     bgLight: '#EFF6FF',
@@ -53,7 +53,7 @@ export const SERVICES = {
   },
   agent_ai: {
     code: 'agent_ai',
-    name: 'Smart Agent AI',
+    name: 'Agent AI',
     description: 'L\'assistente AI che lavora mentre tu riposi',
     tagline: 'Automatizza. Risparmia. Cresci.',
     benefits: [
@@ -70,7 +70,7 @@ export const SERVICES = {
   },
   connect: {
     code: 'connect',
-    name: 'Smart Connect',
+    name: 'Connect',
     description: 'Il CRM che trasforma contatti in clienti',
     tagline: 'Relazioni che generano fatturato',
     benefits: [
@@ -104,7 +104,7 @@ export const SERVICES = {
   },
   chat_ai: {
     code: 'chat_ai',
-    name: 'Smart Chat AI',
+    name: 'Chat AI',
     description: 'Bot AI personalizzati ed embeddabili',
     tagline: 'Il tuo assistente AI, pronto in minuti',
     benefits: [
@@ -128,23 +128,25 @@ export const CONTACT_REQUIRED_SERVICES = ['agent_ai', 'connect', 'display'];
 
 // Mappatura codici servizio: database <-> API esterne
 // Il database (tabella services) usa codici brevi: review, page, menu, display
-// Le API esterne e i servizi PHP usano codici lunghi: smart_review, smart_page, menu_digitale, display_suite
+// Le API esterne e i servizi PHP usano codici lunghi: review, page, menu_digitale, display_suite
+// Backward compatibility: accetta ancora i vecchi codici smart_review, smart_page
 export const SERVICE_CODE_MAP = {
-  // API/external code -> DB/short code
+  // Legacy codes -> DB/short code (backward compatibility)
   'smart_review': 'review',
   'smart_page': 'page',
+  'smart_chat': 'chat_ai',
+  // API/external code -> DB/short code
   'menu_digitale': 'menu',
-  // DB/short code -> API/external code
-  'review': 'smart_review',
-  'page': 'smart_page',
-  'menu': 'menu_digitale',
-  // Display/other services (same in both)
   'display_suite': 'display',
+  // DB/short code -> API/external code
+  'review': 'review',
+  'page': 'page',
+  'menu': 'menu_digitale',
   'display': 'display_suite',
+  // Services with same code in both
   'agent_ai': 'agent_ai',
   'connect': 'connect',
-  'chat_ai': 'chat_ai',
-  'smart_chat': 'chat_ai'
+  'chat_ai': 'chat_ai'
 };
 
 // Normalizza un service code al formato breve (review, page, menu)
@@ -162,18 +164,21 @@ export const normalizeServiceCodeShort = (code) => {
   return code;
 };
 
-// Normalizza un service code al formato database (smart_review, smart_page, menu_digitale)
+// Normalizza un service code al formato lungo/esterno (review, page, menu_digitale, display_suite)
 export const normalizeServiceCodeFull = (code) => {
   if (!code) return code;
   const mapped = SERVICE_CODE_MAP[code];
   // Se il mapping esiste e il risultato è un codice lungo, usalo
-  if (mapped && ['smart_review', 'smart_page', 'menu_digitale', 'display_suite'].includes(mapped)) {
+  if (mapped && ['review', 'page', 'menu_digitale', 'display_suite'].includes(mapped)) {
     return mapped;
   }
   // Altrimenti ritorna il codice originale se già lungo
-  if (['smart_review', 'smart_page', 'menu_digitale', 'display_suite'].includes(code)) {
+  if (['review', 'page', 'menu_digitale', 'display_suite'].includes(code)) {
     return code;
   }
+  // Backward compatibility: converte smart_review -> review, smart_page -> page
+  if (code === 'smart_review') return 'review';
+  if (code === 'smart_page') return 'page';
   return code;
 };
 
