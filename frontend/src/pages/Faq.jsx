@@ -266,7 +266,7 @@ export default function Faq() {
             rel="noopener noreferrer"
             className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
           >
-            WhatsApp +39 351 678 1324
+            WhatsApp
           </a>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Plus, Edit2, Trash2, Save, X, ChevronDown, ChevronUp,
   Eye, EyeOff, GripVertical, HelpCircle, Star, FileText,
-  UtensilsCrossed, Sparkles, Loader2
+  UtensilsCrossed, Sparkles, Loader2, MessageSquare
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -11,6 +11,7 @@ const SERVICE_OPTIONS = [
   { value: 'review', label: 'Review', icon: Star, color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200' },
   { value: 'page', label: 'Page', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
   { value: 'menu', label: 'Menu Digitale', icon: UtensilsCrossed, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+  { value: 'chat_ai', label: 'Chat AI', icon: MessageSquare, color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200' },
   { value: 'general', label: 'Generali', icon: HelpCircle, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' },
 ];
 
