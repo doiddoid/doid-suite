@@ -7,7 +7,7 @@ import {
   Check, Clock, Ban, Search, UtensilsCrossed, Monitor,
   User, Shield, Briefcase, Phone, Layers,
   ExternalLink, Loader2, LogIn, ChevronDown, ChevronRight,
-  MessageSquare, Zap, Key, Bot, CheckCircle, XCircle,
+  MessageSquare, MessageCircle, Zap, Key, Bot, CheckCircle, XCircle,
   ChevronUp, GripVertical, HelpCircle, ShoppingBag
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -60,7 +60,12 @@ const SERVICE_ICONS = {
   Layers: Layers,
   layers: Layers,
   Bot: Bot,
-  bot: Bot
+  bot: Bot,
+  MessageCircle: MessageCircle,
+  'message-circle': MessageCircle,
+  chat: MessageCircle,
+  ShoppingBag: ShoppingBag,
+  'shopping-bag': ShoppingBag
 };
 
 // Lista icone disponibili per il selettore
@@ -80,7 +85,9 @@ const AVAILABLE_ICONS = [
   { value: 'shield', label: 'Sicurezza', icon: Shield },
   { value: 'zap', label: 'Energia', icon: Zap },
   { value: 'activity', label: 'Attività', icon: Activity },
-  { value: 'layers', label: 'Livelli', icon: Layers }
+  { value: 'layers', label: 'Livelli', icon: Layers },
+  { value: 'message-circle', label: 'Chat', icon: MessageCircle },
+  { value: 'shopping-bag', label: 'Shopping', icon: ShoppingBag }
 ];
 
 export default function Admin() {
