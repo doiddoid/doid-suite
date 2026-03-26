@@ -693,6 +693,19 @@
     elements.input.focus();
   }
 
+  function resetConversation() {
+    messages = [];
+    apiMessages = [];
+    transcriptSent = false;
+    visitor = { name: '', email: '' };
+    introPhase = 'greeting';
+    isAuthenticated = false;
+    elements.input.placeholder = config.placeholder;
+    elements.messagesArea.innerHTML = '';
+    // Ri-verifica auth per la prossima apertura
+    tryAutoLogin();
+  }
+
   function closeChat() {
     // Se non loggato, ha conversato con l'AI e non ha ancora dato l'email → chiedi
     // Se sta già chiedendo l'email e preme X di nuovo → chiudi senza email
@@ -702,6 +715,7 @@
       elements.window.classList.remove('doid-chat-window--open');
       elements.fab.classList.remove('doid-chat-fab--hidden');
       sendTranscript();
+      resetConversation();
       return;
     }
 
@@ -720,6 +734,7 @@
     elements.window.classList.remove('doid-chat-window--open');
     elements.fab.classList.remove('doid-chat-fab--hidden');
     sendTranscript();
+    resetConversation();
   }
 
   async function sendMessage(text) {
