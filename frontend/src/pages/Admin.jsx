@@ -15,7 +15,7 @@ import api from '../services/api';
 import ServiceStatusManager from '../components/Admin/ServiceStatusManager';
 import ServiceAssignmentModal from '../components/Admin/ServiceAssignmentModal';
 import BillingSummary from '../components/Admin/BillingSummary';
-import CommunicationLogs from '../components/Admin/CommunicationLogs';
+// import CommunicationLogs from '../components/Admin/CommunicationLogs'; // Rimosso dal menu admin
 import PlansSummaryTable from '../components/Admin/PlansSummaryTable';
 import DeletedActivitiesTable from '../components/Admin/DeletedActivitiesTable';
 import OrganizationAssignModal from '../components/Admin/OrganizationAssignModal';
@@ -155,8 +155,6 @@ export default function Admin() {
     else if (activeTab === 'plans') {
       fetchServices();
       fetchPlans();
-    } else if (activeTab === 'comunicazioni') {
-      fetchCommunicationLogs();
     }
   }, [activeTab]);
 
@@ -786,17 +784,42 @@ export default function Admin() {
     );
   }
 
-  const tabs = [
-    { id: 'stats', name: 'Statistiche', icon: Activity },
-    { id: 'clienti', name: 'Clienti', icon: Users },
-    { id: 'riepilogo-piani', name: 'Riepilogo Piani', icon: CreditCard },
-    { id: 'eliminati', name: 'Eliminati', icon: Trash2 },
-    { id: 'plans', name: 'Piani Servizi', icon: Layers },
-    { id: 'packages', name: 'Pacchetti Agency', icon: Package },
-    { id: 'prodotti', name: 'Prodotti & Servizi', icon: ShoppingBag },
-    { id: 'comunicazioni', name: 'Comunicazioni', icon: MessageSquare },
-    { id: 'faq', name: 'FAQ', icon: HelpCircle },
+  const tabGroups = [
+    {
+      label: 'Panoramica',
+      icon: Activity,
+      tabs: [
+        { id: 'stats', name: 'Statistiche', icon: Activity },
+      ]
+    },
+    {
+      label: 'Clienti',
+      icon: Users,
+      tabs: [
+        { id: 'clienti', name: 'Anagrafica', icon: Users },
+        { id: 'riepilogo-piani', name: 'Riepilogo Piani', icon: CreditCard },
+        { id: 'eliminati', name: 'Eliminati', icon: Trash2 },
+      ]
+    },
+    {
+      label: 'Catalogo',
+      icon: Layers,
+      tabs: [
+        { id: 'plans', name: 'Piani Servizi', icon: Layers },
+        { id: 'packages', name: 'Pacchetti Agency', icon: Package },
+        { id: 'prodotti', name: 'Prodotti & Servizi', icon: ShoppingBag },
+      ]
+    },
+    {
+      label: 'Contenuti',
+      icon: FileText,
+      tabs: [
+        { id: 'faq', name: 'FAQ', icon: HelpCircle },
+      ]
+    },
   ];
+
+  const [openDropdown, setOpenDropdown] = useState(null);
 
   const getStatusBadge = (status, daysRemaining = null) => {
     const styles = {
@@ -870,7 +893,6 @@ export default function Admin() {
                 if (activeTab === 'clienti') fetchOrganizations();
                 else if (activeTab === 'packages') fetchPackages();
                 else if (activeTab === 'plans') { fetchServices(); fetchPlans(); }
-                else if (activeTab === 'comunicazioni') fetchCommunicationLogs(logsFilters);
               }}
               className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
             >
@@ -881,32 +903,73 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Grouped with dropdowns */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-1 overflow-x-auto" aria-label="Tabs">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
+            {tabGroups.map((group) => {
+              const GroupIcon = group.icon;
+              const isGroupActive = group.tabs.some(t => t.id === activeTab);
+              const isSingle = group.tabs.length === 1;
+
+              if (isSingle) {
+                const tab = group.tabs[0];
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setOpenDropdown(null); }}
+                    className={`flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                      activeTab === tab.id
+                        ? 'border-indigo-500 text-indigo-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    {group.label}
+                  </button>
+                );
+              }
+
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  {tab.name}
-                  {tab.count !== undefined && (
-                    <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
-                      activeTab === tab.id ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {tab.count}
-                    </span>
+                <div key={group.label} className="relative">
+                  <button
+                    onClick={() => setOpenDropdown(openDropdown === group.label ? null : group.label)}
+                    className={`flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                      isGroupActive
+                        ? 'border-indigo-500 text-indigo-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <GroupIcon className="w-5 h-5" />
+                    {group.label}
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openDropdown === group.label ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openDropdown === group.label && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+                      <div className="absolute top-full left-0 mt-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[200px]">
+                        {group.tabs.map((tab) => {
+                          const Icon = tab.icon;
+                          return (
+                            <button
+                              key={tab.id}
+                              onClick={() => { setActiveTab(tab.id); setOpenDropdown(null); }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                                activeTab === tab.id
+                                  ? 'bg-indigo-50 text-indigo-600 font-medium'
+                                  : 'text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                              {tab.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
-                </button>
+                </div>
               );
             })}
           </nav>
@@ -2054,21 +2117,6 @@ export default function Admin() {
                   ))}
                 </div>
               </div>
-            )}
-
-            {/* Comunicazioni Tab */}
-            {activeTab === 'comunicazioni' && (
-              <CommunicationLogs
-                logs={communicationLogs}
-                pagination={logsPagination}
-                filters={logsFilters}
-                onFilterChange={(newFilters) => {
-                  setLogsFilters(newFilters);
-                  fetchCommunicationLogs(newFilters);
-                }}
-                onLoadMore={() => fetchCommunicationLogs(logsFilters, true)}
-                loading={loading}
-              />
             )}
 
             {/* Prodotti & Servizi Tab */}
