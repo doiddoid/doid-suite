@@ -20,6 +20,7 @@ import ActivitySettings from './pages/ActivitySettings';
 import Admin from './pages/Admin';
 import MyServicesPage from './pages/MyServicesPage';
 import Guida from './pages/Guida';
+import Faq from './pages/Faq';
 
 function App() {
   return (
@@ -43,7 +44,7 @@ function App() {
               }
             >
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/servizi" element={<MyServicesPage />} />
+              {/* <Route path="/servizi" element={<MyServicesPage />} /> */}
               <Route path="/settings" element={<Settings />} />
               <Route path="/organizations/new" element={<NewOrganization />} />
               <Route path="/activities" element={<Activities />} />
@@ -51,6 +52,7 @@ function App() {
               <Route path="/activities/:id/settings" element={<ActivitySettings />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/guida" element={<Guida />} />
+              <Route path="/faq" element={<Faq />} />
             </Route>
 
             {/* Landing page for public, redirect to dashboard for authenticated */}

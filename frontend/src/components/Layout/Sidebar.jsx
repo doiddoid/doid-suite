@@ -12,6 +12,7 @@ import {
   Monitor,
   Shield,
   BookOpen,
+  HelpCircle,
   Sparkles,
   ExternalLink,
   Loader2,
@@ -339,6 +340,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         <div className="space-y-1">
           <NavItem item={{ name: 'Impostazioni', path: '/settings', icon: Settings }} />
           <NavItem item={{ name: 'Guida', path: '/guida', icon: BookOpen }} />
+          <NavItem item={{ name: 'FAQ', path: '/faq', icon: HelpCircle }} />
         </div>
 
         {/* Admin Section */}

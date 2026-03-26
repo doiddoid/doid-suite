@@ -8,7 +8,7 @@ import {
   User, Shield, Briefcase, Phone, Layers,
   ExternalLink, Loader2, LogIn, ChevronDown, ChevronRight,
   MessageSquare, Zap, Key, Bot, CheckCircle, XCircle,
-  ChevronUp, GripVertical
+  ChevronUp, GripVertical, HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -22,6 +22,7 @@ import OrganizationAssignModal from '../components/Admin/OrganizationAssignModal
 import CredentialsModal from '../components/Admin/CredentialsModal';
 import MembersManageModal from '../components/Admin/MembersManageModal';
 import ClientDetailPanel from '../components/Admin/ClientDetailPanel';
+import FaqManager from '../components/Admin/FaqManager';
 
 // Mappa icone servizi - estesa
 const SERVICE_ICONS = {
@@ -785,6 +786,7 @@ export default function Admin() {
     { id: 'plans', name: 'Piani Servizi', icon: Layers },
     { id: 'packages', name: 'Pacchetti Agency', icon: Package },
     { id: 'comunicazioni', name: 'Comunicazioni', icon: MessageSquare },
+    { id: 'faq', name: 'FAQ', icon: HelpCircle },
   ];
 
   const getStatusBadge = (status, daysRemaining = null) => {
@@ -2058,6 +2060,11 @@ export default function Admin() {
                 onLoadMore={() => fetchCommunicationLogs(logsFilters, true)}
                 loading={loading}
               />
+            )}
+
+            {/* FAQ Tab */}
+            {activeTab === 'faq' && (
+              <FaqManager />
             )}
           </>
         )}
