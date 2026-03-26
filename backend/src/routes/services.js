@@ -27,7 +27,7 @@ const validate = (req, res, next) => {
 router.get('/deep-link-token',
   [
     query('activity_id').isUUID().withMessage('ID attività non valido'),
-    query('service').isIn(['page', 'review', 'menu']).withMessage('Servizio non valido (page, review, menu)'),
+    query('service').isIn(['page', 'review', 'menu', 'chat_ai']).withMessage('Servizio non valido'),
     query('return_to').optional().isString().withMessage('return_to non valido')
   ],
   validate,
@@ -69,8 +69,10 @@ router.get('/deep-link-token',
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: 60 });
 
-    const serviceUrl = SERVICES[service]?.appUrl;
-    const url = `${serviceUrl}/auth/deep-link.php?token=${token}`;
+    const serviceConfig = SERVICES[service];
+    const serviceUrl = serviceConfig?.appUrl;
+    const ssoPath = serviceConfig?.ssoPath || '/auth/deep-link.php';
+    const url = `${serviceUrl}${ssoPath}?token=${token}`;
 
     res.json({
       success: true,

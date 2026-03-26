@@ -101,11 +101,29 @@ export const SERVICES = {
     bgLight: '#F5F3FF',
     borderColor: '#DDD6FE',
     type: 'contact_required'
+  },
+  chat_ai: {
+    code: 'chat_ai',
+    name: 'Smart Chat AI',
+    description: 'Bot AI personalizzati ed embeddabili',
+    tagline: 'Il tuo assistente AI, pronto in minuti',
+    benefits: [
+      'Chatbot AI per il tuo sito web',
+      'Design e fonti completamente personalizzabili',
+      'Embed con una sola riga di codice'
+    ],
+    appUrl: process.env.CHAT_AI_URL || 'https://chat.doid.it',
+    ssoPath: '/login',
+    icon: 'MessageSquare',
+    color: '#14B8A6',
+    bgLight: '#F0FDFA',
+    borderColor: '#99F6E4',
+    type: 'activatable'
   }
 };
 
 // Lista servizi per tipo
-export const ACTIVATABLE_SERVICES = ['review', 'page', 'menu'];
+export const ACTIVATABLE_SERVICES = ['review', 'page', 'menu', 'chat_ai'];
 export const CONTACT_REQUIRED_SERVICES = ['agent_ai', 'connect', 'display'];
 
 // Mappatura codici servizio: database <-> API esterne
@@ -124,7 +142,9 @@ export const SERVICE_CODE_MAP = {
   'display_suite': 'display',
   'display': 'display_suite',
   'agent_ai': 'agent_ai',
-  'connect': 'connect'
+  'connect': 'connect',
+  'chat_ai': 'chat_ai',
+  'smart_chat': 'chat_ai'
 };
 
 // Normalizza un service code al formato breve (review, page, menu)
@@ -132,11 +152,11 @@ export const normalizeServiceCodeShort = (code) => {
   if (!code) return code;
   const mapped = SERVICE_CODE_MAP[code];
   // Se il mapping esiste e il risultato è un codice breve, usalo
-  if (mapped && ['review', 'page', 'menu', 'display', 'agent_ai', 'connect'].includes(mapped)) {
+  if (mapped && ['review', 'page', 'menu', 'display', 'agent_ai', 'connect', 'chat_ai'].includes(mapped)) {
     return mapped;
   }
   // Altrimenti ritorna il codice originale se già breve
-  if (['review', 'page', 'menu', 'display', 'agent_ai', 'connect'].includes(code)) {
+  if (['review', 'page', 'menu', 'display', 'agent_ai', 'connect', 'chat_ai'].includes(code)) {
     return code;
   }
   return code;

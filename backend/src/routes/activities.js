@@ -481,8 +481,10 @@ router.post('/:activityId/generate-token',
     });
 
     // URL di redirect con token
-    const appUrl = SERVICES[serviceCode].appUrl;
-    const redirectUrl = `${appUrl}/auth/sso.php?token=${token}`;
+    const serviceConfig = SERVICES[serviceCode];
+    const appUrl = serviceConfig.appUrl;
+    const ssoPath = serviceConfig.ssoPath || '/auth/sso.php';
+    const redirectUrl = `${appUrl}${ssoPath}?token=${token}`;
 
     res.json({
       success: true,
