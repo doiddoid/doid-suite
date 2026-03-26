@@ -2822,4 +2822,234 @@ router.delete('/activities/:activityId/products/:productId',
   })
 );
 
+// ==================== NFC PRODUCTS ====================
+
+// GET /api/admin/nfc-products
+router.get('/nfc-products',
+  logAdminAction('list_nfc_products'),
+  asyncHandler(async (req, res) => {
+    const includeInactive = req.query.includeInactive === 'true';
+
+    let q = supabaseAdmin
+      .from('nfc_products')
+      .select('*')
+      .order('sort_order');
+
+    if (!includeInactive) {
+      q = q.eq('is_active', true);
+    }
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    res.json({ success: true, data: { products: data } });
+  })
+);
+
+// POST /api/admin/nfc-products
+router.post('/nfc-products',
+  [
+    body('code').trim().notEmpty().withMessage('Codice richiesto'),
+    body('name').trim().notEmpty().withMessage('Nome richiesto'),
+    body('price_public').isFloat({ min: 0 }).withMessage('Prezzo pubblico non valido'),
+    body('price_partner').isFloat({ min: 0 }).withMessage('Prezzo partner non valido'),
+    body('description').optional().trim(),
+    body('emoji').optional().trim(),
+    body('image').optional().trim(),
+    body('price_range').optional().trim(),
+    body('has_variants').optional().isBoolean(),
+    body('badge').optional().trim(),
+    body('link').optional().trim(),
+    body('sort_order').optional().isInt({ min: 0 })
+  ],
+  validate,
+  logAdminAction('create_nfc_product'),
+  asyncHandler(async (req, res) => {
+    const { code, name, description, emoji, image, price_public, price_partner, price_range, has_variants, badge, link, sort_order } = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from('nfc_products')
+      .insert({
+        code, name, description, emoji, image,
+        price_public, price_partner, price_range,
+        has_variants: has_variants || false,
+        badge, link,
+        sort_order: sort_order || 0,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(400).json({ success: false, error: 'Esiste già un prodotto con questo codice' });
+      }
+      throw error;
+    }
+
+    res.status(201).json({ success: true, data, message: 'Prodotto creato' });
+  })
+);
+
+// PUT /api/admin/nfc-products/:id
+router.put('/nfc-products/:id',
+  [
+    param('id').isUUID().withMessage('ID non valido'),
+    body('name').optional().trim().notEmpty(),
+    body('price_public').optional().isFloat({ min: 0 }),
+    body('price_partner').optional().isFloat({ min: 0 }),
+    body('description').optional().trim(),
+    body('emoji').optional().trim(),
+    body('image').optional().trim(),
+    body('price_range').optional({ values: 'null' }).trim(),
+    body('has_variants').optional().isBoolean(),
+    body('badge').optional({ values: 'null' }).trim(),
+    body('link').optional({ values: 'null' }).trim(),
+    body('is_active').optional().isBoolean(),
+    body('sort_order').optional().isInt({ min: 0 })
+  ],
+  validate,
+  logAdminAction('update_nfc_product'),
+  asyncHandler(async (req, res) => {
+    const updateData = {};
+    const fields = ['name', 'description', 'emoji', 'image', 'price_public', 'price_partner', 'price_range', 'has_variants', 'badge', 'link', 'is_active', 'sort_order'];
+    for (const f of fields) {
+      if (req.body[f] !== undefined) updateData[f] = req.body[f];
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('nfc_products')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, data, message: 'Prodotto aggiornato' });
+  })
+);
+
+// DELETE /api/admin/nfc-products/:id (soft delete)
+router.delete('/nfc-products/:id',
+  [param('id').isUUID().withMessage('ID non valido')],
+  validate,
+  logAdminAction('delete_nfc_product'),
+  asyncHandler(async (req, res) => {
+    const { error } = await supabaseAdmin
+      .from('nfc_products')
+      .update({ is_active: false })
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+
+    res.json({ success: true, message: 'Prodotto disattivato' });
+  })
+);
+
+// ==================== NFC KITS ====================
+
+// GET /api/admin/nfc-kits
+router.get('/nfc-kits',
+  logAdminAction('list_nfc_kits'),
+  asyncHandler(async (req, res) => {
+    const includeInactive = req.query.includeInactive === 'true';
+
+    let q = supabaseAdmin
+      .from('nfc_kits')
+      .select('*')
+      .order('sort_order');
+
+    if (!includeInactive) {
+      q = q.eq('is_active', true);
+    }
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    res.json({ success: true, data: { kits: data } });
+  })
+);
+
+// POST /api/admin/nfc-kits
+router.post('/nfc-kits',
+  [
+    body('qty').isInt({ min: 1 }).withMessage('Quantità non valida'),
+    body('price').isFloat({ min: 0 }).withMessage('Prezzo non valido'),
+    body('price_per_unit').isFloat({ min: 0 }).withMessage('Prezzo unitario non valido'),
+    body('saving_percent').optional().trim(),
+    body('sort_order').optional().isInt({ min: 0 })
+  ],
+  validate,
+  logAdminAction('create_nfc_kit'),
+  asyncHandler(async (req, res) => {
+    const { qty, price, price_per_unit, saving_percent, sort_order } = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from('nfc_kits')
+      .insert({
+        qty, price, price_per_unit,
+        saving_percent: saving_percent || null,
+        sort_order: sort_order || 0,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({ success: true, data, message: 'Kit creato' });
+  })
+);
+
+// PUT /api/admin/nfc-kits/:id
+router.put('/nfc-kits/:id',
+  [
+    param('id').isUUID().withMessage('ID non valido'),
+    body('qty').optional().isInt({ min: 1 }),
+    body('price').optional().isFloat({ min: 0 }),
+    body('price_per_unit').optional().isFloat({ min: 0 }),
+    body('saving_percent').optional({ values: 'null' }).trim(),
+    body('is_active').optional().isBoolean(),
+    body('sort_order').optional().isInt({ min: 0 })
+  ],
+  validate,
+  logAdminAction('update_nfc_kit'),
+  asyncHandler(async (req, res) => {
+    const updateData = {};
+    const fields = ['qty', 'price', 'price_per_unit', 'saving_percent', 'is_active', 'sort_order'];
+    for (const f of fields) {
+      if (req.body[f] !== undefined) updateData[f] = req.body[f];
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('nfc_kits')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, data, message: 'Kit aggiornato' });
+  })
+);
+
+// DELETE /api/admin/nfc-kits/:id (soft delete)
+router.delete('/nfc-kits/:id',
+  [param('id').isUUID().withMessage('ID non valido')],
+  validate,
+  logAdminAction('delete_nfc_kit'),
+  asyncHandler(async (req, res) => {
+    const { error } = await supabaseAdmin
+      .from('nfc_kits')
+      .update({ is_active: false })
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+
+    res.json({ success: true, message: 'Kit disattivato' });
+  })
+);
+
 export default router;
