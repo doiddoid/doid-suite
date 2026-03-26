@@ -254,17 +254,10 @@ export default function Faq() {
         <p className="text-sm text-gray-500 mb-2">Non trovi quello che cerchi?</p>
         <div className="flex items-center justify-center gap-4 flex-wrap">
           <a
-            href="mailto:info@doid.biz"
+            href="mailto:support@doid.biz"
             className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
           >
-            info@doid.biz
-          </a>
-          <span className="text-gray-300">|</span>
-          <a
-            href="tel:+393516781324"
-            className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
-          >
-            +39 351 678 1324
+            support@doid.biz
           </a>
           <span className="text-gray-300">|</span>
           <a
@@ -273,7 +266,7 @@ export default function Faq() {
             rel="noopener noreferrer"
             className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
           >
-            WhatsApp
+            WhatsApp +39 351 678 1324
           </a>
         </div>
       </div>

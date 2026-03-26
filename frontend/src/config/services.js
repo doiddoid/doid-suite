@@ -4,7 +4,7 @@
 export const CONTACT_INFO = {
   whatsapp: '+39 351 678 1324',
   whatsappLink: 'https://wa.me/393516781324',
-  email: 'info@doid.it',
+  email: 'support@doid.biz',
   calendly: 'https://calendly.com/doid'
 };
 

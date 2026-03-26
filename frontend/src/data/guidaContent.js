@@ -237,7 +237,7 @@ export const guidaContent = {
           },
           {
             title: 'Contatti supporto',
-            content: '• **Email**: info@doid.biz\n• **Telefono**: +39 348 089 0477\n• **WhatsApp**: dalla pagina "I Miei Servizi"',
+            content: '• **Email**: support@doid.biz\n• **WhatsApp**: +39 351 678 1324',
           },
         ],
         faq: [
@@ -842,6 +842,99 @@ export const guidaContent = {
       },
     ],
   },
+
+  chat_ai: {
+    id: 'chat_ai',
+    label: 'Chat AI',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    textColor: 'text-teal-700',
+    borderColor: 'border-teal-200',
+    description: 'Crea assistenti AI personalizzati ed embeddabili su qualsiasi sito web.',
+    guides: [
+      {
+        id: 'intro',
+        title: "Cos'è Smart Chat AI",
+        description: 'Panoramica del servizio e delle funzionalità principali.',
+        steps: [
+          {
+            title: 'A cosa serve',
+            content: 'Smart Chat AI ti permette di creare un **assistente virtuale AI** per il tuo sito web:\n\n• Rispondi ai clienti **24/7**\n• Personalizzi **aspetto, colori e logo**\n• Controlli le risposte tramite **fonti di conoscenza**\n• Ricevi **notifiche** su Telegram per ogni conversazione\n• Embeddi con **una sola riga di codice**',
+          },
+          {
+            title: 'Come funziona',
+            content: '1. **Crei l\'assistente** dal pannello Smart Chat AI\n2. **Configuri aspetto e fonti** — FAQ, testi, query database\n3. **Copi il codice embed** e lo incolli nel tuo sito\n4. I visitatori **chattano** con l\'assistente AI\n5. Ricevi le **conversazioni** su Telegram e nel pannello',
+          },
+        ],
+        faq: [
+          { q: "L'assistente inventa le risposte?", a: 'No. Risponde solo con le informazioni che gli fornisci tramite le fonti di conoscenza.' },
+          { q: 'Funziona su mobile?', a: 'Sì. Il widget è responsive. Puoi anche attivare il fullscreen su mobile.' },
+        ],
+        nextGuide: 'configurazione',
+      },
+      {
+        id: 'configurazione',
+        title: 'Configurazione assistente',
+        description: 'Come creare e configurare il tuo primo assistente AI.',
+        steps: [
+          {
+            title: 'Creare un assistente',
+            content: '1. Dalla dashboard DOID Suite, clicca **"Accedi"** su Smart Chat AI\n2. Clicca **"Nuovo Assistente"**\n3. Si apre il configuratore con **6 tab**',
+          },
+          {
+            title: 'Tab Aspetto',
+            content: 'Personalizza come appare il widget:\n\n• **Colore primario** — il colore del pulsante e header\n• **Avatar** — carica un\'immagine o scegli un\'emoji\n• **Titolo e sottotitolo** — visibili nell\'header\n• **Messaggio di benvenuto** — il primo messaggio\n• **Posizione** — destra, sinistra, centro, centro verticale\n• **Icona pulsante** — Chat, Supporto, Aiuto, AI, Robot o emoji\n• **Testo animato** — appare accanto al pulsante\n• **Fullscreen su mobile** — apre pagina dedicata',
+          },
+          {
+            title: 'Tab Fonti',
+            content: 'Le informazioni che l\'assistente usa per rispondere:\n\n• **FAQ** — domanda + risposta\n• **Testo libero** — blocchi informativi\n• **Link / URL** — riferimenti web\n• **Google Drive** — documenti condivisi\n• **Query Database** — lettura dati dal DB con SQL',
+            tip: 'Inizia con 5-10 FAQ sulle domande più frequenti dei tuoi clienti.',
+          },
+          {
+            title: 'Tab Comportamento',
+            content: '• **System prompt** — istruzioni per il comportamento dell\'AI\n• **Modello** — Haiku (veloce) o Sonnet (preciso)\n• **Max token** — lunghezza massima risposta\n• **Temperatura** — 0 = preciso, 1 = creativo\n• **Rate limit** — protezione contro abusi\n• **API key custom** — usa il tuo account Anthropic',
+          },
+          {
+            title: 'Tab Notifiche',
+            content: '• **Telegram** — ricevi ogni conversazione su un gruppo\n• **Email** — riepilogo via email (prossimamente)\n\nPer configurare Telegram:\n1. Crea un bot con @BotFather\n2. Aggiungi il bot a un gruppo\n3. Inserisci Token e Chat ID nel pannello\n4. Clicca "Test" per verificare',
+          },
+        ],
+        faq: [
+          { q: 'Quanti assistenti posso creare?', a: 'Non c\'è un limite. Puoi crearne uno per ogni sito.' },
+          { q: 'Posso usare la mia API key?', a: 'Sì, dal tab Comportamento. Se vuoto, usa quella di sistema.' },
+        ],
+        nextGuide: 'installazione',
+      },
+      {
+        id: 'installazione',
+        title: 'Installazione sul sito',
+        description: 'Come embeddare il widget su WordPress, Shopify, Wix e HTML.',
+        steps: [
+          {
+            title: 'Codice embed',
+            content: 'Trovi il codice nel tab **Embed**. È una singola riga:\n\n```\n<script src="https://chat.doid.it/widget/IL-TUO-ID.js"></script>\n```\n\nVa inserito prima di `</body>` nel tuo sito.',
+          },
+          {
+            title: 'WordPress con Elementor',
+            content: '1. **Elementor** → **Custom Code**\n2. **Aggiungi nuovo** → nome: "Chat AI Widget"\n3. Posizione: **Before closing </body> tag**\n4. Incolla il codice script\n5. Condizioni: **Entire Site** → Pubblica\n\nSenza Elementor Pro: usa il plugin gratuito **WPCode** (Insert Headers and Footers).',
+          },
+          {
+            title: 'Shopify e Wix',
+            content: '**Shopify**: Negozio online → Temi → Modifica codice → theme.liquid → incolla prima di </body>\n\n**Wix**: Impostazioni → Avanzate → Codice personalizzato → Aggiungi → Body Fine → Tutte le pagine',
+          },
+          {
+            title: 'Link fullscreen',
+            content: 'Puoi anche condividere un link diretto alla chat a schermo intero:\n\n`https://chat.doid.it/c/IL-TUO-ID`\n\nUtile per QR code, WhatsApp, firma email.',
+          },
+        ],
+        faq: [
+          { q: 'Il widget rallenta il sito?', a: 'No. Pesa ~14KB e si carica in modo asincrono.' },
+          { q: 'Il codice cambia se modifico l\'assistente?', a: 'No. Il widget carica sempre la configurazione aggiornata dal server.' },
+        ],
+        nextGuide: null,
+      },
+    ],
+  },
 };
 
 /** Configurazione servizi per icone e colori (allineata con Sidebar.jsx) */
@@ -850,4 +943,5 @@ export const serviceConfig = {
   review: { color: 'yellow', iconBg: 'bg-yellow-100', iconText: 'text-yellow-600' },
   page: { color: 'blue', iconBg: 'bg-blue-100', iconText: 'text-blue-600' },
   menu: { color: 'green', iconBg: 'bg-green-100', iconText: 'text-green-600' },
+  chat_ai: { color: 'teal', iconBg: 'bg-teal-100', iconText: 'text-teal-600' },
 };

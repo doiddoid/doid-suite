@@ -317,7 +317,7 @@ function SupportBar() {
               <div className="flex items-center gap-3 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
                   <Mail className="w-3.5 h-3.5" />
-                  info@doid.biz
+                  support@doid.biz
                 </span>
                 <span className="flex items-center gap-1">
                   <Phone className="w-3.5 h-3.5" />
