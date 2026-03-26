@@ -261,16 +261,25 @@ class AuthService {
    * @param {string} userId - ID utente
    * @returns {object|null} - { requirePasswordChange, migratedFrom } o null se non migrato
    */
-  async checkAndUpdateMigrationStatus(userId) {
+  async checkPasswordChangeRequired(userId) {
     try {
-      // Verifica se esiste un profilo con dati di migrazione
+      // 1. Check user_metadata per utenti creati da admin con password temporanea
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (!userError && userData?.user?.user_metadata?.must_reset_password === true) {
+        console.log(`[AUTH] User ${userId} ha must_reset_password in metadata`);
+        return {
+          requirePasswordChange: true,
+          migratedFrom: null
+        };
+      }
+
+      // 2. Check profiles per utenti migrati
       const { data: profile, error: fetchError } = await supabaseAdmin
         .from('profiles')
         .select('migration_status, migrated_from, password_changed')
         .eq('id', userId)
         .single();
 
-      // Se non esiste profilo o errore, l'utente non è migrato
       if (fetchError || !profile) {
         return null;
       }
@@ -308,8 +317,7 @@ class AuthService {
       // Password già cambiata, login normale
       return null;
     } catch (error) {
-      console.error(`[MIGRATION] Errore check migrazione per user ${userId}:`, error);
-      // Non bloccare il login in caso di errore
+      console.error(`[AUTH] Errore check password change per user ${userId}:`, error);
       return null;
     }
   }
@@ -328,8 +336,8 @@ class AuthService {
       throw Errors.BadRequest(error.message);
     }
 
-    // Verifica stato migrazione
-    const migrationResult = await this.checkAndUpdateMigrationStatus(data.user.id);
+    // Verifica se deve cambiare password (migrati o creati da admin con temp password)
+    const migrationResult = await this.checkPasswordChangeRequired(data.user.id);
 
     // Processa pending registration se esiste (primo login dopo verifica email)
     const pendingResult = await this.processPendingRegistration(
@@ -398,8 +406,8 @@ class AuthService {
 
     const organizations = await this.getUserOrganizations(userId);
 
-    // Verifica se l'utente deve cambiare password (utenti migrati)
-    const migrationResult = await this.checkAndUpdateMigrationStatus(userId);
+    // Verifica se l'utente deve cambiare password (migrati o creati da admin con temp password)
+    const migrationResult = await this.checkPasswordChangeRequired(userId);
 
     const result = {
       id: user.user.id,
@@ -553,10 +561,10 @@ class AuthService {
     // Verifica token
     const resetData = await this.verifyPasswordResetToken(token);
 
-    // Aggiorna password tramite Admin API
+    // Aggiorna password e rimuovi must_reset_password tramite Admin API
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       resetData.user_id,
-      { password: newPassword }
+      { password: newPassword, user_metadata: { must_reset_password: false } }
     );
 
     if (updateError) {
@@ -585,8 +593,13 @@ class AuthService {
       throw Errors.BadRequest(error.message);
     }
 
-    // Se userId fornito, aggiorna password_changed nel profilo (per utenti migrati)
+    // Se userId fornito, rimuovi flag must_reset_password e aggiorna profilo
     if (userId) {
+      // Rimuovi must_reset_password dai user_metadata (utenti creati da admin)
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: { must_reset_password: false }
+      });
+
       // Prima recupera info profilo per la notifica
       const { data: profile } = await supabaseAdmin
         .from('profiles')
