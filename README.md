@@ -6,8 +6,8 @@ Piattaforma centralizzata per la gestione di servizi digitali DOID.
 
 DOID Suite è una dashboard unificata che permette agli utenti di gestire tutti i servizi DOID da un'unica interfaccia:
 
-- **Smart Review** - Gestione recensioni intelligente
-- **Smart Page** - Creazione pagine web professionali / vCard
+- **Review** - Gestione recensioni intelligente
+- **Page** - Creazione pagine web professionali / vCard
 - **Menu Digitale** - Menu digitali per ristoranti
 - **Display Suite** - Digital signage
 
@@ -107,8 +107,8 @@ NODE_ENV=development
 SUPER_ADMIN_EMAILS=admin@example.com
 
 # Service URLs
-SMART_REVIEW_URL=https://review.doid.it
-SMART_PAGE_URL=https://page.doid.it
+REVIEW_URL=https://review.doid.it
+PAGE_URL=https://page.doid.it
 MENU_DIGITALE_URL=https://menu.doid.it
 DISPLAY_SUITE_URL=https://display.doid.it
 
@@ -221,7 +221,7 @@ Le agenzie possono anche ereditare servizi dai pacchetti dell'organizzazione.
 
 ## Integrazione con App Esterne (SSO)
 
-Le app esterne (Smart Review, Smart Page, etc.) si integrano tramite SSO:
+Le app esterne (Review, Page, etc.) si integrano tramite SSO:
 
 1. **Dashboard genera token**: L'utente clicca "Gestisci" su un servizio
 2. **Redirect con token**: Redirect a `/auth/sso?token=...`
@@ -239,7 +239,7 @@ const token = urlParams.get('token');
 const response = await fetch('https://suite.doid.it/api/external/sso/authenticate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ token, service: 'smart_review' })
+  body: JSON.stringify({ token, service: 'review' })
 });
 
 const { data } = await response.json();

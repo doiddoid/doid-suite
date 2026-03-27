@@ -62,7 +62,7 @@ const testPayloads = [
     }
   },
   {
-    name: 'service.trial_activated (Smart Review)',
+    name: 'service.trial_activated (Review)',
     event: 'service.trial_activated',
     data: {
       event: 'service.trial_activated',
@@ -76,8 +76,8 @@ const testPayloads = [
       lastName: 'Rossi',
       name: 'Mario Rossi',
       // Dati servizio arricchiti
-      service: 'smart_review',
-      service_label: 'Smart Review',
+      service: 'review',
+      service_label: 'Review',
       upgrade_url: 'https://review.doid.it/upgrade',
       price: '9.90',
       has_free_plan: true,
@@ -86,14 +86,14 @@ const testPayloads = [
         activity_id: 'test-activity-456',
         activity_name: 'Ristorante da Mario',
         organization_id: 'test-org-123',
-        service: 'smart_review',
-        service_label: 'Smart Review',
+        service: 'review',
+        service_label: 'Review',
         plan: 'pro',
         trial_end_date: new Date(Date.now() + 30*24*60*60*1000).toISOString(),
         trial_end_date_formatted: '5 febbraio 2026',
         days_remaining: 30
       },
-      tags: ['trial_activated', 'service_smart_review', 'trial_active']
+      tags: ['trial_activated', 'service_review', 'trial_active']
     }
   },
   {
@@ -109,14 +109,14 @@ const testPayloads = [
       email: 'test@example.com',
       name: 'Mario Rossi',
       customField: {
-        service: 'smart_review',
-        service_name: 'Smart Review',
+        service: 'review',
+        service_name: 'Review',
         activity_name: 'Ristorante da Mario',
         trial_end_date: new Date(Date.now() + 23*24*60*60*1000).toISOString(),
         days_remaining: 23,
         upgrade_url: 'https://suite.doid.it/activities/test-activity-456/upgrade'
       },
-      tags: ['trial_reminder_23d', 'service_smart_review']
+      tags: ['trial_reminder_23d', 'service_review']
     }
   }
 ];

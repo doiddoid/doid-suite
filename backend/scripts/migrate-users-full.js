@@ -1,6 +1,6 @@
 /**
  * ============================================
- * MIGRAZIONE COMPLETA UTENTI SMART REVIEW -> SUPABASE
+ * MIGRAZIONE COMPLETA UTENTI REVIEW -> SUPABASE
  * ============================================
  *
  * Questo script:
@@ -326,7 +326,7 @@ async function createSubscription(activity, csvUser) {
     .from('subscriptions')
     .select('id')
     .eq('activity_id', activity.id)
-    .eq('service_code', 'smart_review')
+    .eq('service_code', 'review')
     .single();
 
   if (existing) {
@@ -334,7 +334,7 @@ async function createSubscription(activity, csvUser) {
   }
 
   if (CONFIG.DRY_RUN) {
-    log('info', `[DRY-RUN] Creerebbe abbonamento Smart Review`);
+    log('info', `[DRY-RUN] Creerebbe abbonamento Review`);
     return { status: 'would_create' };
   }
 
@@ -351,7 +351,7 @@ async function createSubscription(activity, csvUser) {
     .from('subscriptions')
     .insert({
       activity_id: activity.id,
-      service_code: 'smart_review',
+      service_code: 'review',
       plan_code: 'pro', // Default a pro per utenti migrati
       status: isExpired ? 'expired' : 'active',
       billing_cycle: 'yearly',
@@ -378,7 +378,7 @@ async function createSubscription(activity, csvUser) {
 // Main
 async function main() {
   console.log('\n' + '='.repeat(50));
-  console.log('  MIGRAZIONE COMPLETA SMART REVIEW -> SUPABASE');
+  console.log('  MIGRAZIONE COMPLETA REVIEW -> SUPABASE');
   console.log('='.repeat(50));
 
   if (CONFIG.DRY_RUN) {

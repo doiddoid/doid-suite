@@ -30,7 +30,7 @@ function log(color, prefix, message) {
 
 async function testSSO() {
   console.log('\n========================================');
-  console.log('  TEST SSO SMART REVIEW');
+  console.log('  TEST SSO REVIEW');
   console.log('========================================\n');
 
   // 1. Prima facciamo login per ottenere un token utente valido
@@ -95,8 +95,8 @@ async function testSSO() {
   const activity = activitiesData.data.activities[0];
   log('green', '✅', `Attività: ${activity.name} (${activity.id})`);
 
-  // 3. Genera token per Smart Review
-  log('cyan', '[3/4]', 'Generazione token SSO per smart_review...');
+  // 3. Genera token per Review
+  log('cyan', '[3/4]', 'Generazione token SSO per review...');
 
   const tokenResponse = await fetch(`${API_URL}/activities/${activity.id}/generate-token`, {
     method: 'POST',
@@ -105,7 +105,7 @@ async function testSSO() {
       'Authorization': `Bearer ${accessToken}`
     },
     body: JSON.stringify({
-      serviceCode: 'smart_review'
+      serviceCode: 'review'
     })
   });
 
@@ -116,7 +116,7 @@ async function testSSO() {
 
     // Se non ha abbonamento, creiamo un trial
     if (tokenData.error?.includes('abbonamento')) {
-      log('cyan', '   ', 'Attivo trial per smart_review...');
+      log('cyan', '   ', 'Attivo trial per review...');
 
       const trialResponse = await fetch(`${API_URL}/activities/${activity.id}/subscriptions/trial`, {
         method: 'POST',
@@ -125,7 +125,7 @@ async function testSSO() {
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          serviceCode: 'smart_review'
+          serviceCode: 'review'
         })
       });
 
@@ -141,7 +141,7 @@ async function testSSO() {
             'Authorization': `Bearer ${accessToken}`
           },
           body: JSON.stringify({
-            serviceCode: 'smart_review'
+            serviceCode: 'review'
           })
         });
 
@@ -165,7 +165,7 @@ async function testSSO() {
   console.log(`    Token: ${tokenData.data.token.substring(0, 50)}...`);
   console.log(`    Redirect URL: ${tokenData.data.redirectUrl}`);
 
-  // 4. Simula chiamata SSO da Smart Review
+  // 4. Simula chiamata SSO da Review
   log('cyan', '[4/4]', 'Test endpoint SSO authenticate...');
 
   const ssoResponse = await fetch(`${API_URL}/external/sso/authenticate`, {
@@ -173,7 +173,7 @@ async function testSSO() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       token: tokenData.data.token,
-      service: 'smart_review'
+      service: 'review'
     })
   });
 

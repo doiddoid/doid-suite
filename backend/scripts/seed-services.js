@@ -21,20 +21,20 @@ const supabase = createClient(
 // Definizione servizi
 const SERVICES = [
   {
-    code: 'smart_review',
-    name: 'Smart Review',
+    code: 'review',
+    name: 'Review',
     description: 'Gestione recensioni intelligente per la tua attività',
-    app_url: process.env.SMART_REVIEW_URL || 'https://review.doid.it',
+    app_url: process.env.REVIEW_URL || 'https://review.doid.it',
     icon: 'Star',
     color: '#FFB800',
     is_active: true,
     sort_order: 1
   },
   {
-    code: 'smart_page',
-    name: 'Smart Page',
+    code: 'page',
+    name: 'Page',
     description: 'Crea pagine web professionali in pochi click',
-    app_url: process.env.SMART_PAGE_URL || 'https://page.doid.it',
+    app_url: process.env.PAGE_URL || 'https://page.doid.it',
     icon: 'FileText',
     color: '#3B82F6',
     is_active: true,
@@ -64,7 +64,7 @@ const SERVICES = [
 
 // Piani per ogni servizio
 const PLANS = {
-  smart_review: [
+  review: [
     {
       code: 'free',
       name: 'Free',
@@ -118,7 +118,7 @@ const PLANS = {
       sort_order: 3
     }
   ],
-  smart_page: [
+  page: [
     {
       code: 'free',
       name: 'Free',

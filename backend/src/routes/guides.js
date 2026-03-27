@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import guideService from '../services/guideService.js';
+import { supabaseAdmin } from '../config/supabase.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireSuperAdmin, logAdminAction } from '../middleware/adminAuth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -84,6 +85,36 @@ router.delete('/admin/:id',
   asyncHandler(async (req, res) => {
     await guideService.deleteGuide(req.params.id);
     res.json({ success: true, message: 'Guida eliminata' });
+  })
+);
+
+// POST /api/guides/admin/upload-screenshot — Upload screenshot
+router.post('/admin/upload-screenshot',
+  authenticate,
+  requireSuperAdmin,
+  express.raw({ type: 'image/*', limit: '5mb' }),
+  asyncHandler(async (req, res) => {
+    if (!req.body || req.body.length === 0) {
+      return res.status(400).json({ success: false, error: 'Nessun file ricevuto' });
+    }
+
+    const contentType = req.headers['content-type'];
+    const ext = contentType.split('/')[1].replace('jpeg', 'jpg');
+    const fileName = `screenshots/${Date.now()}.${ext}`;
+
+    const { error } = await supabaseAdmin.storage
+      .from('guide-screenshots')
+      .upload(fileName, req.body, { contentType, upsert: true });
+
+    if (error) {
+      return res.status(500).json({ success: false, error: 'Errore upload: ' + error.message });
+    }
+
+    const { data: urlData } = supabaseAdmin.storage
+      .from('guide-screenshots')
+      .getPublicUrl(fileName);
+
+    res.json({ success: true, data: { url: urlData.publicUrl } });
   })
 );
 

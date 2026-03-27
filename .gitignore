@@ -34,3 +34,20 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# Migration temporary files (security risk if committed)
+temp_migrate*.php
+migrate_allergens*.php
+
+# Cleanup backups
+cleanup-backup-*/
+
+# Database one-time scripts output
+verify-results.json
+migration-log.json
+user-id-mapping.json
+*.csv

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Plus, Edit2, Trash2, Save, X, ChevronDown, ChevronUp,
   Eye, EyeOff, Star, FileText, UtensilsCrossed, Sparkles,
-  MessageSquare, HelpCircle, Loader2, GripVertical
+  MessageSquare, HelpCircle, Loader2, GripVertical, Upload, Image
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -16,6 +16,64 @@ const SERVICE_OPTIONS = [
 
 const emptySection = { title: '', content: '', tip: '', warning: '' };
 const emptyFaqItem = { q: '', a: '' };
+
+function ScreenshotUpload({ url, desc, onUpdate }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError('Max 5MB'); return; }
+
+    setUploading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/guides/admin/upload-screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': file.type,
+          'Authorization': `Bearer ${api.getToken()}`
+        },
+        body: file
+      });
+      const data = await res.json();
+      if (data.success) {
+        onUpdate({ url: data.data.url, desc: desc || '' });
+      } else {
+        setError(data.error);
+      }
+    } catch (err) { setError(err.message); }
+    setUploading(false);
+    e.target.value = '';
+  }
+
+  return (
+    <div className="flex items-start gap-3 p-2 bg-white rounded-lg border border-gray-100">
+      {url ? (
+        <img src={url} alt="Screenshot" className="w-24 h-16 object-cover rounded border" />
+      ) : (
+        <div className="w-24 h-16 bg-gray-100 rounded border border-dashed border-gray-300 flex items-center justify-center">
+          <Image className="w-5 h-5 text-gray-400" />
+        </div>
+      )}
+      <div className="flex-1 space-y-1">
+        <div className="flex gap-2">
+          <label className={`flex items-center gap-1 text-xs px-2 py-1 rounded cursor-pointer ${uploading ? 'bg-gray-100 text-gray-400' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'}`}>
+            <Upload className="w-3 h-3" />
+            {uploading ? 'Caricamento...' : url ? 'Sostituisci' : 'Carica screenshot'}
+            <input type="file" accept="image/*" onChange={handleFile} className="hidden" disabled={uploading} />
+          </label>
+          {url && (
+            <button onClick={() => onUpdate(null)} className="text-xs text-red-500 hover:text-red-700">Rimuovi</button>
+          )}
+        </div>
+        <input type="text" value={desc} onChange={e => onUpdate({ url: url || '', desc: e.target.value })} className="w-full px-2 py-1 border rounded text-xs" placeholder="Descrizione screenshot (opzionale)" />
+        {error && <p className="text-xs text-red-500">{error}</p>}
+      </div>
+    </div>
+  );
+}
 
 export default function GuideManager() {
   const [guides, setGuides] = useState([]);
@@ -231,10 +289,16 @@ export default function GuideManager() {
                     <button onClick={() => removeSection(idx)} className="p-1 text-gray-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                   </div>
                   <textarea value={section.content} onChange={e => updateSection(idx, 'content', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm mb-2" rows={4} placeholder="Contenuto (supporta **bold** e liste con •)" />
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 mb-2">
                     <input type="text" value={section.tip || ''} onChange={e => updateSection(idx, 'tip', e.target.value)} className="px-2 py-1.5 border rounded-lg text-xs" placeholder="💡 Suggerimento (opzionale)" />
                     <input type="text" value={section.warning || ''} onChange={e => updateSection(idx, 'warning', e.target.value)} className="px-2 py-1.5 border rounded-lg text-xs" placeholder="⚠️ Avvertenza (opzionale)" />
                   </div>
+                  {/* Screenshot */}
+                  <ScreenshotUpload
+                    url={section.screenshot?.url}
+                    desc={section.screenshot?.desc || ''}
+                    onUpdate={(screenshot) => updateSection(idx, 'screenshot', screenshot)}
+                  />
                 </div>
               ))}
             </div>

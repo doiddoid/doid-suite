@@ -67,7 +67,7 @@ async function checkSchema() {
         const { data: service } = await supabase
           .from('services')
           .select('id')
-          .eq('code', 'smart_review')
+          .eq('code', 'review')
           .single();
 
         const { data: plan } = await supabase

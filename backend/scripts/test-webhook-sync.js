@@ -8,8 +8,8 @@
  *   node scripts/test-webhook-sync.js [activityId] [serviceCode]
  *
  * Esempio:
- *   node scripts/test-webhook-sync.js abc-123 smart_review
- *   node scripts/test-webhook-sync.js abc-123 smart_page
+ *   node scripts/test-webhook-sync.js abc-123 review
+ *   node scripts/test-webhook-sync.js abc-123 page
  *   node scripts/test-webhook-sync.js  # usa valori di test
  *
  * Opzioni ambiente:
@@ -65,8 +65,8 @@ function logResult(label, success, details = '') {
 
 // Configurazione webhook
 const licenseSyncUrls = {
-  'smart_review': process.env.DOID_WEBHOOK_SMART_REVIEW || 'https://review.doid.it/api/webhook/sync-license',
-  'smart_page': process.env.DOID_WEBHOOK_SMART_PAGE || 'https://page.doid.it/api/webhook/sync-license'
+  'review': process.env.DOID_WEBHOOK_REVIEW || 'https://review.doid.it/api/webhook/sync-license',
+  'page': process.env.DOID_WEBHOOK_PAGE || 'https://page.doid.it/api/webhook/sync-license'
 };
 
 const licenseSyncSecret = process.env.DOID_LICENSE_SYNC_SECRET || process.env.SSO_SECRET_KEY || '';
@@ -284,14 +284,14 @@ async function checkWebhookLogs(limit = 5) {
 async function main() {
   const args = process.argv.slice(2);
   const activityId = args[0] || process.env.TEST_ACTIVITY_ID;
-  const serviceCode = args[1] || 'smart_review';
+  const serviceCode = args[1] || 'review';
 
   logSection('🧪 TEST WEBHOOK LICENSE SYNC');
 
   log(`\nConfigurazione:`, 'cyan');
   log(`  Secret configurato: ${licenseSyncSecret ? 'Sì (' + licenseSyncSecret.substring(0, 8) + '...)' : 'No'}`);
-  log(`  Review URL: ${licenseSyncUrls.smart_review}`);
-  log(`  Page URL: ${licenseSyncUrls.smart_page}`);
+  log(`  Review URL: ${licenseSyncUrls.review}`);
+  log(`  Page URL: ${licenseSyncUrls.page}`);
   log(`  Activity ID: ${activityId || 'Auto (cerca nel DB)'}`);
   log(`  Service: ${serviceCode}`);
   log(`  DRY_RUN: ${process.env.DRY_RUN || 'false'}`);
@@ -299,7 +299,7 @@ async function main() {
   // Test 1: Health check
   logSection('1. TEST HEALTH ENDPOINTS');
 
-  for (const service of ['smart_review', 'smart_page']) {
+  for (const service of ['review', 'page']) {
     log(`\n  Testing ${service}...`, 'cyan');
     const healthResult = await testHealthEndpoint(service);
 
@@ -405,7 +405,7 @@ async function main() {
   log(`\nPer vedere i log in real-time sul server:`, 'cyan');
   log(`  tail -f /var/log/apache2/error.log | grep WEBHOOK`);
   log(`\nPer testare manualmente con curl:`, 'cyan');
-  log(`  curl -X GET ${licenseSyncUrls.smart_review.replace('/sync-license', '/health')}`);
+  log(`  curl -X GET ${licenseSyncUrls.review.replace('/sync-license', '/health')}`);
 
   console.log('\n');
 }

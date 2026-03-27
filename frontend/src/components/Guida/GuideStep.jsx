@@ -158,13 +158,22 @@ export default function GuideStep({ section, index }) {
       {/* Content */}
       {section.content && renderContent(section.content)}
 
-      {/* Screenshot placeholder */}
+      {/* Screenshot */}
       {section.screenshot && (
-        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center my-4">
-          <Camera className="w-8 h-8 text-gray-400 mb-2" />
-          <p className="text-sm font-medium text-gray-500">Screenshot in arrivo</p>
-          <p className="text-xs text-gray-400 mt-1">{section.screenshot.desc}</p>
-        </div>
+        section.screenshot.url ? (
+          <div className="my-4">
+            <img src={section.screenshot.url} alt={section.screenshot.desc || section.screenshot.alt || 'Screenshot'} className="w-full rounded-xl border border-gray-200 shadow-sm" />
+            {section.screenshot.desc && (
+              <p className="text-xs text-gray-400 mt-2 text-center">{section.screenshot.desc}</p>
+            )}
+          </div>
+        ) : (
+          <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center my-4">
+            <Camera className="w-8 h-8 text-gray-400 mb-2" />
+            <p className="text-sm font-medium text-gray-500">Screenshot in arrivo</p>
+            {section.screenshot.desc && <p className="text-xs text-gray-400 mt-1">{section.screenshot.desc}</p>}
+          </div>
+        )
       )}
 
       {/* Tip box */}

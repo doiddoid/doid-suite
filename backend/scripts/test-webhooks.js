@@ -59,7 +59,7 @@ async function testServiceTrialActivated() {
     activityId: testActivity.id,
     activityName: testActivity.name,
     organizationId: testActivity.organizationId,
-    service: 'smart_review',
+    service: 'review',
     plan: 'pro',
     trialEndDate: trialEndDate.toISOString(),
     daysRemaining: 30
@@ -80,8 +80,8 @@ async function testTrialReminder() {
     fullName: testUser.fullName,
     activityId: testActivity.id,
     activityName: testActivity.name,
-    service: 'smart_review',
-    serviceName: 'Smart Review',
+    service: 'review',
+    serviceName: 'Review',
     trialEndDate: trialEndDate.toISOString(),
     daysRemaining: 23
   });

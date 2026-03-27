@@ -1,5 +1,5 @@
 /**
- * Script per migrare utenti da Smart Review a Supabase Auth
+ * Script per migrare utenti da Review a Supabase Auth
  *
  * Esegui con: node migrate-smart-users.js
  *
@@ -128,7 +128,7 @@ async function migrateUser(user, index, total) {
 // Funzione principale
 async function main() {
   console.log('\n========================================');
-  console.log('  MIGRAZIONE UTENTI SMART REVIEW');
+  console.log('  MIGRAZIONE UTENTI REVIEW');
   console.log('========================================\n');
 
   // Leggi utenti dal CSV

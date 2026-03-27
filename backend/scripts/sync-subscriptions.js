@@ -1,9 +1,9 @@
 /**
- * Sincronizza abbonamenti da Smart Review DB a DOID Suite
+ * Sincronizza abbonamenti da Review DB a DOID Suite
  *
  * Analizza il dump SQL e crea gli abbonamenti corretti per:
- * - Smart Review (utenti con review_settings attivo)
- * - Smart Page (utenti con vcards)
+ * - Review (utenti con review_settings attivo)
+ * - Page (utenti con vcards)
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -23,18 +23,18 @@ const supabase = createClient(
 
 // IDs servizi e piani
 const SERVICES = {
-  SMART_REVIEW: '4a8966ab-b29e-4946-8847-b085afb8a4af',
-  SMART_PAGE: '3e4748c9-fbb9-430b-946e-947d95041875'
+  REVIEW: '4a8966ab-b29e-4946-8847-b085afb8a4af',
+  PAGE: '3e4748c9-fbb9-430b-946e-947d95041875'
 };
 
 const PLANS = {
-  SMART_REVIEW_FREE: 'ac6331fa-de03-4274-adbd-e18185b2c512',
-  SMART_REVIEW_PRO: '529a06b2-1ee5-4d1a-a268-3bdbd1ca2d78',
-  SMART_PAGE_FREE: '714ecb30-8cee-421c-84fd-4ffba97c087e',
-  SMART_PAGE_PRO: 'd0a130f4-bdf2-4a5e-b2d6-f349f64a54f1'
+  REVIEW_FREE: 'ac6331fa-de03-4274-adbd-e18185b2c512',
+  REVIEW_PRO: '529a06b2-1ee5-4d1a-a268-3bdbd1ca2d78',
+  PAGE_FREE: '714ecb30-8cee-421c-84fd-4ffba97c087e',
+  PAGE_PRO: 'd0a130f4-bdf2-4a5e-b2d6-f349f64a54f1'
 };
 
-// Utente PRO per Smart Review
+// Utente PRO per Review
 const PRO_REVIEW_USER = 'gelaterialeccalecca@libero.it';
 
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -60,7 +60,7 @@ function analyzeSQL(sqlPath) {
     }
   }
 
-  // Estrai review_settings (Smart Review) - is_active = 1
+  // Estrai review_settings (Review) - is_active = 1
   const reviewMatch = sql.match(/INSERT INTO `review_settings`[\s\S]+?;/);
   if (reviewMatch) {
     const regex = /\('([^']+)',\s*'([^']+)',\s*1,/g;
@@ -73,7 +73,7 @@ function analyzeSQL(sqlPath) {
     }
   }
 
-  // Estrai vcards (Smart Page)
+  // Estrai vcards (Page)
   const vcardsMatch = sql.match(/INSERT INTO `vcards`[\s\S]+?;/);
   if (vcardsMatch) {
     const regex = /\('([^']+)',\s*\d+,\s*\d+,\s*'([^']+)'/g;
@@ -91,7 +91,7 @@ function analyzeSQL(sqlPath) {
 
 async function main() {
   console.log('\n' + '='.repeat(60));
-  console.log('  SINCRONIZZAZIONE ABBONAMENTI SMART REVIEW -> DOID SUITE');
+  console.log('  SINCRONIZZAZIONE ABBONAMENTI REVIEW -> DOID SUITE');
   console.log('='.repeat(60));
 
   if (DRY_RUN) {
@@ -191,14 +191,14 @@ async function main() {
       continue;
     }
 
-    // Crea abbonamento Smart Review se necessario
+    // Crea abbonamento Review se necessario
     if (user.hasReview) {
-      const subKey = `${activity.id}-${SERVICES.SMART_REVIEW}`;
+      const subKey = `${activity.id}-${SERVICES.REVIEW}`;
       if (existingSubsSet.has(subKey)) {
         reviewSkipped++;
       } else {
         const isPro = user.email === PRO_REVIEW_USER;
-        const planId = isPro ? PLANS.SMART_REVIEW_PRO : PLANS.SMART_REVIEW_FREE;
+        const planId = isPro ? PLANS.REVIEW_PRO : PLANS.REVIEW_FREE;
 
         if (DRY_RUN) {
           console.log(`[DRY-RUN] Review ${isPro ? 'PRO' : 'FREE'}: ${user.email}`);
@@ -207,7 +207,7 @@ async function main() {
           const { error } = await supabase.from('subscriptions').insert({
             activity_id: activity.id,
             organization_id: orgId,
-            service_id: SERVICES.SMART_REVIEW,
+            service_id: SERVICES.REVIEW,
             plan_id: planId,
             status: 'active',
             billing_cycle: 'yearly',
@@ -228,9 +228,9 @@ async function main() {
       }
     }
 
-    // Crea abbonamento Smart Page se necessario
+    // Crea abbonamento Page se necessario
     if (user.hasPage) {
-      const subKey = `${activity.id}-${SERVICES.SMART_PAGE}`;
+      const subKey = `${activity.id}-${SERVICES.PAGE}`;
       if (existingSubsSet.has(subKey)) {
         pageSkipped++;
       } else {
@@ -241,8 +241,8 @@ async function main() {
           const { error } = await supabase.from('subscriptions').insert({
             activity_id: activity.id,
             organization_id: orgId,
-            service_id: SERVICES.SMART_PAGE,
-            plan_id: PLANS.SMART_PAGE_FREE,
+            service_id: SERVICES.PAGE,
+            plan_id: PLANS.PAGE_FREE,
             status: 'active',
             billing_cycle: 'yearly',
             current_period_start: now.toISOString(),
@@ -268,12 +268,12 @@ async function main() {
   console.log('  REPORT FINALE');
   console.log('='.repeat(60));
 
-  console.log('\n📱 SMART REVIEW:');
+  console.log('\n📱 REVIEW:');
   console.log(`   ✅ Creati:    ${reviewCreated}`);
   console.log(`   ℹ️  Esistenti: ${reviewSkipped}`);
   console.log(`   ❌ Errori:    ${reviewErrors}`);
 
-  console.log('\n📄 SMART PAGE:');
+  console.log('\n📄 PAGE:');
   console.log(`   ✅ Creati:    ${pageCreated}`);
   console.log(`   ℹ️  Esistenti: ${pageSkipped}`);
   console.log(`   ❌ Errori:    ${pageErrors}`);

@@ -1,5 +1,5 @@
 /**
- * Import abbonamenti da Smart Review a DOID Suite
+ * Import abbonamenti da Review a DOID Suite
  *
  * Legge il CSV degli utenti con le licenze e crea gli abbonamenti
  * per le attività corrispondenti.
@@ -23,15 +23,15 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-// IDs fissi per Smart Review
-const SMART_REVIEW_SERVICE_ID = '4a8966ab-b29e-4946-8847-b085afb8a4af';
-const SMART_REVIEW_PRO_PLAN_ID = '529a06b2-1ee5-4d1a-a268-3bdbd1ca2d78';
+// IDs fissi per Review
+const REVIEW_SERVICE_ID = '4a8966ab-b29e-4946-8847-b085afb8a4af';
+const REVIEW_PRO_PLAN_ID = '529a06b2-1ee5-4d1a-a268-3bdbd1ca2d78';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 
 async function main() {
   console.log('\n' + '='.repeat(50));
-  console.log('  IMPORT ABBONAMENTI SMART REVIEW');
+  console.log('  IMPORT ABBONAMENTI REVIEW');
   console.log('='.repeat(50));
 
   if (DRY_RUN) {
@@ -136,7 +136,7 @@ async function main() {
     }
 
     // Verifica se abbonamento esiste già
-    const subKey = `${activity.id}-${SMART_REVIEW_SERVICE_ID}`;
+    const subKey = `${activity.id}-${REVIEW_SERVICE_ID}`;
     if (existingSubsSet.has(subKey)) {
       console.log(`ℹ️  Abbonamento esistente: ${email}`);
       skipped++;
@@ -163,8 +163,8 @@ async function main() {
     const { error } = await supabase.from('subscriptions').insert({
       activity_id: activity.id,
       organization_id: orgId,
-      service_id: SMART_REVIEW_SERVICE_ID,
-      plan_id: SMART_REVIEW_PRO_PLAN_ID,
+      service_id: REVIEW_SERVICE_ID,
+      plan_id: REVIEW_PRO_PLAN_ID,
       status: status,
       billing_cycle: 'yearly',
       current_period_start: now.toISOString(),

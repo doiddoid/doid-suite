@@ -1,5 +1,5 @@
 /**
- * TEST FLUSSO TRIAL SMART REVIEW - VERSIONE REALE
+ * TEST FLUSSO TRIAL REVIEW - VERSIONE REALE
  *
  * Questo script crea un utente REALE via API DOID e testa l'intero flusso:
  * 1. Registrazione utente
@@ -33,7 +33,7 @@ const TEST_CONFIG = {
   activityName: 'Ristorante Test GHL',
 
   // Servizio da testare
-  requestedService: 'smart_review',
+  requestedService: 'review',
 
   // Timing (secondi tra un evento e l'altro)
   timingSeconds: {
@@ -207,8 +207,8 @@ function getTrialReminderPayload(event, daysRemaining, userData) {
       email: TEST_CONFIG.email,
       first_name: TEST_CONFIG.fullName.split(' ')[0],
       activity_name: TEST_CONFIG.activityName,
-      service: 'smart_review',
-      service_label: 'Smart Review',
+      service: 'review',
+      service_label: 'Review',
       days_remaining: daysRemaining,
       trial_ends_at: trialEndDate.toISOString().split('T')[0],
       trial_ends_at_formatted: formatDate(trialEndDate),
@@ -230,8 +230,8 @@ function getTrialExpiredPayload(userData) {
       email: TEST_CONFIG.email,
       first_name: TEST_CONFIG.fullName.split(' ')[0],
       activity_name: TEST_CONFIG.activityName,
-      service: 'smart_review',
-      service_label: 'Smart Review',
+      service: 'review',
+      service_label: 'Review',
       expired_at: new Date().toISOString(),
       dashboard_url: 'https://review.doid.it',
       upgrade_url: 'https://review.doid.it/upgrade',
@@ -247,12 +247,12 @@ function getTrialExpiredPayload(userData) {
 
 async function runTestFlow() {
   console.log('\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
-  console.log('     TEST FLUSSO TRIAL SMART REVIEW - UTENTE REALE');
+  console.log('     TEST FLUSSO TRIAL REVIEW - UTENTE REALE');
   console.log('\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550');
   console.log(`\n\u{1F4E7} Email test: ${TEST_CONFIG.email}`);
   console.log(`\u{1F464} Utente: ${TEST_CONFIG.fullName}`);
   console.log(`\u{1F3EA} Attivita': ${TEST_CONFIG.activityName}`);
-  console.log(`\u{1F527} Servizio: Smart Review`);
+  console.log(`\u{1F527} Servizio: Review`);
   console.log(`\u{1F310} API: ${API_BASE_URL}`);
 
   let userData = {};
@@ -296,7 +296,7 @@ async function runTestFlow() {
   console.log('Il primo login processa la pending registration:');
   console.log('  - Crea Organization');
   console.log('  - Crea Activity');
-  console.log('  - Attiva Trial Smart Review PRO');
+  console.log('  - Attiva Trial Review PRO');
   console.log('\u2192 Webhook user.verified inviato a GHL');
   console.log('\u2192 Webhook service.trial_activated inviato a GHL');
 
@@ -311,7 +311,7 @@ async function runTestFlow() {
 
   console.log('\n\u{1F4EC} A questo punto dovresti aver ricevuto:');
   console.log('   1. \u2709\uFE0F  Email "Account DOID attivo" (user.verified)');
-  console.log('   2. \u2709\uFE0F  Email "Benvenuto Smart Review PRO" (service.trial_activated)');
+  console.log('   2. \u2709\uFE0F  Email "Benvenuto Review PRO" (service.trial_activated)');
 
   await sleep(TEST_CONFIG.timingSeconds.afterLogin);
 
@@ -321,7 +321,7 @@ async function runTestFlow() {
   console.log('\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
   console.log('STEP 4: REMINDER GIORNO 7');
   console.log('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
-  console.log('Simulo: "Come sta andando con Smart Review?"');
+  console.log('Simulo: "Come sta andando con Review?"');
   await sendWebhook('trial.day_7', WEBHOOKS.trialDay7, getTrialReminderPayload('trial.day_7', 23, userData));
 
   await sleep(TEST_CONFIG.timingSeconds.betweenReminders);
@@ -365,7 +365,7 @@ async function runTestFlow() {
   console.log(`\n\u{1F4EC} Controlla la casella email: ${TEST_CONFIG.email}`);
   console.log('   Dovresti aver ricevuto 7 email in sequenza:\n');
   console.log('   1. \u2709\uFE0F  Account DOID attivo (user.verified)');
-  console.log('   2. \u2709\uFE0F  Benvenuto Smart Review PRO (service.trial_activated)');
+  console.log('   2. \u2709\uFE0F  Benvenuto Review PRO (service.trial_activated)');
   console.log('   3. \u2709\uFE0F  Come sta andando? (giorno 7)');
   console.log('   4. \u2709\uFE0F  Sei a meta\'! (giorno 14)');
   console.log('   5. \u2709\uFE0F  Mancano 9 giorni (giorno 21)');
