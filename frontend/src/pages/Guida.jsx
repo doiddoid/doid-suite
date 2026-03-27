@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   BookOpen,
   Search,
@@ -14,6 +14,7 @@ import { guidaContent } from '../data/guidaContent';
 import GuideAccordion from '../components/Guida/GuideAccordion';
 import GuideCTA from '../components/Guida/GuideCTA';
 import GuideFAQ from '../components/Guida/GuideFAQ';
+import api from '../services/api';
 
 const tabConfig = [
   { id: 'suite', icon: Sparkles, label: 'Suite', color: 'teal', activeClass: 'bg-teal-50 text-teal-700 border-teal-500' },
@@ -28,8 +29,39 @@ export default function Guida() {
   const [searchQuery, setSearchQuery] = useState('');
   const [openGuideId, setOpenGuideId] = useState(null);
   const contentRef = useRef(null);
+  const [dbGuides, setDbGuides] = useState({});
 
-  const serviceData = guidaContent[activeTab];
+  // Carica guide dal DB
+  useEffect(() => {
+    api.request('/guides').then(res => {
+      if (res.success && res.data) {
+        // Raggruppa per service_code
+        const grouped = {};
+        res.data.forEach(g => {
+          if (!grouped[g.service_code]) grouped[g.service_code] = [];
+          grouped[g.service_code].push({
+            id: g.id,
+            title: g.title,
+            subtitle: g.subtitle,
+            sections: g.sections || [],
+            faq: g.faq || [],
+            nextGuide: null
+          });
+        });
+        setDbGuides(grouped);
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Merge: se ci sono guide dal DB per il servizio attivo, usa quelle. Altrimenti fallback all'hardcoded.
+  const serviceData = useMemo(() => {
+    const hardcoded = guidaContent[activeTab];
+    const fromDb = dbGuides[activeTab];
+    if (fromDb && fromDb.length > 0) {
+      return { ...hardcoded, guides: fromDb };
+    }
+    return hardcoded;
+  }, [activeTab, dbGuides]);
 
   // Filtra le guide in base alla ricerca
   const filteredGuides = useMemo(() => {
@@ -60,18 +92,24 @@ export default function Guida() {
 
   // Navigazione verso una guida specifica
   const handleNavigateToGuide = useCallback((guideId) => {
-    // Trova il servizio e la guida
-    for (const [serviceKey, service] of Object.entries(guidaContent)) {
-      const guide = service.guides?.find(g => g.id === guideId);
-      if (guide) {
+    // Cerca prima nel DB, poi nell'hardcoded
+    for (const [serviceKey, guides] of Object.entries(dbGuides)) {
+      if (guides.find(g => g.id === guideId)) {
         setActiveTab(serviceKey);
         setOpenGuideId(guideId);
-        // Scroll to top of content
         contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
       }
     }
-  }, []);
+    for (const [serviceKey, service] of Object.entries(guidaContent)) {
+      if (service.guides?.find(g => g.id === guideId)) {
+        setActiveTab(serviceKey);
+        setOpenGuideId(guideId);
+        contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+  }, [dbGuides]);
 
   // Cross-sell: servizi correlati (esclude il tab attivo)
   const crossSellServices = useMemo(() => {

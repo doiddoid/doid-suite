@@ -8,7 +8,7 @@ import {
   User, Shield, Briefcase, Phone, Layers,
   ExternalLink, Loader2, LogIn, ChevronDown, ChevronRight,
   MessageSquare, MessageCircle, Zap, Key, Bot, CheckCircle, XCircle,
-  ChevronUp, GripVertical, HelpCircle, ShoppingBag
+  ChevronUp, GripVertical, HelpCircle, ShoppingBag, BookOpen
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
@@ -23,6 +23,7 @@ import CredentialsModal from '../components/Admin/CredentialsModal';
 import MembersManageModal from '../components/Admin/MembersManageModal';
 import ClientDetailPanel from '../components/Admin/ClientDetailPanel';
 import FaqManager from '../components/Admin/FaqManager';
+import GuideManager from '../components/Admin/GuideManager';
 import NfcProductsManager from '../components/Admin/NfcProductsManager';
 
 // Mappa icone servizi - estesa
@@ -815,6 +816,7 @@ export default function Admin() {
       icon: FileText,
       tabs: [
         { id: 'faq', name: 'FAQ', icon: HelpCircle },
+        { id: 'guide', name: 'Guide', icon: BookOpen },
       ]
     },
   ];
@@ -2108,6 +2110,11 @@ export default function Admin() {
             {/* FAQ Tab */}
             {activeTab === 'faq' && (
               <FaqManager />
+            )}
+
+            {/* Guide Tab */}
+            {activeTab === 'guide' && (
+              <GuideManager />
             )}
           </>
         )}

@@ -20,6 +20,7 @@ import activitiesRoutes from './routes/activities.js';
 import webhooksRoutes from './routes/webhooks.js';
 import chatRoutes from './routes/chat.js';
 import faqRoutes from './routes/faq.js';
+import guidesRoutes from './routes/guides.js';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -151,6 +152,7 @@ app.use('/api/activities', activitiesRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/faq', faqRoutes);
+app.use('/api/guides', guidesRoutes);
 
 // Root route
 app.get('/', (req, res) => {
