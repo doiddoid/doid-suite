@@ -9,7 +9,7 @@ class ActivityService {
    * @param {object} data - Dati attività
    * @param {string} data.organizationId - (opzionale) ID organizzazione/agenzia
    */
-  async createActivity(userId, data) {
+  async createActivity(userId, data, { isSuperAdmin = false } = {}) {
     const { name, email, phone, vatNumber, address, city, organizationId } = data;
 
     if (!name || !name.trim()) {
@@ -17,7 +17,7 @@ class ActivityService {
     }
 
     // Verifica limiti utente
-    const userLimits = await this.getUserActivityLimits(userId);
+    const userLimits = await this.getUserActivityLimits(userId, { isSuperAdmin });
 
     // Se organizationId fornito, verifica che l'utente abbia accesso e che l'org possa aggiungere attività
     if (organizationId) {
@@ -100,7 +100,17 @@ class ActivityService {
    * Ottieni limiti creazione attività per un utente
    * Considera: organizzazioni dell'utente, tipo account, attività esistenti
    */
-  async getUserActivityLimits(userId) {
+  async getUserActivityLimits(userId, { isSuperAdmin = false } = {}) {
+    // Super admin: nessun limite
+    if (isSuperAdmin) {
+      return {
+        accountType: 'super_admin',
+        canCreate: true,
+        canCreateViaAgency: true,
+        limitMessage: null
+      };
+    }
+
     // Ottieni organizzazioni dell'utente
     const { data: orgUsers } = await supabaseAdmin
       .from('organization_users')

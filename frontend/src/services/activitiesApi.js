@@ -9,6 +9,13 @@ class ActivitiesApiService {
   // ==================== ACTIVITIES CRUD ====================
 
   /**
+   * Limiti creazione attività per utente corrente
+   */
+  async getActivityLimits() {
+    return api.request('/activities/limits');
+  }
+
+  /**
    * Lista attività dell'utente corrente
    */
   async getActivities() {

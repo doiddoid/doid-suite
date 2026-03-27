@@ -33,7 +33,7 @@ router.use(authenticate);
 // Ottieni limiti creazione attività per utente corrente
 router.get('/limits',
   asyncHandler(async (req, res) => {
-    const limits = await activityService.getUserActivityLimits(req.user.id);
+    const limits = await activityService.getUserActivityLimits(req.user.id, { isSuperAdmin: !!req.user.isSuperAdmin });
 
     res.json({
       success: true,
@@ -68,7 +68,7 @@ router.post('/',
   ],
   validate,
   asyncHandler(async (req, res) => {
-    const activity = await activityService.createActivity(req.user.id, req.body);
+    const activity = await activityService.createActivity(req.user.id, req.body, { isSuperAdmin: !!req.user.isSuperAdmin });
 
     res.status(201).json({
       success: true,
