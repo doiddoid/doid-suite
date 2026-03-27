@@ -851,85 +851,207 @@ export const guidaContent = {
     textColor: 'text-teal-700',
     borderColor: 'border-teal-200',
     description: 'Crea assistenti AI personalizzati ed embeddabili su qualsiasi sito web.',
+    cta: {
+      headline: 'Non hai ancora provato Chat AI?',
+      problem: 'I tuoi clienti hanno domande anche quando non sei disponibile.',
+      solution: 'Con Chat AI hai un assistente virtuale che risponde 24/7 con le informazioni che decidi tu. Lo configuri in 5 minuti e lo embeddi con una riga di codice.',
+      action: 'Attiva la prova gratuita — 30 giorni gratis',
+      note: 'Nessun dato di pagamento richiesto.',
+    },
     guides: [
       {
-        id: 'intro',
-        title: "Cos'è Smart Chat AI",
-        description: 'Panoramica del servizio e delle funzionalità principali.',
-        steps: [
+        id: 'chatai-01',
+        title: 'Cos\'è Chat AI e Come Funziona',
+        subtitle: 'Panoramica, funzionalità principali e come il tuo assistente risponde ai clienti',
+        sections: [
           {
             title: 'A cosa serve',
-            content: 'Smart Chat AI ti permette di creare un **assistente virtuale AI** per il tuo sito web:\n\n• Rispondi ai clienti **24/7**\n• Personalizzi **aspetto, colori e logo**\n• Controlli le risposte tramite **fonti di conoscenza**\n• Ricevi **notifiche** su Telegram per ogni conversazione\n• Embeddi con **una sola riga di codice**',
+            content: 'Chat AI è un servizio che ti permette di creare un **assistente virtuale AI** per il tuo sito web:\n\n• **Rispondi ai clienti 24/7** — anche quando sei chiuso o impegnato\n• **Personalizzi tutto** — colori, logo, testi, posizione, icona\n• **Controlli le risposte** — l\'assistente usa solo le informazioni che gli fornisci\n• **Ricevi notifiche** — ogni conversazione arriva su Telegram\n• **Embeddi ovunque** — una riga di codice su qualsiasi sito',
           },
           {
             title: 'Come funziona',
-            content: '1. **Crei l\'assistente** dal pannello Smart Chat AI\n2. **Configuri aspetto e fonti** — FAQ, testi, query database\n3. **Copi il codice embed** e lo incolli nel tuo sito\n4. I visitatori **chattano** con l\'assistente AI\n5. Ricevi le **conversazioni** su Telegram e nel pannello',
+            content: '**1. Crei l\'assistente** dal pannello Chat AI.\nScegli nome, colori, avatar e messaggio di benvenuto.\n\n**2. Aggiungi le fonti di conoscenza** — FAQ, testi, link o dati dal database. L\'assistente usa solo queste informazioni per rispondere.\n\n**3. Copi il codice embed** dal tab "Embed" e lo incolli nel tuo sito prima di `</body>`.\n\n**4. I visitatori chattano** — vedono un pulsante in basso, cliccano e iniziano a conversare.\n\n**5. Ricevi tutto** — conversazioni su Telegram e nello storico del pannello.',
+          },
+          {
+            title: 'Cosa può fare l\'assistente',
+            content: '• Rispondere a **domande su prezzi, orari, servizi** usando le fonti che gli fornisci\n• Guidare i visitatori verso **registrazione, contatto o acquisto**\n• **Chiedere nome ed email** per ricontattare i visitatori\n• Rimandare al **supporto umano** quando non ha la risposta\n• Mostrare **link cliccabili** a WhatsApp, email, pagine web',
+            tip: 'L\'assistente non inventa mai — se non ha l\'informazione nelle fonti, lo dice chiaramente e invita a contattare il supporto.',
           },
         ],
         faq: [
-          { q: "L'assistente inventa le risposte?", a: 'No. Risponde solo con le informazioni che gli fornisci tramite le fonti di conoscenza.' },
-          { q: 'Funziona su mobile?', a: 'Sì. Il widget è responsive. Puoi anche attivare il fullscreen su mobile.' },
+          { q: 'L\'assistente inventa le risposte?', a: 'No. Risponde solo con le informazioni che gli fornisci tramite le fonti di conoscenza. Se non ha la risposta, lo dice e rimanda al supporto.' },
+          { q: 'Funziona su mobile?', a: 'Sì, il widget è responsive. Puoi anche attivare "Fullscreen su mobile" che apre la chat a schermo intero.' },
+          { q: 'Rallenta il mio sito?', a: 'No. Il widget pesa circa 14KB e si carica in modo asincrono senza bloccare la pagina.' },
         ],
-        nextGuide: 'configurazione',
+        nextGuide: 'chatai-02',
       },
       {
-        id: 'configurazione',
-        title: 'Configurazione assistente',
-        description: 'Come creare e configurare il tuo primo assistente AI.',
-        steps: [
+        id: 'chatai-02',
+        title: 'Primo Accesso e Creazione Assistente',
+        subtitle: 'Accesso da Suite, creazione del primo assistente e panoramica del configuratore',
+        sections: [
           {
-            title: 'Creare un assistente',
-            content: '1. Dalla dashboard DOID Suite, clicca **"Accedi"** su Smart Chat AI\n2. Clicca **"Nuovo Assistente"**\n3. Si apre il configuratore con **6 tab**',
+            title: 'Accedere da DOID Suite',
+            content: 'Accedi a **suite.doid.it** e clicca **"Accedi"** sulla scheda **Smart Chat AI** nella dashboard.\n\nVerrai reindirizzato a **chat.doid.it** automaticamente — senza un altro login (SSO).',
+            screenshot: { alt: 'Accesso Chat AI', desc: 'Scheda Smart Chat AI con pulsante Accedi nella dashboard Suite' },
           },
           {
-            title: 'Tab Aspetto',
-            content: 'Personalizza come appare il widget:\n\n• **Colore primario** — il colore del pulsante e header\n• **Avatar** — carica un\'immagine o scegli un\'emoji\n• **Titolo e sottotitolo** — visibili nell\'header\n• **Messaggio di benvenuto** — il primo messaggio\n• **Posizione** — destra, sinistra, centro, centro verticale\n• **Icona pulsante** — Chat, Supporto, Aiuto, AI, Robot o emoji\n• **Testo animato** — appare accanto al pulsante\n• **Fullscreen su mobile** — apre pagina dedicata',
+            title: 'Creare il primo assistente',
+            content: '1. Nella dashboard Chat AI, clicca **"Nuovo Assistente"**\n2. Si apre il **configuratore** con il nome "Nuovo Assistente"\n3. Trovi **6 tab** in alto: Aspetto, Fonti, Comportamento, Notifiche, Chat, Embed\n4. Inizia dal tab **Aspetto** per dare un nome e un volto al tuo assistente',
+            screenshot: { alt: 'Dashboard Chat AI', desc: 'Dashboard con pulsante Nuovo Assistente e lista assistenti creati' },
           },
           {
-            title: 'Tab Fonti',
-            content: 'Le informazioni che l\'assistente usa per rispondere:\n\n• **FAQ** — domanda + risposta\n• **Testo libero** — blocchi informativi\n• **Link / URL** — riferimenti web\n• **Google Drive** — documenti condivisi\n• **Query Database** — lettura dati dal DB con SQL',
-            tip: 'Inizia con 5-10 FAQ sulle domande più frequenti dei tuoi clienti.',
-          },
-          {
-            title: 'Tab Comportamento',
-            content: '• **System prompt** — istruzioni per il comportamento dell\'AI\n• **Modello** — Haiku (veloce) o Sonnet (preciso)\n• **Max token** — lunghezza massima risposta\n• **Temperatura** — 0 = preciso, 1 = creativo\n• **Rate limit** — protezione contro abusi\n• **API key custom** — usa il tuo account Anthropic',
-          },
-          {
-            title: 'Tab Notifiche',
-            content: '• **Telegram** — ricevi ogni conversazione su un gruppo\n• **Email** — riepilogo via email (prossimamente)\n\nPer configurare Telegram:\n1. Crea un bot con @BotFather\n2. Aggiungi il bot a un gruppo\n3. Inserisci Token e Chat ID nel pannello\n4. Clicca "Test" per verificare',
+            title: 'Il configuratore — panoramica dei 6 tab',
+            content: '| Tab | Cosa configuri |\n|-----|----------------|\n| **Aspetto** | Colori, avatar, testi, posizione pulsante, icona, testo animato |\n| **Fonti** | FAQ, testi, URL, Google Drive, query database |\n| **Comportamento** | Prompt AI, modello, temperatura, limiti, API key |\n| **Notifiche** | Telegram, email |\n| **Chat** | Storico conversazioni con i visitatori |\n| **Embed** | Codice da copiare e link fullscreen |',
+            tip: 'Dopo ogni modifica, ricorda di cliccare "Salva" in alto a destra.',
           },
         ],
         faq: [
-          { q: 'Quanti assistenti posso creare?', a: 'Non c\'è un limite. Puoi crearne uno per ogni sito.' },
-          { q: 'Posso usare la mia API key?', a: 'Sì, dal tab Comportamento. Se vuoto, usa quella di sistema.' },
+          { q: 'Devo fare un altro login?', a: 'No, l\'accesso è automatico tramite SSO da DOID Suite.' },
+          { q: 'Quanti assistenti posso creare?', a: 'Non c\'è un limite. Puoi creare assistenti diversi per siti o sezioni diverse.' },
         ],
-        nextGuide: 'installazione',
+        nextGuide: 'chatai-03',
       },
       {
-        id: 'installazione',
-        title: 'Installazione sul sito',
-        description: 'Come embeddare il widget su WordPress, Shopify, Wix e HTML.',
-        steps: [
+        id: 'chatai-03',
+        title: 'Configurare l\'Aspetto',
+        subtitle: 'Colori, avatar, pulsante, posizione, testo animato e fullscreen mobile',
+        sections: [
+          {
+            title: 'Nome e colori',
+            content: '• **Nome assistente** — il nome interno (visibile solo a te nella dashboard)\n• **Colore primario** — colore del pulsante e dell\'header del widget\n• **Colore header** — sfondo dell\'header (di default segue il primario)\n• **Colore testo header** — bianco di default\n\nLa **preview** a destra mostra in tempo reale come apparirà il widget.',
+          },
+          {
+            title: 'Avatar',
+            content: 'L\'avatar appare nell\'header del widget:\n\n• **Carica immagine** — clicca "Carica immagine", scegli un file PNG/JPG (max 2MB). Ideale: il logo della tua attività.\n• **Emoji** — se non carichi un\'immagine, viene usata l\'emoji (default 🤖).\n\nL\'immagine ha sempre priorità sull\'emoji.',
+            tip: 'Usa un\'immagine quadrata con sfondo trasparente per il risultato migliore.',
+          },
+          {
+            title: 'Testi del widget',
+            content: '• **Titolo** — il nome visibile nell\'header (es. "Assistente doID")\n• **Sottotitolo** — sotto il titolo (es. "AI Support")\n• **Messaggio di benvenuto** — il primo messaggio che il visitatore vede quando apre la chat\n• **Placeholder** — il testo grigio nel campo di input (es. "Scrivi un messaggio...")',
+          },
+          {
+            title: 'Posizione e pulsante',
+            content: '**Posizione del pulsante**:\n• Destra / Sinistra — in basso, con offset personalizzabile\n• Centro — centrato orizzontalmente in basso\n• Destra/Sinistra centrato verticalmente — a metà altezza dello schermo\n\n**Icona pulsante**: Chat, Supporto (cuffia), Aiuto (?), AI (stella), Robot, oppure un\'emoji a scelta.\n\n**Testo animato**: un messaggio che appare accanto al pulsante (es. "Hai bisogno di aiuto?") con animazione Fade, Pulse o Bounce e ritardo configurabile.',
+            tip: 'Se il pulsante è centrato e ha un testo, diventa un bottone rettangolare con icona + testo inline — più visibile su mobile.',
+          },
+          {
+            title: 'Opzioni aggiuntive',
+            content: '• **Chiedi nome** — il bot chiede il nome all\'inizio della conversazione\n• **Chiedi email** — chiede l\'email\n• **Email alla chiusura** — quando l\'utente chiude, il bot chiede l\'email per inviare il riepilogo\n• **Fullscreen su mobile** — su schermi piccoli, il click apre una pagina dedicata a schermo intero invece del popup',
+          },
+        ],
+        faq: [
+          { q: 'La preview è in tempo reale?', a: 'Sì, ogni modifica si riflette subito nella preview a destra.' },
+          { q: 'Il pulsante copre i contenuti del sito?', a: 'Il pulsante è piccolo (56px) e posizionato in basso. Puoi spostarlo con gli offset se copre qualcosa.' },
+        ],
+        nextGuide: 'chatai-04',
+      },
+      {
+        id: 'chatai-04',
+        title: 'Configurare le Fonti di Conoscenza',
+        subtitle: 'FAQ, testi, URL, Google Drive e query database — come istruire l\'assistente',
+        sections: [
+          {
+            title: 'Come funzionano le fonti',
+            content: 'Le fonti sono le **informazioni che l\'assistente usa per rispondere**. Senza fonti, l\'assistente non ha dati specifici sulla tua attività.\n\nQuando un visitatore fa una domanda, l\'AI cerca la risposta nelle fonti che hai configurato. Se non la trova, lo dice chiaramente.',
+            tip: 'Più fonti pertinenti aggiungi, migliori saranno le risposte. Ma non esagerare — fonti troppo generiche possono confondere l\'AI.',
+          },
+          {
+            title: 'Tipi di fonte disponibili',
+            content: '| Tipo | Cosa inserire | Quando usarlo |\n|------|---------------|---------------|\n| **FAQ** | Domanda + Risposta | Per le domande frequenti dei clienti |\n| **Testo** | Blocco informativo | Per descrizioni, policy, orari |\n| **URL** | Link a una pagina | Per riferimenti esterni |\n| **Google Drive** | Link di condivisione | Per documenti, listini, cataloghi |\n| **Query Database** | Query SQL SELECT | Per dati live dal database (prezzi, prodotti) |',
+          },
+          {
+            title: 'Aggiungere una FAQ',
+            content: '1. Seleziona **FAQ** dal menu tipo\n2. Scrivi la **domanda** (es. "Quali sono gli orari di apertura?")\n3. Scrivi la **risposta** (es. "Siamo aperti dal lunedì al venerdì, 9:00-18:00")\n4. Clicca **"Aggiungi"**',
+          },
+          {
+            title: 'Usare le Query Database',
+            content: 'Le query leggono dati direttamente dal tuo database:\n\n1. Seleziona **Query Database**\n2. Dai un titolo descrittivo (es. "Prezzi servizi")\n3. Scrivi la query SQL — solo **SELECT** consentito\n4. Clicca **"Aggiungi"**\n5. Clicca **"Esegui query"** per caricare i dati\n\nI risultati vengono salvati e usati dall\'assistente. Se i dati cambiano, clicca **"Aggiorna dati"** per ricaricarli.',
+            tip: 'La query viene eseguita solo quando clicchi "Esegui" — non ad ogni messaggio. Aggiorna manualmente quando i dati cambiano.',
+            warning: 'Solo query SELECT consentite. INSERT, UPDATE, DELETE e altri statement sono bloccati per sicurezza.',
+          },
+          {
+            title: 'Gestire le fonti',
+            content: 'Per ogni fonte puoi:\n\n• **Modificare** — clicca l\'icona matita\n• **Disattivare/Riattivare** — clicca l\'icona occhio (la fonte resta salvata ma non viene usata)\n• **Eliminare** — clicca il cestino\n\nOgni fonte mostra la **data di ultimo aggiornamento**.',
+          },
+        ],
+        faq: [
+          { q: 'Quante fonti posso aggiungere?', a: 'Non c\'è un limite fisso, ma consigliamo di restare sotto le 50 fonti per mantenere risposte rapide e pertinenti.' },
+          { q: 'L\'assistente legge davvero i link URL?', a: 'L\'URL viene incluso come riferimento nel contesto. Per contenuti complessi, è meglio usare FAQ o testo con le informazioni estratte.' },
+        ],
+        nextGuide: 'chatai-05',
+      },
+      {
+        id: 'chatai-05',
+        title: 'Comportamento, Notifiche e Storico',
+        subtitle: 'System prompt, modello AI, Telegram, storico chat e API key personalizzata',
+        sections: [
+          {
+            title: 'System Prompt',
+            content: 'Il prompt di sistema definisce **come si comporta** l\'assistente:\n\n• Chi è e per chi lavora\n• In quale lingua risponde\n• Il tono (formale, amichevole, tecnico)\n• Cosa fare quando non ha la risposta\n• Contatti di supporto da fornire\n\nLe fonti vengono aggiunte **automaticamente** in coda al prompt — non devi inserirle qui.',
+            tip: 'Un buon prompt è specifico. "Sei l\'assistente di [nome attività], rispondi in italiano in modo professionale" è meglio di "Rispondi alle domande".',
+          },
+          {
+            title: 'Modello AI e parametri',
+            content: '• **Modello** — Haiku 4.5 (veloce, consigliato) o Sonnet 4 (più preciso, più lento e costoso)\n• **Max token** — lunghezza massima della risposta (600 = ~3 paragrafi)\n• **Temperatura** — 0 = risposte precise e ripetibili, 1 = risposte più creative e varie. Consigliato: 0.7\n• **Rate limit** — quante richieste per IP sono consentite (protezione da abusi)',
+          },
+          {
+            title: 'API Key personalizzata',
+            content: 'Di default l\'assistente usa l\'API key di sistema. Se hai un **account Anthropic dedicato**, puoi inserire la tua chiave nel campo "API Key Anthropic".\n\nQuesto è utile se:\n• Vuoi **controllo diretto** sui costi\n• Hai un piano Anthropic con limiti più alti\n• Gestisci più assistenti ad alto volume',
+          },
+          {
+            title: 'Configurare Telegram',
+            content: 'Per ricevere ogni conversazione su Telegram:\n\n**1. Crea un bot Telegram:**\n• Apri Telegram e cerca **@BotFather**\n• Invia `/newbot` e segui le istruzioni\n• Ricevi il **Token** (es. `123456:ABC-DEF...`)\n\n**2. Crea un gruppo e aggiungi il bot:**\n• Crea un gruppo Telegram\n• Aggiungi il bot appena creato al gruppo\n\n**3. Trova il Chat ID:**\n• Aggiungi @RawDataBot al gruppo temporaneamente\n• Ti mostrerà il Chat ID (es. `-100123456789`)\n• Rimuovi @RawDataBot\n\n**4. Configura nel pannello:**\n• Incolla Token e Chat ID nel tab Notifiche\n• Clicca **"Test"** per verificare',
+          },
+          {
+            title: 'Storico conversazioni',
+            content: 'Il tab **Chat** mostra tutte le conversazioni con i visitatori:\n\n• **Lista a sinistra** — nome, email, data, numero messaggi\n• **Dettaglio a destra** — trascrizione completa della conversazione\n• **Paginazione** — naviga lo storico per pagine\n\nLe conversazioni vengono salvate automaticamente quando il visitatore chiude la chat.',
+          },
+        ],
+        faq: [
+          { q: 'Posso usare la mia API key Anthropic?', a: 'Sì, dal tab Comportamento. Se lasci vuoto, viene usata quella di sistema.' },
+          { q: 'Come vedo le conversazioni?', a: 'Nel tab Chat del tuo assistente trovi lo storico completo con nome, email e trascrizione.' },
+        ],
+        nextGuide: 'chatai-06',
+      },
+      {
+        id: 'chatai-06',
+        title: 'Installazione sul Sito',
+        subtitle: 'Come embeddare il widget su WordPress, Shopify, Wix e qualsiasi sito HTML',
+        sections: [
           {
             title: 'Codice embed',
-            content: 'Trovi il codice nel tab **Embed**. È una singola riga:\n\n```\n<script src="https://chat.doid.it/widget/IL-TUO-ID.js"></script>\n```\n\nVa inserito prima di `</body>` nel tuo sito.',
+            content: 'Trovi il codice nel tab **Embed** del tuo assistente. È una singola riga:\n\n`<script src="https://chat.doid.it/widget/IL-TUO-ID.js"></script>`\n\nVa inserito **prima della chiusura** `</body>` nel tuo sito. Il widget carica automaticamente la configurazione dal server.',
           },
           {
-            title: 'WordPress con Elementor',
-            content: '1. **Elementor** → **Custom Code**\n2. **Aggiungi nuovo** → nome: "Chat AI Widget"\n3. Posizione: **Before closing </body> tag**\n4. Incolla il codice script\n5. Condizioni: **Entire Site** → Pubblica\n\nSenza Elementor Pro: usa il plugin gratuito **WPCode** (Insert Headers and Footers).',
+            title: 'WordPress con Elementor Pro',
+            content: '1. Nel menu WordPress vai su **Elementor → Custom Code**\n2. Clicca **"Aggiungi nuovo"**\n3. Nome: **Chat AI Widget**\n4. Posizione: **Before closing </body> tag**\n5. Incolla il codice script\n6. In Condizioni: seleziona **Entire Site**\n7. **Pubblica**',
           },
           {
-            title: 'Shopify e Wix',
-            content: '**Shopify**: Negozio online → Temi → Modifica codice → theme.liquid → incolla prima di </body>\n\n**Wix**: Impostazioni → Avanzate → Codice personalizzato → Aggiungi → Body Fine → Tutte le pagine',
+            title: 'WordPress senza Elementor Pro',
+            content: 'Installa il plugin gratuito **WPCode** (ex Insert Headers and Footers):\n\n1. **Plugin → Aggiungi nuovo** → cerca "WPCode"\n2. Installa e attiva\n3. Vai in **Code Snippets → Header & Footer**\n4. Incolla il codice nella sezione **Footer**\n5. **Salva**',
           },
           {
-            title: 'Link fullscreen',
-            content: 'Puoi anche condividere un link diretto alla chat a schermo intero:\n\n`https://chat.doid.it/c/IL-TUO-ID`\n\nUtile per QR code, WhatsApp, firma email.',
+            title: 'Shopify',
+            content: '1. **Negozio online → Temi → Azioni → Modifica codice**\n2. Apri il file **theme.liquid**\n3. Cerca `</body>` e incolla il codice **appena prima**\n4. **Salva**',
+          },
+          {
+            title: 'Wix',
+            content: '1. **Impostazioni → Avanzate → Codice personalizzato**\n2. Clicca **"Aggiungi codice personalizzato"**\n3. Incolla il codice\n4. Posizione: **Body - Fine**\n5. Applica a: **Tutte le pagine**\n6. **Applica**',
+          },
+          {
+            title: 'Qualsiasi sito HTML',
+            content: 'Apri il file HTML e incolla il codice prima di `</body>`:\n\n```\n<body>\n  ... il tuo sito ...\n  <script src="https://chat.doid.it/widget/IL-TUO-ID.js"></script>\n</body>\n```\n\nFunziona su qualsiasi sito — inclusi React, Vue, Angular, Next.js.',
+          },
+          {
+            title: 'Link fullscreen (alternativa)',
+            content: 'Oltre al widget, puoi condividere un **link diretto** alla chat a schermo intero:\n\n`https://chat.doid.it/c/IL-TUO-ID`\n\nUtile per:\n• **QR Code** — stampalo su volantini o biglietti\n• **WhatsApp** — invialo ai clienti\n• **Firma email** — aggiungilo come "Chatta con noi"\n• **Social media** — condividilo nei post o nella bio',
           },
         ],
         faq: [
-          { q: 'Il widget rallenta il sito?', a: 'No. Pesa ~14KB e si carica in modo asincrono.' },
-          { q: 'Il codice cambia se modifico l\'assistente?', a: 'No. Il widget carica sempre la configurazione aggiornata dal server.' },
+          { q: 'Il codice cambia se modifico l\'assistente?', a: 'No. Il codice resta lo stesso — il widget carica sempre la configurazione aggiornata dal server.' },
+          { q: 'Posso mettere il widget solo su alcune pagine?', a: 'Sì, inserisci il codice solo nelle pagine dove vuoi che appaia. Su WordPress con Elementor puoi anche impostare condizioni specifiche.' },
+          { q: 'Posso avere più widget sullo stesso sito?', a: 'Sì, ma è sconsigliato. Meglio un solo assistente per sito. Per sezioni diverse, usa fonti diverse nello stesso assistente.' },
         ],
         nextGuide: null,
       },
