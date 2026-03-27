@@ -6,6 +6,7 @@ import {
   Star,
   FileText,
   UtensilsCrossed,
+  MessageSquare,
   ArrowRight,
   X
 } from 'lucide-react';
@@ -19,6 +20,7 @@ const tabConfig = [
   { id: 'review', icon: Star, label: 'Review', color: 'yellow', activeClass: 'bg-yellow-50 text-yellow-700 border-yellow-500' },
   { id: 'page', icon: FileText, label: 'Page', color: 'blue', activeClass: 'bg-blue-50 text-blue-700 border-blue-500' },
   { id: 'menu', icon: UtensilsCrossed, label: 'Menu', color: 'green', activeClass: 'bg-green-50 text-green-700 border-green-500' },
+  { id: 'chat_ai', icon: MessageSquare, label: 'Chat AI', color: 'teal', activeClass: 'bg-teal-50 text-teal-700 border-teal-500' },
 ];
 
 export default function Guida() {

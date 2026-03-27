@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   HelpCircle, Search, X, ChevronDown, Sparkles,
-  Star, FileText, UtensilsCrossed
+  Star, FileText, UtensilsCrossed, MessageSquare
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -12,6 +12,7 @@ const SERVICE_TABS = [
   { id: 'review', label: 'Review', icon: Star, activeClass: 'bg-yellow-50 text-yellow-700 border-yellow-500' },
   { id: 'page', label: 'Page', icon: FileText, activeClass: 'bg-blue-50 text-blue-700 border-blue-500' },
   { id: 'menu', label: 'Menu Digitale', icon: UtensilsCrossed, activeClass: 'bg-green-50 text-green-700 border-green-500' },
+  { id: 'chat_ai', label: 'Chat AI', icon: MessageSquare, activeClass: 'bg-teal-50 text-teal-700 border-teal-500' },
 ];
 
 const SERVICE_STYLES = {
@@ -20,6 +21,7 @@ const SERVICE_STYLES = {
   review: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', icon: Star },
   page: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: FileText },
   menu: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', icon: UtensilsCrossed },
+  chat_ai: { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', icon: MessageSquare },
 };
 
 const SERVICE_LABELS = {
@@ -28,6 +30,7 @@ const SERVICE_LABELS = {
   review: 'Review',
   page: 'Page',
   menu: 'Menu Digitale',
+  chat_ai: 'Chat AI',
 };
 
 function FaqItem({ faq, defaultOpen = false }) {
